@@ -336,6 +336,39 @@ void main() {
     });
   });
 
+  group('issue145: voice notices must describe a paid, positive display interval', () {
+    List<LiveSuperChatMessage> decode(String body) => [
+      for (final message in DouyuDanmakuProtocol.decode(
+        DouyuDanmakuProtocol.packet(body, type: DouyuDanmakuProtocol.serverPacketType),
+        roomId: '1',
+      ))
+        if (message.data case final LiveSuperChatMessage card) card,
+    ];
+    String voice(int cents, {int start = 1790519453, int end = 1790519513}) =>
+        'type@=voice_trlt/list@=acptime@AA=$start@ASetime@AA=$end@ASrealPrice@AA=$cents@AScontent@AA=同一留言@ASun@AA=测试观众@AS@S/';
+
+    test('a zero-price voice companion does not produce an extra unpriced SC card', () {
+      final paid = decode(
+        'type@=comm_chatmsg/now@=1790519453000/cet@=60/cprice@=1000/chatmsg@=nn@A=测试观众@Stxt@A=同一留言@S/',
+      );
+      final cards = [...paid, ...decode(voice(0))];
+      expect(cards, hasLength(1), reason: 'normal paid SC plus a non-paid voice notice is one paid card');
+      expect(cards.single.price, 10);
+    });
+    for (final price in [-100, 0]) {
+      test('rejects non-positive voice price $price', () => expect(decode(voice(price)), isEmpty));
+    }
+    for (final end in [1790519452, 1790519453]) {
+      test('rejects invalid voice display end $end', () => expect(decode(voice(1000, end: end)), isEmpty));
+    }
+    test('keeps valid paid voice and distinct paid purchases with identical text', () {
+      final first = decode(voice(1000)).single;
+      final second = decode(voice(1000, start: 1790519454, end: 1790519514)).single;
+      expect(first.price, 10);
+      expect(first.isSameEventAs(second), isFalse);
+    });
+  });
+
   test('D07.2: both super chats are in yuan (cprice and realPrice in fen), as the platform table says', () {
     final paid = [
       for (final body in [

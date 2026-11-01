@@ -334,7 +334,7 @@ abstract final class DouyuDanmakuProtocol {
     final end = int.tryParse(item['etime'] ?? '');
     final start = int.tryParse(item['acptime'] ?? '');
     final cents = int.tryParse(item['realPrice'] ?? '');
-    if (end == null || start == null || cents == null) return null;
+    if (end == null || start == null || cents == null || cents <= 0 || end <= start) return null;
     final avatars = DouyuStt.list(item['uat'] ?? '');
     final avatar = avatars.length > 1 ? avatars[1] : '';
     return _superChatMessage(
