@@ -111,16 +111,33 @@ void main() {
       await expectLater(api.list('123'), throwsA(isA<SiteError>()));
     }
   });
+
+  test('presenter archives avoid the official mobile redirect to the unrelated video home page', () async {
+    final http = _Http()
+      ..body = fixture('page1.html')
+      ..routeBrowserPage = true;
+    final videos = (await HuyaArchiveApi(http).list('294636272')).videos;
+    expect(videos, hasLength(10));
+    expect(videos.first.id, '1131139550');
+    // Keep media and moment requests on their existing policy.
+    expect(HuyaArchiveApi.mediaHeaders['user-agent'], contains('Mobile'));
+  });
 }
 
 final class _Http implements LiveHttp {
   late LiveRequest last;
   String body = '';
   int status = 200;
+  bool routeBrowserPage = false;
   @override
   Future<LiveResponse> send(LiveRequest request) async {
     last = request;
-    return LiveResponse(status: status, bytes: utf8.encode(body), url: request.url);
+    final mobileHome = routeBrowserPage && (request.headers['user-agent']?.contains('Mobile') ?? false);
+    return LiveResponse(
+      status: status,
+      bytes: utf8.encode(mobileHome ? '<script>window.HNF_GLOBAL_INIT = {"pageData":[]};</script>' : body),
+      url: request.url,
+    );
   }
 
   @override

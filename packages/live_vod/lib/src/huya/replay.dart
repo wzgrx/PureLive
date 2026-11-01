@@ -97,6 +97,10 @@ final class HuyaArchiveApi implements HuyaArchiveSource {
   /// Media has no application cookie or cross-platform headers.
   static const Map<String, String> mediaHeaders = {'referer': 'https://www.huya.com/', 'user-agent': HuyaApi.userAgent};
 
+  // The official desktop archive redirects mobile identities to the video
+  // home page, whose HNF_GLOBAL_INIT has no presenter archive response.
+  static const _pageHeaders = {'referer': 'https://www.huya.com/', 'user-agent': HuyaApi.desktopUserAgent};
+
   /// Accepts a public uid or the exact official archive URL.
   static String? uidFromText(String value) {
     final text = value.trim();
@@ -115,6 +119,7 @@ final class HuyaArchiveApi implements HuyaArchiveSource {
     final response = await _get(
       Uri.https('www.huya.com', '/video/u/$uid', {'tabName': 'live', 'pageIndex': '$page'}),
       cancel,
+      headers: _pageHeaders,
     );
     return parseList(response.text, uid: uid, page: page);
   }
@@ -131,11 +136,9 @@ final class HuyaArchiveApi implements HuyaArchiveSource {
     return [for (final quality in qualities) HuyaArchiveQuality(quality)];
   }
 
-  Future<LiveResponse> _get(Uri url, CancelToken? cancel) async {
+  Future<LiveResponse> _get(Uri url, CancelToken? cancel, {Map<String, String> headers = mediaHeaders}) async {
     try {
-      final response = await http.send(
-        LiveRequest(site: SiteIds.huya, url: url, headers: mediaHeaders, cancel: cancel),
-      );
+      final response = await http.send(LiveRequest(site: SiteIds.huya, url: url, headers: headers, cancel: cancel));
       if (response.status == 404) throw const NotFound('huya', 'Archive not found');
       if (response.status == 401) throw const NeedsLogin('huya', 'Archive requires login');
       if ({403, 429}.contains(response.status)) throw const RiskControl('huya', detail: 'Archive refused');
