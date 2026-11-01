@@ -113,6 +113,93 @@ void main() {
     }
   });
 
+  test('native controller requests mirror the receiver non-persistent connection contract', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final requestedPersistence = <bool>[];
+    server.listen((request) async {
+      requestedPersistence.add(request.persistentConnection);
+      await request.drain<void>();
+      final response = request.response
+        ..persistentConnection = false
+        ..headers.contentType = ContentType.json
+        ..write(jsonEncode(request.uri.path == '/api/pair' ? {'token': 'a' * 43} : <String, Object?>{}));
+      await response.close();
+    });
+    final client = PlaybackRemoteClient(Uri.parse('http://127.0.0.1:${server.port}/'));
+    try {
+      await client.pair('123456');
+      for (var i = 0; i < 8; i++) {
+        await client.status();
+      }
+      expect(requestedPersistence, hasLength(9));
+      expect(
+        requestedPersistence,
+        everyElement(isFalse),
+        reason: 'the receiver closes each response; do not offer old sockets back to a keep-alive pool',
+      );
+    } finally {
+      client.close();
+      await server.close(force: true);
+    }
+  });
+
+  test('fragmented just-over-limit POST returns400 after a bounded body drain', () async {
+    final remote = PlaybackRemote();
+    await remote.start(bind: InternetAddress.loopbackIPv4, discovery: false);
+    final http = HttpClient();
+    try {
+      final request = await http.postUrl(Uri.parse('http://127.0.0.1:${remote.port}/api/pair'));
+      request
+        ..persistentConnection = false
+        ..headers.contentType = ContentType.json
+        ..write('x' * 16384);
+      await request.flush();
+      await Future<void>.delayed(const Duration(seconds: 1));
+      request.write('x');
+      await request.flush();
+      await Future<void>.delayed(const Duration(seconds: 1));
+      final response = await request.close();
+      expect(response.statusCode, HttpStatus.badRequest);
+      await response.drain<void>();
+      expect(remote.pairedCount, 0);
+    } finally {
+      http.close(force: true);
+      await remote.stop();
+      remote.dispose();
+    }
+  });
+
+  test('a body beyond the drain budget is rejected and leaves the receiver usable', () async {
+    final remote = PlaybackRemote();
+    await remote.start(bind: InternetAddress.loopbackIPv4, discovery: false);
+    final http = HttpClient();
+    final client = PlaybackRemoteClient(Uri.parse('http://127.0.0.1:${remote.port}/'));
+    try {
+      try {
+        final request = await http.postUrl(Uri.parse('http://127.0.0.1:${remote.port}/api/pair'));
+        request
+          ..persistentConnection = false
+          ..headers.contentType = ContentType.json
+          ..write('x' * 200000);
+        final response = await request.close();
+        expect(response.statusCode, HttpStatus.badRequest);
+        await response.drain<void>();
+      } on HttpException {
+        // Rejecting beyond the bounded read budget may close the transport.
+      } on SocketException {
+        // The peer may still be writing when the read budget is exhausted.
+      }
+      expect(remote.pairedCount, 0);
+      await client.pair(remote.code);
+      expect(client.paired, isTrue);
+    } finally {
+      client.close();
+      http.close(force: true);
+      await remote.stop();
+      remote.dispose();
+    }
+  });
+
   test('browser origin, wrong codes, body limits and invalid commands are enforced', () async {
     var now = DateTime.utc(2026);
     final remote = PlaybackRemote(now: () => now);
@@ -138,6 +225,7 @@ void main() {
       String? raw,
     }) async {
       final request = await http.postUrl(Uri.parse('http://127.0.0.1:${remote.port}/api/$path'));
+      request.persistentConnection = false;
       request.headers.contentType = ContentType.json;
       if (origin != null) request.headers.set('origin', origin);
       if (token != null) request.headers.set('authorization', 'Bearer $token');

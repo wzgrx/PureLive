@@ -84,21 +84,29 @@ final class TvWallpaperFiles {
           ? ui.TargetImageSize(width: 1920, height: (height * 1920 / width).round())
           : const ui.TargetImageSize(),
     );
-    final frame = await codec.getNextFrame();
-    final image = frame.image;
-    final recorder = ui.PictureRecorder();
-    ui.Canvas(recorder).drawImage(
-      image,
-      ui.Offset.zero,
-      ui.Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma, tileMode: TileMode.mirror),
-    );
-    final blurredImage = await recorder.endRecording().toImage(image.width, image.height);
-    final png = await blurredImage.toByteData(format: ui.ImageByteFormat.png);
-    image.dispose();
-    blurredImage.dispose();
-    if (png == null) return picture;
-    await file.writeAsBytes(png.buffer.asUint8List(), flush: true);
-    return file;
+    ui.Image? image;
+    ui.Image? blurredImage;
+    ui.Picture? commands;
+    try {
+      image = (await codec.getNextFrame()).image;
+      final recorder = ui.PictureRecorder();
+      ui.Canvas(recorder).drawImage(
+        image,
+        ui.Offset.zero,
+        ui.Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma, tileMode: TileMode.mirror),
+      );
+      commands = recorder.endRecording();
+      blurredImage = await commands.toImage(image.width, image.height);
+      final png = await blurredImage.toByteData(format: ui.ImageByteFormat.png);
+      if (png == null) return picture;
+      await file.writeAsBytes(png.buffer.asUint8List(), flush: true);
+      return file;
+    } finally {
+      commands?.dispose();
+      blurredImage?.dispose();
+      image?.dispose();
+      codec.dispose();
+    }
   }
 
   /// Pictures blurred so far.

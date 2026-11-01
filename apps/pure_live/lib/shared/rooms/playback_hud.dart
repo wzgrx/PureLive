@@ -126,33 +126,72 @@ class PlaybackHudView extends StatelessWidget {
       TargetPlatform.linux => 'DejaVu Sans Mono',
       _ => 'monospace',
     };
-    final style = TextStyle(
+    TextStyle style(PlaybackHudStyle item) => TextStyle(
       inherit: false,
-      fontSize: config.size,
-      fontFamily: switch (config.font) {
+      fontSize: item.size,
+      fontFamily: switch (item.font) {
         'mono' => mono,
         'app' => base?.fontFamily,
         _ => null,
       },
-      fontFamilyFallback: config.font == 'app' ? base?.fontFamilyFallback : null,
+      fontFamilyFallback: item.font == 'app' ? base?.fontFamilyFallback : null,
       fontWeight: FontWeight.w600,
-      color: Color(config.color),
+      color: Color(item.color),
       shadows: OnVideoColors.shadows,
     ).tabular;
-    Widget contents(double? speed) => Wrap(
-      alignment: WrapAlignment.end,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 12,
-      children: [
-        if (config.clock) PlayerClock(style: style),
-        if (config.speed)
-          Text(
-            '${i18n('playback_hud_speed')}: ${playbackHudRate(speed)}',
-            key: const ValueKey('playback-hud-speed'),
-            style: style,
-          ),
-      ],
+    Widget clock() => PlayerClock(style: style(config.styleFor('clock')));
+    Widget rate(double? speed) => Text(
+      '${i18n('playback_hud_speed')}: ${playbackHudRate(speed)}',
+      key: const ValueKey('playback-hud-speed'),
+      style: style(config.styleFor('speed')),
     );
+    Widget contents(double? speed) {
+      final groups = <String, List<Widget>>{};
+      if (config.clock) (groups[config.styleFor('clock').corner] ??= []).add(clock());
+      if (config.speed) (groups[config.styleFor('speed').corner] ??= []).add(rate(speed));
+      final splitVertical =
+          groups.keys.any((key) => key.startsWith('top')) && groups.keys.any((key) => key.startsWith('bottom'));
+      return LayoutBuilder(
+        builder: (_, area) => Stack(
+          fit: StackFit.expand,
+          children: [
+            for (final entry in groups.entries)
+              Align(
+                alignment: PlaybackHudConfig.corners[entry.key]!,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: config.separate && groups.length > 1 && !splitVertical
+                        ? ((area.maxWidth - 4) / 2).clamp(0, double.infinity)
+                        : area.maxWidth,
+                    maxHeight: config.separate && splitVertical
+                        ? ((area.maxHeight - 4) / 2).clamp(0, double.infinity)
+                        : area.maxHeight,
+                  ),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: config.separate
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: entry.key.endsWith('Left')
+                                ? CrossAxisAlignment.start
+                                : CrossAxisAlignment.end,
+                            spacing: 4,
+                            children: entry.value,
+                          )
+                        : Wrap(
+                            alignment: WrapAlignment.end,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 12,
+                            children: entry.value,
+                          ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
     return Positioned.fill(
       child: LayoutBuilder(
         builder: (context, box) {
@@ -170,20 +209,14 @@ class PlaybackHudView extends StatelessWidget {
                 minimum: const EdgeInsets.all(12),
                 child: Padding(
                   padding: bounded,
-                  child: Align(
-                    alignment: PlaybackHudConfig.corners[config.corner]!,
-                    child: RepaintBoundary(
-                      key: const ValueKey('playback-hud'),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: config.speed
-                            ? ListenableBuilder(
-                                listenable: telemetry,
-                                builder: (_, _) => contents(telemetry.downloadAverage),
-                              )
-                            : contents(null),
-                      ),
-                    ),
+                  child: RepaintBoundary(
+                    key: const ValueKey('playback-hud'),
+                    child: config.speed
+                        ? ListenableBuilder(
+                            listenable: telemetry,
+                            builder: (_, _) => contents(telemetry.downloadAverage),
+                          )
+                        : contents(null),
                   ),
                 ),
               ),

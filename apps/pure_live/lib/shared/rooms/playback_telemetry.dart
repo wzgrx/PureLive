@@ -20,6 +20,9 @@ final class PlaybackTelemetry extends ValueNotifier<PlaybackStats?> with Widgets
   int _epoch = 0;
   Object? _lastIdentity;
 
+  /// Native evidence is unavailable immediately after its source identity changes.
+  PlaybackStats? get current => _lastIdentity == _identity() ? value : null;
+
   /// Short average of valid samples, including a genuinely measured zero.
   double? get downloadAverage => _downloads.isEmpty ? null : _downloads.reduce((a, b) => a + b) / _downloads.length;
 

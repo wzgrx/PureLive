@@ -264,6 +264,36 @@ void main() {
   });
   tearDown(() => AppImageCache.manager = images);
 
+  testWidgets('native medal gradients and outlines render consistently in light/dark and narrow large text (#147)', (
+    tester,
+  ) async {
+    const colors = LiveFanBadgeColors(
+      start: LiveMessageColor(120, 20, 150),
+      end: LiveMessageColor(230, 30, 130),
+      border: LiveMessageColor(255, 220, 20),
+    );
+    final line = ChatLine.chat(
+      const LiveMessage(
+        type: LiveMessageType.chat,
+        userName: '观众',
+        message: '你好',
+        color: LiveMessageColor.white,
+        fansName: '测试牌',
+        fansLevel: '33',
+        fansColors: colors,
+      ),
+    );
+    for (final theme in _themes.values) {
+      await _pumpLine(tester, line, theme: theme, width: 280, textScale: 2);
+      final chip = tester.widget<ChatChip>(find.byKey(const ValueKey('live-play-chat-fans')));
+      expect(chip.background, const Color(0xff781496));
+      expect((chip.gradient! as LinearGradient).colors, [const Color(0xff781496), const Color(0xffe61e82)]);
+      expect((chip.border! as Border).top.color, const Color(0xffffdc14));
+      expect(chip.text, '测试牌 33');
+      expect(tester.takeException(), isNull);
+    }
+  });
+
   group('c1: the defaults draw the list as before', () {
     test("ChatSizing.standard is the settings' defaults and changes no style", () {
       final theme = const LiveTheme().light;

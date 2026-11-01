@@ -1,11 +1,12 @@
 import 'package:live_core/live_core.dart';
+import 'package:live_vod/src/archive.dart';
 import 'package:live_vod/src/douyu/sign.dart';
 import 'package:live_vod/src/models.dart';
 import 'package:meta/meta.dart';
 
 /// Public metadata of an official Douyu video or a replay segment.
 @immutable
-final class DouyuVodVideo {
+final class DouyuVodVideo implements ArchiveVideo {
   /// Creates metadata, with no expiring stream URL or login credential.
   const new({
     required this.id,
@@ -33,9 +34,11 @@ final class DouyuVodVideo {
   );
 
   /// Hash id used by `/show/{id}`, distinct from the numeric point id.
+  @override
   final String id;
 
   /// Display title.
+  @override
   final String title;
 
   /// Public encoded author id used by author-list endpoints.
@@ -48,6 +51,7 @@ final class DouyuVodVideo {
   final String cover;
 
   /// Duration, or zero until the engine provides it.
+  @override
   final Duration duration;
 
   /// Numeric signing point id, supplied by the video detail.
@@ -91,14 +95,16 @@ final class DouyuVodDetail {
 
 /// A platform-offered rendition, including an unavailable paid/login tier.
 @immutable
-final class DouyuVodQuality {
+final class DouyuVodQuality implements ArchiveQuality {
   /// Creates a rendition. Only [playable] entries can be opened.
   const new({required this.id, required this.label, required this.level, required this.url, required this.playable});
 
   /// Platform stream type.
+  @override
   final String id;
 
   /// Platform quality label.
+  @override
   final String label;
 
   /// Ordering level, highest first.
@@ -108,6 +114,7 @@ final class DouyuVodQuality {
   final String url;
 
   /// Whether the server provides a URL and allows this client to play it.
+  @override
   final bool playable;
 }
 

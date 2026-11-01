@@ -303,6 +303,22 @@ final class LiveBadge {
   String toString() => 'LiveBadge($url${id.isEmpty ? '' : ', $id'})';
 }
 
+/// Platform-supplied fan medal colours; absent metadata keeps the theme fallback.
+@immutable
+final class LiveFanBadgeColors {
+  /// Creates an opaque medal gradient without depending on Flutter.
+  const new({required this.start, this.end, this.border});
+
+  /// First colour, or the platform's solid medal colour.
+  final LiveMessageColor start;
+
+  /// Optional second gradient colour.
+  final LiveMessageColor? end;
+
+  /// Optional outline supplied by the platform.
+  final LiveMessageColor? border;
+}
+
 /// One danmaku message.
 @immutable
 final class LiveMessage {
@@ -317,6 +333,7 @@ final class LiveMessage {
     this.userLevel = '',
     this.fansLevel = '',
     this.fansName = '',
+    this.fansColors,
     this.isLocal = false,
     this.messageId = '',
     this.sentAt,
@@ -355,6 +372,9 @@ final class LiveMessage {
 
   /// Fan badge name.
   final String fansName;
+
+  /// Native medal colours, when the platform provides them.
+  final LiveFanBadgeColors? fansColors;
 
   /// Composed on this device.
   final bool isLocal;

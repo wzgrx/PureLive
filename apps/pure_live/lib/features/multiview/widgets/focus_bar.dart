@@ -7,6 +7,7 @@ import 'package:pure_live/features/multiview/logic/multiview_controller.dart';
 import 'package:pure_live/features/multiview/widgets/cell_controls.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/rooms/platform_texts.dart';
+import 'package:pure_live/shared/rooms/playback_lines.dart';
 
 /// The large cell's controls in the immersive and fullscreen modes (3.x
 /// `_buildLargeControlBar`, docs/A-界面设计/A13-网络电视和多画面界面/A13.2-多画面 c14): pause, refresh, the
@@ -71,11 +72,9 @@ class FocusControlBar extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           child: session == null
               ? const SizedBox.shrink()
-              : StreamBuilder<PlaybackState>(
-                  stream: session.states,
-                  initialData: session.state,
-                  builder: (context, snapshot) {
-                    final playback = snapshot.data ?? session.state;
+              : PlaybackLineBuilder(
+                  session: session,
+                  builder: (context, playback, lines) {
                     final paused = playback.status == PlaybackStatus.paused;
                     final danmaku = controller.danmakuEnabled;
                     return Row(
@@ -128,11 +127,9 @@ class FocusControlBar extends StatelessWidget {
                             key: const ValueKey('multiview-bar-line'),
                             entryKey: 'multiview-bar-line-item',
                             tooltip: i18n('select_play_line'),
-                            label: i18n('toolbox_line', args: {'index': '${playback.lineIndex + 1}'}),
-                            entries: [
-                              for (var line = 0; line < playback.lineCount; line++)
-                                i18n('toolbox_line', args: {'index': '${line + 1}'}),
-                            ],
+                            label: lines.name(playback.lineIndex),
+                            entries: lines.labels,
+                            descriptions: lines.origins.any((host) => host.isNotEmpty) ? lines.origins : null,
                             current: playback.lineIndex,
                             enabled: !cell.switching,
                             onVideo: true,

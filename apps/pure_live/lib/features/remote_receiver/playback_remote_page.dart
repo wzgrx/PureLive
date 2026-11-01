@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/i18n/i18n.dart';
@@ -12,6 +13,7 @@ import 'package:pure_live/shared/qr_scan.dart';
 import 'package:pure_live/shared/remote/playback_remote.dart';
 import 'package:pure_live/shared/remote/remote_access.dart';
 import 'package:pure_live/shared/remote/remote_client.dart';
+import 'package:pure_live/shared/remote/screen_capture_hint.dart';
 import 'package:pure_live/shared/remote/screen_share.dart';
 
 /// LAN browser/app pairing, link pushes and playback control on every layout.
@@ -232,6 +234,28 @@ class _PlaybackRemotePageState extends ConsumerState<PlaybackRemotePage> {
               key: const ValueKey('screen-share-capture'),
               onPressed: _busy ? null : () => unawaited(_run(_share.capturing ? _share.stop : _share.startCapture)),
               child: Text(i18n(_share.capturing ? 'screen_share_stop' : 'screen_share_enable_capture')),
+            ),
+            ListTile(
+              key: const ValueKey('screen-capture-hint-setting'),
+              title: Text(i18n('screen_capture_hint_title')),
+              subtitle: Text(i18n('screen_capture_hint_desc')),
+              trailing: Text(
+                i18n('screen_capture_hint_${ScreenCaptureHint.of(watchSetting(ref, Settings.screenCaptureHint)).name}'),
+              ),
+              onTap: () async {
+                final selected = await showAppOptionDialog<String>(
+                  context: context,
+                  title: i18n('screen_capture_hint_title'),
+                  options: [
+                    for (final mode in ['full', 'compact', 'hidden'])
+                      AppDialogOption(value: mode, label: i18n('screen_capture_hint_$mode')),
+                  ],
+                  selected: ScreenCaptureHint.of(ref.read(storeProvider).settings.get(Settings.screenCaptureHint)).name,
+                );
+                if (selected != null && mounted) {
+                  await ref.read(storeProvider).settings.set(Settings.screenCaptureHint, selected);
+                }
+              },
             ),
             Text(i18n('screen_share_video_only')),
             if (Theme.of(context).platform == TargetPlatform.iOS) Text(i18n('screen_share_ios_scope')),

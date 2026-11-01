@@ -67,6 +67,7 @@ class TvIptvPane extends ConsumerStatefulWidget {
 class TvIptvPaneState extends ConsumerState<TvIptvPane> {
   final Map<String, GlobalKey<TvRoomGridState>> _grids = {};
   final Map<String, FocusNode> _listNodes = {};
+  final FocusNode _manage = FocusNode(debugLabel: 'iptv manage');
   Future<List<TvPlaylist>>? _playlists;
   String? _current;
   String? _shown;
@@ -89,6 +90,7 @@ class TvIptvPaneState extends ConsumerState<TvIptvPane> {
 
   @override
   void dispose() {
+    _manage.dispose();
     for (final node in _listNodes.values) {
       node.dispose();
     }
@@ -134,12 +136,44 @@ class TvIptvPaneState extends ConsumerState<TvIptvPane> {
             Expanded(
               child: current.channels.isEmpty
                   ? TvStatusView(icon: TvIcons.menuIptv, title: i18n('tv_no_rooms'))
-                  : TvRoomGrid(key: _grid(current.id), rooms: current.channels, numbered: true),
+                  : TvRoomGrid(
+                      key: _grid(current.id),
+                      rooms: current.channels,
+                      numbered: true,
+                      onLeaveLeft: () => _listNode(current.id).requestFocus(),
+                    ),
             ),
           ],
         );
       },
     );
+  }
+
+  KeyEventResult _playlistKey(String? id, KeyEvent event, List<TvPlaylist> lists, TvPlaylist current) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    final entries = [...lists.map((list) => list.id), null];
+    final index = entries.indexOf(id);
+    if (key == LogicalKeyboardKey.arrowUp || key == LogicalKeyboardKey.arrowDown) {
+      final next = index + (key == LogicalKeyboardKey.arrowUp ? -1 : 1);
+      if (next >= 0 && next < entries.length) {
+        final target = (entries[next] == null ? _manage : _listNode(entries[next]!))..requestFocus();
+        if (target.context case final context?) Scrollable.ensureVisible(context);
+      }
+      return KeyEventResult.handled;
+    }
+    if (key != LogicalKeyboardKey.arrowRight) return KeyEventResult.ignored;
+    final selected = id ?? current.id;
+    if (selected == current.id) {
+      _grid(selected).currentState?.enter();
+    } else {
+      final origin = _listNode(selected);
+      setState(() => _current = selected);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _shown == selected && origin.hasFocus) _grid(selected).currentState?.enter();
+      });
+    }
+    return KeyEventResult.handled;
   }
 
   Widget _playlistColumn(List<TvPlaylist> lists, TvPlaylist current) {
@@ -157,21 +191,15 @@ class TvIptvPaneState extends ConsumerState<TvIptvPane> {
               subtitle: i18n('iptv_channel_count', args: {'count': '${list.channels.length}'}),
               selected: list.id == current.id,
               onTap: () => setState(() => _current = list.id),
-              onKey: (node, event) {
-                if (event is KeyUpEvent || event.logicalKey != LogicalKeyboardKey.arrowRight) {
-                  return KeyEventResult.ignored;
-                }
-                if (list.id != current.id) setState(() => _current = list.id);
-                final grid = _grid(list.id);
-                WidgetsBinding.instance.addPostFrameCallback((_) => grid.currentState?.enter());
-                return KeyEventResult.handled;
-              },
+              onKey: (node, event) => _playlistKey(list.id, event, lists, current),
             ),
           ),
         Padding(
           padding: EdgeInsets.only(top: scale.px(6)),
           child: TvButton(
             key: const ValueKey('tv-iptv-manage'),
+            focusNode: _manage,
+            onKey: (_, event) => _playlistKey(null, event, lists, current),
             icon: TvIcons.manage,
             label: i18n('iptv_manage'),
             small: true,

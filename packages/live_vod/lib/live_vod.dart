@@ -4,6 +4,7 @@
 /// cache rules). No UI (docs/L-网络电视和点播/L03-点播和音乐/L03.1-哔哩哔哩点播和音乐核心包/record.md).
 library;
 
+export 'src/archive.dart';
 export 'src/client.dart';
 export 'src/danmaku.dart';
 export 'src/douyu/api.dart';
@@ -11,6 +12,7 @@ export 'src/douyu/models.dart';
 export 'src/douyu/sign.dart';
 export 'src/douyu/source.dart';
 export 'src/douyu/timeline.dart';
+export 'src/huya/replay.dart';
 export 'src/models.dart';
 export 'src/music/audio_cache.dart';
 export 'src/music/daily.dart';

@@ -650,6 +650,7 @@ abstract final class BilibiliDanmakuProtocol {
       color: color == 0 ? LiveMessageColor.white : LiveMessageColor.numberToColor(color),
       fansName: medal.name,
       fansLevel: medal.level,
+      fansColors: _medalColors(rich, info.length > 3 ? info[3] : null),
       messageId: nonce.isEmpty ? '' : 'bilibili:$nonce',
       sentAt: sentAt,
       emotes: emotes('${info[1]}', meta),
@@ -675,6 +676,38 @@ abstract final class BilibiliDanmakuProtocol {
       return (name: text(legacy[1]), level: level(legacy[0]));
     }
     return (name: '', level: '');
+  }
+
+  /// Native medal colours: rich user.medal, else DANMU_MSG info[3].
+  /// Only use colours belonging to the selected medal, never another badge.
+  static LiveFanBadgeColors? _medalColors(Object? rich, Object? legacy) {
+    LiveMessageColor? color(Object? value) {
+      final n = jsonInt(value);
+      return n != null && n >= 0 && n <= 0xffffff ? LiveMessageColor.numberToColor(n) : null;
+    }
+
+    final user = rich is Map ? (rich['user'] is Map ? rich['user'] as Map : rich) : null;
+    if (user?['medal'] case final Map<Object?, Object?> medal
+        when medal['name'] is String && (medal['name']! as String).trim().isNotEmpty) {
+      final start = color(medal['color_start']) ?? color(medal['color']);
+      if (start == null && _medal(rich, null) == _medal(null, legacy)) {
+        return _medalColors(null, legacy);
+      }
+      return start == null
+          ? null
+          : LiveFanBadgeColors(start: start, end: color(medal['color_end']), border: color(medal['color_border']));
+    }
+    if (legacy is! List || legacy.length < 5 || legacy[1] is! String || (legacy[1] as String).trim().isEmpty) {
+      return null;
+    }
+    final start = (legacy.length > 8 ? color(legacy[8]) : null) ?? color(legacy[4]);
+    return start == null
+        ? null
+        : LiveFanBadgeColors(
+            start: start,
+            end: legacy.length > 9 ? color(legacy[9]) : null,
+            border: legacy.length > 7 ? color(legacy[7]) : null,
+          );
   }
 
   /// The sender's avatar: `user.base.face` of the rich user ([rich],

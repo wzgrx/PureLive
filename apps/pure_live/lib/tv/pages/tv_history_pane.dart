@@ -16,6 +16,7 @@ import 'package:pure_live/shared/rooms/room_texts.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/widgets/tv_button.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
+import 'package:pure_live/tv/widgets/tv_focus_region.dart';
 import 'package:pure_live/tv/widgets/tv_room_dialog.dart';
 import 'package:pure_live/tv/widgets/tv_room_grid.dart';
 import 'package:pure_live/tv/widgets/tv_status.dart';
@@ -47,6 +48,7 @@ class TvHistoryPane extends ConsumerStatefulWidget {
 class _TvHistoryPaneState extends ConsumerState<TvHistoryPane> {
   static const String _all = '';
   final Map<String, GlobalKey<TvRoomGridState>> _grids = {};
+  final GlobalKey<TvFocusRegionState> _actions = GlobalKey();
   final FocusNode _clear = FocusNode(debugLabel: 'history clear');
   final GlobalKey<TvTabBarState> _platformTabs = GlobalKey();
   final GlobalKey<TvTabBarState> _dayTabs = GlobalKey();
@@ -170,40 +172,50 @@ class _TvHistoryPaneState extends ConsumerState<TvHistoryPane> {
       children: [
         Padding(
           padding: EdgeInsets.fromLTRB(scale.px(12), scale.px(8), scale.px(12), 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  i18n(
-                    limit == unlimitedHistoryLimit ? 'tv_history_count' : 'tv_history_count_limit',
-                    args: {'count': '${rooms.length}', 'limit': '$limit'},
+          child: TvFocusRegion(
+            key: _actions,
+            horizontal: true,
+            onUp: () {},
+            onDown: () {
+              if (!(_platformTabs.currentState?.focusRemembered() ?? false)) {
+                _dayTabs.currentState?.focusRemembered();
+              }
+            },
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    i18n(
+                      limit == unlimitedHistoryLimit ? 'tv_history_count' : 'tv_history_count_limit',
+                      args: {'count': '${rooms.length}', 'limit': '$limit'},
+                    ),
+                    key: const ValueKey('tv-history-count'),
+                    style: scale.font(TvTextSize.body, color: palette.textSecondary),
                   ),
-                  key: const ValueKey('tv-history-count'),
-                  style: scale.font(TvTextSize.body, color: palette.textSecondary),
                 ),
-              ),
-              TvButton(
-                key: const ValueKey('tv-history-refresh'),
-                icon: AppIcons.refresh,
-                label: i18n(_refreshing ? 'tv_history_refreshing' : 'tv_refresh'),
-                onTap: _refreshing ? null : () => unawaited(_refresh(shown)),
-              ),
-              SizedBox(width: scale.px(12)),
-              TvButton(
-                key: const ValueKey('tv-history-limit'),
-                label: i18n('tv_history_limit', args: {'limit': historyLimitLabel(limit)}),
-                onTap: () => unawaited(_limit(limit, rooms.length)),
-              ),
-              SizedBox(width: scale.px(12)),
-              TvButton(
-                key: const ValueKey('tv-history-clear'),
-                focusNode: _clear,
-                icon: TvIcons.clearAll,
-                label: i18n('tv_history_clear'),
-                kind: TvButtonKind.danger,
-                onTap: () => unawaited(_clearAll(shown)),
-              ),
-            ],
+                TvButton(
+                  key: const ValueKey('tv-history-refresh'),
+                  icon: AppIcons.refresh,
+                  label: i18n(_refreshing ? 'tv_history_refreshing' : 'tv_refresh'),
+                  onTap: _refreshing ? null : () => unawaited(_refresh(shown)),
+                ),
+                SizedBox(width: scale.px(12)),
+                TvButton(
+                  key: const ValueKey('tv-history-limit'),
+                  label: i18n('tv_history_limit', args: {'limit': historyLimitLabel(limit)}),
+                  onTap: () => unawaited(_limit(limit, rooms.length)),
+                ),
+                SizedBox(width: scale.px(12)),
+                TvButton(
+                  key: const ValueKey('tv-history-clear'),
+                  focusNode: _clear,
+                  icon: TvIcons.clearAll,
+                  label: i18n('tv_history_clear'),
+                  kind: TvButtonKind.danger,
+                  onTap: () => unawaited(_clearAll(shown)),
+                ),
+              ],
+            ),
           ),
         ),
         if (counts.length > 1)
@@ -219,7 +231,8 @@ class _TvHistoryPaneState extends ConsumerState<TvHistoryPane> {
             ],
             selected: platforms.indexOf(_platform),
             onSelect: (index) => setState(() => _platform = platforms[index]),
-            onDown: () => _dayTabs.currentState?.focusSelected() ?? gridKey.currentState?.enter() ?? false,
+            onUp: () => _actions.currentState?.enter() ?? false,
+            onDown: () => _dayTabs.currentState?.focusRemembered() ?? false,
           ),
         TvTabBar(
           key: _dayTabs,
@@ -231,13 +244,15 @@ class _TvHistoryPaneState extends ConsumerState<TvHistoryPane> {
           ],
           selected: day == null ? 0 : days.indexOf(day) + 1,
           onSelect: (index) => setState(() => _day = index == 0 ? null : days[index - 1]),
+          onUp: () =>
+              (_platformTabs.currentState?.focusRemembered() ?? false) || (_actions.currentState?.enter() ?? false),
           onDown: () => gridKey.currentState?.enter() ?? false,
         ),
         Expanded(
           child: TvRoomGrid(
             key: gridKey,
             rooms: shown,
-            onLeaveUp: () => _dayTabs.currentState?.focusSelected(),
+            onLeaveUp: () => _dayTabs.currentState?.focusRemembered(),
             showPlatform: _platform == _all,
             detail: (room) => historyWatchedLabel(room.lastWatchedAt, now),
             actions: (room) => [

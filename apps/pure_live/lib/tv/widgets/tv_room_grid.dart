@@ -28,6 +28,7 @@ class TvRoomGrid extends ConsumerStatefulWidget {
     required this.rooms,
     this.onEndReached,
     this.onLeaveUp,
+    this.onLeaveLeft,
     this.onOpen,
     this.actions,
     this.detail,
@@ -45,6 +46,9 @@ class TvRoomGrid extends ConsumerStatefulWidget {
 
   /// Up on the first row; when null the focus moves by geometry.
   final VoidCallback? onLeaveUp;
+
+  /// Left on the first column, before the home rail's geometric fallback.
+  final VoidCallback? onLeaveLeft;
 
   /// Opens a room; null opens the TV room ([openTvRoom]) with [rooms] as its
   /// list. Completes with the room shown last.
@@ -121,6 +125,7 @@ class TvRoomGridState extends ConsumerState<TvRoomGrid> {
           mainSpacing: mainSpacing,
           onEndReached: widget.onEndReached,
           onLeaveUp: widget.onLeaveUp,
+          onLeaveLeft: widget.onLeaveLeft,
           itemBuilder: (context, index, node, onKey) {
             final room = widget.rooms[index];
             return TvRoomCard(

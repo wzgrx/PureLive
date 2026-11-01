@@ -5,6 +5,7 @@ import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/features/settings/appearance_pages.dart';
 import 'package:pure_live/features/settings/audience_pages.dart';
 import 'package:pure_live/features/settings/background_guide_tiles.dart';
+import 'package:pure_live/features/settings/custom_background_page.dart';
 import 'package:pure_live/features/settings/data_tools.dart';
 import 'package:pure_live/features/settings/live_alert_tiles.dart';
 import 'package:pure_live/features/settings/playback_hud_page.dart';
@@ -365,6 +366,15 @@ List<SettingsEntry> _build() {
       desc: 'change_theme_mode_subtitle',
       settings: [Settings.themeMode],
       keywords: ['dark', 'light', '深色', '浅色', '夜间', '暗色'],
+    )
+    ..link(
+      'custom_background',
+      'custom_background_title',
+      AppIcons.themeColor,
+      page: (_) => const CustomBackgroundPage(),
+      desc: 'custom_background_desc',
+      settings: [Settings.customBackground],
+      keywords: ['壁纸', '背景', 'background', 'wallpaper'],
     )
     ..add(
       'pure_black',

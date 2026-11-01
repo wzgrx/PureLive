@@ -10,6 +10,7 @@ import 'package:pure_live/features/multiview/logic/multiview_controller.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/record/record_button.dart';
 import 'package:pure_live/shared/rooms/platform_texts.dart';
+import 'package:pure_live/shared/rooms/playback_lines.dart';
 import 'package:pure_live/shared/rooms/room_gain_control.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 
@@ -276,11 +277,9 @@ class _StreamButtons extends StatelessWidget {
     final qualities = cell.qualities;
     if (!cell.playing || session == null || qualities.isEmpty) return const SizedBox.shrink();
     final current = cell.qualityIndex.clamp(0, qualities.length - 1);
-    return StreamBuilder<PlaybackState>(
-      stream: session.states,
-      initialData: session.state,
-      builder: (context, snapshot) {
-        final playback = snapshot.data ?? session.state;
+    return PlaybackLineBuilder(
+      session: session,
+      builder: (context, playback, lines) {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -301,11 +300,9 @@ class _StreamButtons extends StatelessWidget {
                 key: const ValueKey('multiview-line'),
                 entryKey: 'multiview-line-item',
                 tooltip: i18n('select_play_line'),
-                label: i18n('toolbox_line', args: {'index': '${playback.lineIndex + 1}'}),
-                entries: [
-                  for (var line = 0; line < playback.lineCount; line++)
-                    i18n('toolbox_line', args: {'index': '${line + 1}'}),
-                ],
+                label: lines.name(playback.lineIndex),
+                entries: lines.labels,
+                descriptions: lines.origins.any((host) => host.isNotEmpty) ? lines.origins : null,
                 current: playback.lineIndex,
                 enabled: !cell.switching,
                 onMenu: onMenu,

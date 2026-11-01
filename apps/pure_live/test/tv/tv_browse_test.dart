@@ -43,6 +43,57 @@ LiveRoom _room(String platform, String id, LiveStatus status) =>
     LiveRoom(platform: platform, roomId: id, nick: '主播$id', title: '标题$id', liveStatus: status);
 
 void main() {
+  for (final id in ['live', 'replay', 'offline']) {
+    testWidgets('issue141: every empty favorite tab reaches search with Down: $id', (tester) async {
+      final services = (await tester.runAsync(testServices))!;
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 5));
+        await tester.runAsync(services.close);
+      });
+      await tester.runAsync(loadStrings);
+      final controller = FavoriteController(
+        store: services.store,
+        refresher: FollowRefresher(sites: SiteRegistry({})),
+      );
+      final scheme = ColorScheme.fromSeed(seedColor: LiveTheme.brandBlue, brightness: Brightness.dark);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appServicesProvider.overrideWithValue(services),
+            favoriteControllerProvider.overrideWith((ref) {
+              ref.onDispose(controller.dispose);
+              return controller..start();
+            }),
+          ],
+          child: MaterialApp(
+            theme: ThemeData(colorScheme: scheme),
+            home: TvTheme(
+              palette: TvPalette.of(scheme),
+              child: const Scaffold(body: TvFavoritesPane()),
+            ),
+          ),
+        ),
+      );
+      await settleBrowse(tester);
+      final tab = tester.widget<TvFocusable>(find.byKey(ValueKey('tv-tab-$id'))).focusNode!..requestFocus();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump(const Duration(seconds: 1));
+      final search = find.widgetWithText(TvButton, '搜索直播');
+      expect(FocusManager.instance.primaryFocus?.context, isNotNull);
+      expect(
+        Focus.of(tester.element(find.text('搜索直播'))).hasFocus,
+        isTrue,
+        reason: 'Down follows the content region, independent of tab X coordinate',
+      );
+      expect(search, findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump(const Duration(seconds: 1));
+      expect(tab.hasFocus, isTrue, reason: 'Up restores the same unselected tab');
+    });
+  }
+
   testWidgets('issue #17: returning from cards remembers the focused filter; states and offline rows', (tester) async {
     tester.view
       ..physicalSize = const Size(1920, 1080)

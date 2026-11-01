@@ -12,6 +12,9 @@ final class PlaybackHudConfig {
     this.size = 18,
     this.color = 0xffffffff,
     this.font = 'app',
+    this.separate = false,
+    this.clockStyle,
+    this.speedStyle,
   });
 
   /// Safely reads imported or older configuration values.
@@ -19,6 +22,17 @@ final class PlaybackHudConfig {
     T choice<T>(String key, Set<T> choices, T fallback) => choices.contains(value[key]) ? value[key]! as T : fallback;
     final rawSize = value['size'];
     final rawColor = value['color'];
+    PlaybackHudStyle? style(Object? raw) {
+      if (raw is! Map) return null;
+      const fields = {'corner', 'size', 'color', 'font'};
+      return PlaybackHudStyle.fromJson({
+        for (final key in fields)
+          if (value.containsKey(key)) key: value[key],
+        for (final entry in raw.entries)
+          if (entry.key is String && fields.contains(entry.key)) entry.key as String: entry.value,
+      });
+    }
+
     return .new(
       mode: choice('mode', modes, 'controls'),
       clock: value['clock'] != false,
@@ -27,6 +41,9 @@ final class PlaybackHudConfig {
       size: rawSize is num && rawSize.isFinite ? rawSize.toDouble().clamp(12, 48) : 18,
       color: rawColor is int && rawColor >= 0 && rawColor <= 0xffffffff ? rawColor : 0xffffffff,
       font: choice('font', fonts, 'app'),
+      separate: value['separate'] == true,
+      clockStyle: style(value['clockStyle']),
+      speedStyle: style(value['speedStyle']),
     );
   }
 
@@ -50,6 +67,22 @@ final class PlaybackHudConfig {
 
   /// Application, system sans-serif, or monospace font.
   final String font;
+
+  /// Whether clock and speed have independent styling and placement.
+  final bool separate;
+
+  /// Optional clock overrides; null inherits the legacy combined appearance.
+  final PlaybackHudStyle? clockStyle;
+
+  /// Optional speed overrides; null inherits the legacy combined appearance.
+  final PlaybackHudStyle? speedStyle;
+
+  /// Combined presentation retained for older settings and backups.
+  PlaybackHudStyle get combinedStyle => PlaybackHudStyle(corner: corner, size: size, color: color, font: font);
+
+  /// Resolved independent appearance without changing stored legacy values.
+  PlaybackHudStyle styleFor(String field) =>
+      !separate ? combinedStyle : (field == 'clock' ? clockStyle : speedStyle) ?? combinedStyle;
 
   /// Supported visibility modes.
   static const Set<String> modes = {'off', 'controls', 'always'};
@@ -77,5 +110,40 @@ final class PlaybackHudConfig {
     'size': size,
     'color': color,
     'font': font,
+    'separate': separate,
+    'clockStyle': ?clockStyle?.toJson(),
+    'speedStyle': ?speedStyle?.toJson(),
   };
+}
+
+/// Appearance of one information item. Uses the same bounds as combined HUDs.
+@immutable
+final class PlaybackHudStyle {
+  /// Creates one item's appearance.
+  const new({this.corner = 'topRight', this.size = 18, this.color = 0xffffffff, this.font = 'app'});
+
+  /// Validates nested imported values through the existing shared rules.
+  factory fromJson(Map<String, Object?> value) {
+    final config = PlaybackHudConfig.fromJson(
+      {...value}
+        ..remove('clockStyle')
+        ..remove('speedStyle'),
+    );
+    return config.combinedStyle;
+  }
+
+  /// Safe corner.
+  final String corner;
+
+  /// Logical font size, 12 to 48.
+  final double size;
+
+  /// ARGB text colour.
+  final int color;
+
+  /// Portable font choice.
+  final String font;
+
+  /// Stable nested representation.
+  Map<String, Object?> toJson() => {'corner': corner, 'size': size, 'color': color, 'font': font};
 }

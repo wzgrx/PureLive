@@ -988,6 +988,12 @@ abstract final class Settings {
   /// Optional per-room signed dB overrides; absent entries inherit the global gain.
   static const roomVolumeGains = JsonSetting('roomVolumeGains', section: 'volume', defaultValue: {});
 
+  /// Application capture banner visibility; OS privacy indicators are unaffected.
+  static const screenCaptureHint = StringSetting('screenCaptureHint', section: 'app', defaultValue: 'full');
+
+  /// Optional local image or colour behind phone and desktop pages.
+  static const customBackground = JsonSetting('customBackground', section: 'app', defaultValue: {});
+
   /// Local clock and media input-rate presentation; absent keys retain defaults.
   static const playbackHud = JsonSetting('playbackHud', section: 'player', defaultValue: {});
 
@@ -2179,6 +2185,8 @@ abstract final class Settings {
     roomVolumes,
     roomVolumeGains,
     playbackHud,
+    customBackground,
+    screenCaptureHint,
     allowAudioMixing,
     roomCardMobilePreset,
     roomCardDesktopPreset,

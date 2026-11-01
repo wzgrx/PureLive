@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/services.dart';
-import 'package:pure_live/features/douyu_vod/vod_progress.dart';
+import 'package:pure_live/shared/rooms/archive/douyu_archive_progress.dart';
+import 'package:pure_live/shared/rooms/archive/huya_archive_controller.dart';
 
 /// The Bilibili video-on-demand plumbing (M14.0 `live_vod`): the app's HTTP
 /// client (same proxy and rate rules as the live platform, site id
@@ -32,5 +33,19 @@ final Provider<DouyuVodProgressStore> douyuVodProgressProvider = Provider((ref) 
   return DouyuVodProgressStore(
     read: () => meta.get('douyu-vod-history-v1'),
     write: (value) => meta.set('douyu-vod-history-v1', value),
+  );
+});
+
+/// Public Huya broadcast recordings, resolved independently of live streams.
+final Provider<HuyaArchiveSource> huyaArchiveProvider = Provider(
+  (ref) => HuyaArchiveApi(ref.watch(appServicesProvider).http),
+);
+
+/// Separate local progress namespace; contains ids and millisecond positions only.
+final Provider<HuyaArchiveProgress> huyaArchiveProgressProvider = Provider((ref) {
+  final meta = ref.watch(storeProvider).meta;
+  return HuyaArchiveProgress(
+    read: () => meta.get('huya-archive-progress-v1'),
+    write: (value) => meta.set('huya-archive-progress-v1', value),
   );
 });

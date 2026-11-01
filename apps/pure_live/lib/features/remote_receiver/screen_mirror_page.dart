@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_observer.dart';
+import 'package:pure_live/shared/remote/screen_capture_hint.dart';
 import 'package:pure_live/shared/remote/screen_share.dart';
 
 /// A real route covers the old room, including native/predictive Back handling.
@@ -184,10 +186,29 @@ class ScreenCaptureIndicator extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final share = ref.watch(appServicesProvider).screenShare;
+    final hint = ScreenCaptureHint.of(watchSetting(ref, Settings.screenCaptureHint));
+    return ScreenCaptureIndicatorView(share: share, hint: hint);
+  }
+}
+
+/// Provider-independent banner with an always-local stop action.
+class ScreenCaptureIndicatorView extends StatelessWidget {
+  /// Creates the selected application-only presentation.
+  const new({required this.share, required this.hint, super.key});
+
+  /// The same owned session used by the remote-control page.
+  final ScreenShare share;
+
+  /// Banner visibility; consent remains visible in every mode.
+  final ScreenCaptureHint hint;
+
+  @override
+  Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: share,
       builder: (context, _) {
         if (!share.capturing && !share.consenting) return const SizedBox.shrink();
+        if (hint == ScreenCaptureHint.hidden && !share.consenting) return const SizedBox.shrink();
         return Stack(
           children: [
             Positioned(
@@ -196,16 +217,26 @@ class ScreenCaptureIndicator extends ConsumerWidget {
               child: Material(
                 color: Theme.of(context).colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 12),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(i18n(share.consenting ? 'screen_share_consent' : 'screen_share_active')),
-                      TextButton(onPressed: () => unawaited(share.stop()), child: Text(i18n('screen_share_stop'))),
-                    ],
-                  ),
-                ),
+                child: hint == ScreenCaptureHint.compact && !share.consenting
+                    ? IconButton(
+                        key: const ValueKey('screen-capture-compact-stop'),
+                        tooltip: i18n('screen_share_stop'),
+                        onPressed: () => unawaited(share.stop()),
+                        icon: const Icon(AppIcons.stopRecording),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(i18n(share.consenting ? 'screen_share_consent' : 'screen_share_active')),
+                            TextButton(
+                              onPressed: () => unawaited(share.stop()),
+                              child: Text(i18n('screen_share_stop')),
+                            ),
+                          ],
+                        ),
+                      ),
               ),
             ),
           ],

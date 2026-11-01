@@ -10,6 +10,8 @@ import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/links/supported_platforms.dart';
+import 'package:pure_live/shared/rooms/archive_navigation.dart';
+import 'package:pure_live/shared/rooms/playback_lines.dart';
 
 /// Reads the clipboard text (tests replace it).
 final Provider<Future<String?> Function()> toolboxClipboardProvider = Provider<Future<String?> Function()>(
@@ -117,8 +119,8 @@ class _ToolboxPageState extends ConsumerState<ToolboxPage> {
         chooseLine: (urls) => _choose(
           title: i18n('toolbox_select_line'),
           items: urls,
-          label: (_, index) => i18n('toolbox_line', args: {'index': '${index + 1}'}),
-          subtitle: (url) => url,
+          label: (line, index) => playbackLineName(index, line: line),
+          subtitle: (line) => line.url,
         ),
       ),
     );
@@ -164,6 +166,15 @@ class _ToolboxPageState extends ConsumerState<ToolboxPage> {
         children: [
           // c9: the cards of the settings pages, at most 720 wide.
           for (final child in [
+            Card(
+              child: ListTile(
+                key: const ValueKey('toolbox-huya-archives'),
+                leading: const Icon(AppIcons.vodCatalog),
+                title: Text(i18n('huya_replay_title')),
+                subtitle: Text(i18n('huya_replay_hint')),
+                onTap: () => unawaited(openHuyaArchives(context)),
+              ),
+            ),
             Card(
               child: ListTile(
                 key: const ValueKey('toolbox-douyu-vod'),

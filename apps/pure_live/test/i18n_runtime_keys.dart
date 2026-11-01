@@ -14,6 +14,8 @@ import 'package:pure_live/features/settings/settings_catalog.dart';
 import 'package:pure_live/features/settings/settings_editors.dart';
 import 'package:pure_live/features/settings/settings_model.dart';
 import 'package:pure_live/i18n/i18n.dart';
+import 'package:pure_live/shared/background/custom_background.dart';
+import 'package:pure_live/shared/remote/screen_capture_hint.dart';
 import 'package:pure_live/shared/rooms/playback_hud_config.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 
@@ -47,6 +49,16 @@ List<RuntimeKeyRule> runtimeKeyRules() {
       if (key(pack) != generic) key(pack),
   };
   return [
+    (
+      template: 'custom_background_*',
+      keys: [for (final fit in CustomBackgroundConfig.fits) 'custom_background_$fit'],
+      optional: false,
+    ),
+    (
+      template: 'screen_capture_hint_*',
+      keys: [for (final mode in ScreenCaptureHint.values) 'screen_capture_hint_${mode.name}'],
+      optional: false,
+    ),
     (
       template: 'playback_hud_*',
       keys: [

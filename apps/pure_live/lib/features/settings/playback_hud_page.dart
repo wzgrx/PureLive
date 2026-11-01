@@ -24,6 +24,18 @@ class PlaybackHudPage extends ConsumerStatefulWidget {
 
 class _PlaybackHudPageState extends ConsumerState<PlaybackHudPage> {
   double? _size;
+  String _editing = 'clock';
+
+  Future<void> _appearance(PlaybackHudConfig config, Map<String, Object?> patch) async {
+    if (!config.separate) {
+      await _save(patch);
+      return;
+    }
+    final style = config.styleFor(_editing);
+    await _save({
+      '${_editing}Style': PlaybackHudStyle.fromJson({...style.toJson(), ...patch}).toJson(),
+    });
+  }
 
   Future<void> _save(Map<String, Object?> patch) async {
     final settings = ref.read(storeProvider).settings;
@@ -38,12 +50,25 @@ class _PlaybackHudPageState extends ConsumerState<PlaybackHudPage> {
       options: [for (final value in values) (value: value, label: i18n('playback_hud_$value'), description: null)],
       selected: selected,
     );
-    if (value != null && mounted) await _save({field: value});
+    if (value != null && mounted) {
+      final config = PlaybackHudConfig.fromJson(ref.read(storeProvider).settings.get(Settings.playbackHud));
+      if (field == 'mode') {
+        await _save({field: value});
+      } else if (field == 'edit') {
+        setState(() {
+          _editing = value;
+          _size = null;
+        });
+      } else {
+        await _appearance(config, {field: value});
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final config = PlaybackHudConfig.fromJson(watchSetting(ref, Settings.playbackHud));
+    final appearance = config.styleFor(_editing);
     final page = Builder(
       builder: (context) => Scaffold(
         key: const ValueKey('settings-playback-hud'),
@@ -70,31 +95,46 @@ class _PlaybackHudPageState extends ConsumerState<PlaybackHudPage> {
               value: config.speed,
               onChanged: (value) => unawaited(_save({'speed': value})),
             ),
+            SettingsSwitchRow(
+              key: const ValueKey('playback-hud-separate'),
+              title: i18n('playback_hud_separate'),
+              subtitle: i18n('playback_hud_separate_desc'),
+              value: config.separate,
+              onChanged: (value) => unawaited(_save({'separate': value})),
+            ),
+            if (config.separate)
+              SettingsRow(
+                key: const ValueKey('playback-hud-edit'),
+                title: i18n('playback_hud_edit'),
+                subtitle: i18n('playback_hud_$_editing'),
+                onTap: () => unawaited(_pick(context, 'edit', 'playback_hud_edit', const ['clock', 'speed'], _editing)),
+              ),
             SettingsRow(
               key: const ValueKey('playback-hud-corner'),
               title: i18n('playback_hud_position'),
-              subtitle: i18n('playback_hud_${config.corner}'),
+              subtitle: i18n('playback_hud_${appearance.corner}'),
               onTap: () => unawaited(
-                _pick(context, 'corner', 'playback_hud_position', PlaybackHudConfig.corners.keys, config.corner),
+                _pick(context, 'corner', 'playback_hud_position', PlaybackHudConfig.corners.keys, appearance.corner),
               ),
             ),
             SettingsRow(
               key: const ValueKey('playback-hud-font'),
               title: i18n('playback_hud_font'),
-              subtitle: i18n('playback_hud_${config.font}'),
-              onTap: () => unawaited(_pick(context, 'font', 'playback_hud_font', PlaybackHudConfig.fonts, config.font)),
+              subtitle: i18n('playback_hud_${appearance.font}'),
+              onTap: () =>
+                  unawaited(_pick(context, 'font', 'playback_hud_font', PlaybackHudConfig.fonts, appearance.font)),
             ),
             SettingsSliderRow(
               key: const ValueKey('playback-hud-size'),
               title: i18n('playback_hud_size'),
-              value: _size ?? config.size,
+              value: _size ?? appearance.size,
               min: 12,
               max: 48,
               divisions: 36,
-              label: '${(_size ?? config.size).round()}',
+              label: '${(_size ?? appearance.size).round()}',
               onChanged: (value) => setState(() => _size = value),
               onChangeEnd: (value) => unawaited(
-                _save({'size': value}).then((_) {
+                _appearance(config, {'size': value}).then((_) {
                   if (mounted) setState(() => _size = null);
                 }),
               ),
@@ -102,8 +142,8 @@ class _PlaybackHudPageState extends ConsumerState<PlaybackHudPage> {
             DanmakuColorPickerRow(
               settingKey: 'playback-hud-color',
               title: i18n('playback_hud_color'),
-              color: Color(config.color),
-              onChanged: (color) => unawaited(_save({'color': color.toARGB32()})),
+              color: Color(appearance.color),
+              onChanged: (color) => unawaited(_appearance(config, {'color': color.toARGB32()})),
             ),
             SettingsRow(
               key: const ValueKey('playback-hud-reset'),

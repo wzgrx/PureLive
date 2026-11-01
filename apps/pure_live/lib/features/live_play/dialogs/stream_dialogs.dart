@@ -12,6 +12,7 @@ import 'package:pure_live/platform/platform_services.dart';
 import 'package:pure_live/platform/system_access.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/rooms/platform_texts.dart';
+import 'package:pure_live/shared/rooms/playback_lines.dart';
 
 /// What the stream panel does with the chosen address.
 enum StreamUse {
@@ -72,6 +73,7 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
   final List<_Page> _pages = [_Page.qualities];
   int? _quality;
   List<String>? _urls;
+  List<LivePlayLine>? _lineInfo;
   late int _line;
   String? _error;
   bool _busy = false;
@@ -106,6 +108,7 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
     });
     String? error;
     List<String>? urls;
+    List<LivePlayLine>? metadata;
     try {
       final resolution = await _room.site.resolvePlayUrls(detail: _room.room, quality: _room.qualities[index]);
       if (resolution.inputRecipe != null) {
@@ -115,6 +118,7 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
         error = i18n('toolbox_get_url_failed');
       } else {
         urls = resolution.urls;
+        metadata = resolution.lines;
       }
     } on Object {
       error = i18n('toolbox_get_url_failed');
@@ -124,6 +128,7 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
       _busy = false;
       _error = error;
       _urls = urls;
+      _lineInfo = metadata;
     });
     if (urls == null) return;
     if (urls.length == 1) {
@@ -167,10 +172,22 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
 
   String get _qualityName => _quality == null ? '' : platformQualityName(_room.qualities[_quality!].quality);
 
-  String _lineName(int index) => i18n('toolbox_line', args: {'index': '${index + 1}'});
+  String _lineName(int index) {
+    final metadata = _lineInfo;
+    final line = metadata != null && index < metadata.length ? metadata[index] : null;
+    return _playingQuality(_quality)
+        ? PlaybackLinePresentation.of(_room.session, telemetry: _room.telemetry).choiceName(index, line)
+        : playbackLineName(index, line: line);
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => PlaybackLineBuilder(
+    session: _room.session,
+    telemetry: _room.telemetry,
+    builder: (context, _, _) => _contents(context),
+  );
+
+  Widget _contents(BuildContext context) {
     final page = _pages.last;
     final title = i18n(widget.use == StreamUse.cast ? 'cast_screen' : 'toolbox_get_direct_link');
     return RoomSidePanel(

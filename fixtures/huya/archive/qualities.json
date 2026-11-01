@@ -1,0 +1,32 @@
+{
+  "status": 200,
+  "data": {
+    "moment": {
+      "videoInfo": {
+        "definitions": [
+          {
+            "width": "1920",
+            "height": "1080",
+            "defName": "1080P",
+            "m3u8": "https://record.example.test/archive.m3u8?definition=yuanhua",
+            "url": "https://record.example.test/archive.m3u8?definition=yuanhua"
+          },
+          {
+            "width": "1280",
+            "height": "720",
+            "defName": "720P",
+            "m3u8": "https://record.example.test/archive.m3u8?definition=1300",
+            "url": "https://record.example.test/archive.m3u8?definition=1300"
+          },
+          {
+            "width": "640",
+            "height": "360",
+            "defName": "360P",
+            "m3u8": "https://record.example.test/archive.m3u8?definition=350",
+            "url": "https://record.example.test/archive.m3u8?definition=350"
+          }
+        ]
+      }
+    }
+  }
+}

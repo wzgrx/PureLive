@@ -8,6 +8,7 @@ import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/phone_bridge.dart';
+import 'package:pure_live/shared/rooms/archive_navigation.dart';
 import 'package:pure_live/tv/tv_navigation.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/widgets/tv_button.dart';
@@ -133,6 +134,11 @@ class _TvLinkPaneState extends ConsumerState<TvLinkPane> {
             spacing: scale.px(12),
             runSpacing: scale.px(12),
             children: [
+              TvButton(
+                key: const ValueKey('tv-link-huya-archives'),
+                label: i18n('huya_replay_title'),
+                onTap: () => unawaited(openHuyaArchives(context)),
+              ),
               TvButton(
                 key: const ValueKey('tv-link-douyu-vod'),
                 label: i18n('douyu_vod_title'),

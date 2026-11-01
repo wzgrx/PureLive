@@ -8,6 +8,7 @@ import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/settings/settings_dialogs.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
+import 'package:pure_live/shared/background/custom_background.dart';
 import 'package:pure_live/tv/settings/tv_settings_section_page.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/wallpaper/tv_wallpaper_layer.dart';
@@ -61,6 +62,7 @@ class TvWallpaperSettingsPage extends ConsumerWidget {
           TvSettingsGroup(
             title: i18n('tv_wallpaper_sources'),
             children: [
+              const _LocalWallpaperRow(),
               TvLinkRow(
                 id: 'wallpaper-solid',
                 icon: TvIcons.wallpaperSolid,
@@ -176,6 +178,61 @@ class TvWallpaperSettingsPage extends ConsumerWidget {
       AppNavigator.toast(i18n('tv_wallpaper_failed'));
     }
   }
+}
+
+class _LocalWallpaperRow extends ConsumerStatefulWidget {
+  const new();
+
+  @override
+  ConsumerState<_LocalWallpaperRow> createState() => _LocalWallpaperRowState();
+}
+
+class _LocalWallpaperRowState extends ConsumerState<_LocalWallpaperRow> {
+  bool _busy = false;
+
+  Future<void> _pick() async {
+    if (_busy) return;
+    final store = ref.read(tvWallpaperStoreProvider);
+    final picker = ref.read(customBackgroundPickerProvider);
+    setState(() => _busy = true);
+    String? imported;
+    try {
+      final source = await picker();
+      if (source == null || !mounted) return;
+      final name = await CustomBackgroundFiles(store.files.folder).importImage(source);
+      imported = name;
+      if (!mounted) return;
+      final file = (await CustomBackgroundFiles(store.files.folder).resolve(name))!;
+      final current = store.current;
+      await store.setPicture(file.uri.toString(), fit: current.fit, mask: current.mask, blur: current.blur);
+    } on Object {
+      if (mounted) AppNavigator.toast(i18n('custom_background_failed'));
+    } finally {
+      if (imported != null) {
+        // Remove only this import if it was never selected. Existing wallpaper
+        // originals and pre-blurred copies belong to the wallpaper store.
+        final current = store.current;
+        final file = await CustomBackgroundFiles(store.files.folder).resolve(imported);
+        if (file != null && current.value != file.path && current.source != file.uri.toString()) {
+          try {
+            await file.delete();
+          } on Object {
+            // A later replacement can remove an in-use generated copy.
+          }
+        }
+      }
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => TvLinkRow(
+    id: 'wallpaper-local-image',
+    icon: TvIcons.wallpaperLibrary,
+    title: i18n('custom_background_image'),
+    subtitle: i18n(_busy ? 'refresh_loading' : 'custom_background_image_desc'),
+    onTap: () => unawaited(_pick()),
+  );
 }
 
 /// "纯色和渐变" (A17.8 h1): the common colours, then the gradients; OK sets

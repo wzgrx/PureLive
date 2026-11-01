@@ -420,6 +420,64 @@ LiveMessage _withoutId(LiveMessage message) => LiveMessage(
 );
 
 void main() {
+  group('native fan badge decorations (#146)', () {
+    LiveMessage chat(List<({int app, List<int> bytes})> decorations, {int tag = 8}) {
+      final body = TarsWriter()
+        ..writeStruct(
+          0,
+          (w) => w
+            ..writeInt(0, 7)
+            ..writeString(2, 'viewer'),
+        )
+        ..writeString(3, 'message')
+        ..writeList(
+          tag,
+          decorations,
+          (w, item) => w.writeStruct(
+            0,
+            (d) => d
+              ..writeInt(0, item.app)
+              ..writeInt(1, 0)
+              ..writeBytes(2, item.bytes),
+          ),
+        );
+      return HuyaDanmakuProtocol.decode(_single(1400, body.toBytes(), lMsgId: 123)).messages.single;
+    }
+
+    final badge =
+        (TarsWriter()
+              ..writeString(3, '测试牌')
+              ..writeInt(4, 11))
+            .toBytes();
+    for (final tag in [8, 9, 12, 15]) {
+      test('reads app 10400 BadgeInfo in decoration vector $tag', () {
+        final m = chat([(app: 10400, bytes: badge)], tag: tag);
+        expect((m.fansName, m.fansLevel, m.message, m.messageId), ('测试牌', '11', 'message', 'huya:123'));
+      });
+    }
+    test('public upstream recorded BadgeInfo agrees with current official schema', () {
+      // OrdinaryRoad-Project/ordinaryroad-barrage-fly: msg-examples-huya.txt,
+      // revision 162a9d1. Only the medal payload; no sender/session fields.
+      final bytes = base64Decode('EltH0VQ2Bue1lei3oUALzPwR+hIGABkMC/oTAmQq9s4cLDxMXAvwFgH6GQYAHAv8Gg==');
+      final m = chat([(app: 10400, bytes: bytes)]);
+      expect((m.fansName, m.fansLevel), ('絕跡', '11'));
+    });
+    test('unknown, absent and damaged badges never fabricate medals or drop chat', () {
+      expect(chat([(app: 999, bytes: badge)]).fansName, isEmpty);
+      expect(chat([]).fansName, isEmpty);
+      final m = chat([
+        (app: 10400, bytes: [0xff]),
+        (app: 10400, bytes: badge),
+      ]);
+      expect((m.fansName, m.fansLevel), ('测试牌', '11'));
+      final zero =
+          (TarsWriter()
+                ..writeString(3, '牌')
+                ..writeInt(4, 0))
+              .toBytes();
+      expect(chat([(app: 10400, bytes: zero)]).fansName, isEmpty);
+    });
+  });
   group('protocol', () {
     test("client frames are byte for byte 3.x's and the recorded ones", () {
       final register = base64Decode(_recorded['registerFrame']! as String);

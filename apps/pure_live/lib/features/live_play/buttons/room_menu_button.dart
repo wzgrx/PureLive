@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
+import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
@@ -19,6 +20,7 @@ import 'package:pure_live/features/live_play/switch_room/room_switch_panel.dart'
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/background_guide.dart';
 import 'package:pure_live/routes/app_navigator.dart';
+import 'package:pure_live/shared/rooms/archive_navigation.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 import 'package:pure_live/shared/rooms/share_code.dart';
@@ -140,6 +142,9 @@ Future<bool> _explainBlockedJump(BackgroundGuideChannel guide, BuildContext? Fun
 /// The entries of the room menu, in its order (docs/A-界面设计/A07-直播间界面/A07.6-直播间弹窗, 右上角
 /// 菜单): three groups split by lines.
 enum RoomMenuEntry {
+  /// Official Huya recordings of this presenter.
+  replayArchive,
+
   /// Another followed or watched room.
   switchRoom,
 
@@ -195,10 +200,17 @@ List<List<RoomMenuEntry>> roomMenuGroups({
   required bool newWindow,
   required bool cast,
   bool local = false,
+  bool huya = false,
   Set<RoomMenuEntry> onBars = const {},
 }) => [
   for (final group in [
-    const [RoomMenuEntry.switchRoom, RoomMenuEntry.timer, RoomMenuEntry.volume, RoomMenuEntry.videoFit],
+    [
+      RoomMenuEntry.switchRoom,
+      RoomMenuEntry.timer,
+      RoomMenuEntry.volume,
+      RoomMenuEntry.videoFit,
+      if (huya) RoomMenuEntry.replayArchive,
+    ],
     [
       if (cast) RoomMenuEntry.cast,
       RoomMenuEntry.streamLink,
@@ -240,7 +252,11 @@ bool roomMenuOpensPanel(RoomMenuEntry entry) => switch (entry) {
   RoomMenuEntry.streamLink ||
   RoomMenuEntry.playbackInfo ||
   RoomMenuEntry.localInteraction => true,
-  RoomMenuEntry.videoFit || RoomMenuEntry.share || RoomMenuEntry.external || RoomMenuEntry.newWindow => false,
+  RoomMenuEntry.replayArchive ||
+  RoomMenuEntry.videoFit ||
+  RoomMenuEntry.share ||
+  RoomMenuEntry.external ||
+  RoomMenuEntry.newWindow => false,
 };
 
 /// The room menu's rows for [controller] now, in their groups
@@ -257,6 +273,7 @@ List<List<RoomMenuItem>> roomMenuItems(
   final deadline = controller.sleepDeadline;
   RoomMenuItem item(RoomMenuEntry entry) {
     final (icon, label, description) = switch (entry) {
+      RoomMenuEntry.replayArchive => (AppIcons.vodCatalog, i18n('huya_replay_title'), null),
       RoomMenuEntry.switchRoom => (AppIcons.switchRoom, i18n('switch_live_room'), null),
       RoomMenuEntry.timer => (
         AppIcons.sleepTimer,
@@ -296,6 +313,7 @@ List<List<RoomMenuItem>> roomMenuItems(
   return [
     for (final group in roomMenuGroups(
       iptv: controller.site.id == SiteIds.iptv,
+      huya: controller.site.id == SiteIds.huya,
       newWindow: DesktopWindow.offersNewWindow(settings),
       local: settings.get(Settings.localInteractionEnabled),
       cast: castSupported(defaultTargetPlatform),
@@ -344,6 +362,31 @@ class RoomMenuButton extends ConsumerWidget {
   ) async {
     final room = controller.room;
     switch (entry) {
+      case RoomMenuEntry.replayArchive:
+        final navigator = Navigator.of(context);
+        final session = controller.session;
+        final identity = room.identityKey;
+        final wasPlaying = session.state.status == PlaybackStatus.playing;
+        var stopped = false;
+        final retired = await openHuyaArchives(
+          context,
+          room: room,
+          beforePlay: () async {
+            if (stopped || controller.isDisposed || controller.room.identityKey != identity) return;
+            await session.stop();
+            stopped = true;
+          },
+        );
+        if (retired &&
+            stopped &&
+            navigator.mounted &&
+            !controller.isDisposed &&
+            identical(controller.session, session) &&
+            controller.room.identityKey == identity &&
+            session.state.status == PlaybackStatus.stopped) {
+          await controller.load();
+          if (!wasPlaying && !controller.isDisposed) await session.pause();
+        }
       case RoomMenuEntry.videoFit:
         await showVideoFitMenu(context, ref.read(storeProvider).settings);
       case RoomMenuEntry.external:

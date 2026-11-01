@@ -188,6 +188,7 @@ LiveMessage cleanDanmakuText(LiveMessage message) {
     userLevel: message.userLevel,
     fansLevel: message.fansLevel,
     fansName: badge,
+    fansColors: message.fansColors,
     isLocal: message.isLocal,
     messageId: message.messageId,
     sentAt: message.sentAt,
