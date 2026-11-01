@@ -7911,3 +7911,16 @@ stages = ["默认值与共享呈现", "全入口和布局回归", "预览和完�
 done = 0
 branch = "ai/A07.39-hud-line-options"
 next = "按明确需求实现与验证，不发布或同步更新文件"
+
+[[task]]
+id = "Y01.41"
+title = "5.6.1播放界面优化发布"
+type = "发布"
+status = "开发中"
+size = "大"
+tier = 1
+from = "用户明确恢复发布、合并PR与分支并关闭已验证issue"
+stages = ["源码完整门禁", "同源构建与分层验收", "发布与双更新源", "issue与分支收尾"]
+done = 0
+branch = "ai/A07.39-hud-line-options"
+next = "冻结5.6.1+5134并执行完整门禁"
