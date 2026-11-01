@@ -99,7 +99,10 @@ final class HuyaArchiveApi implements HuyaArchiveSource {
 
   // The official desktop archive redirects mobile identities to the video
   // home page, whose HNF_GLOBAL_INIT has no presenter archive response.
-  static const _pageHeaders = {'referer': 'https://www.huya.com/', 'user-agent': HuyaApi.desktopUserAgent};
+  static const Map<String, String> _pageHeaders = {
+    'referer': 'https://www.huya.com/',
+    'user-agent': HuyaApi.desktopUserAgent,
+  };
 
   /// Accepts a public uid or the exact official archive URL.
   static String? uidFromText(String value) {
