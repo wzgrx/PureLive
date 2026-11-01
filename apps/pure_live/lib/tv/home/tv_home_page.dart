@@ -474,6 +474,14 @@ class _TvHomePageState extends ConsumerState<TvHomePage> with WidgetsBindingObse
     return leave;
   }
 
+  void _revealMenuFocus() {
+    if (!mounted || !_menuFocused) return;
+    final node = FocusManager.instance.primaryFocus;
+    if (node == null || !_menuNodes.containsValue(node)) return;
+    final context = node.context;
+    if (context != null) Scrollable.ensureVisible(context, alignment: 0.5);
+  }
+
   /// The rail's entries top to bottom (the mode button is `null`), as last
   /// built.
   List<TvPane?> _rail = const [];
@@ -578,7 +586,12 @@ class _TvHomePageState extends ConsumerState<TvHomePage> with WidgetsBindingObse
       canRequestFocus: false,
       skipTraversal: true,
       onFocusChange: (focused) {
-        if (focused != _menuFocused) setState(() => _menuFocused = focused);
+        if (focused != _menuFocused) {
+          setState(() => _menuFocused = focused);
+          // The clock changes the rail's viewport height. Reveal only after
+          // that layout, and only the item that still owns menu focus.
+          if (focused) WidgetsBinding.instance.addPostFrameCallback((_) => _revealMenuFocus());
+        }
       },
       child: FocusTraversalGroup(
         child: Container(

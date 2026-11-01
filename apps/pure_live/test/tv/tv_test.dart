@@ -488,6 +488,44 @@ void main() {
     await _expectVisibleControlsReachable(tester, 'iptv');
   });
 
+  for (final pane in ['history', 'iptv']) {
+    testWidgets('return to lower rail destination keeps its focus ring inside the expanded viewport: $pane', (
+      tester,
+    ) async {
+      final site = _DelayedIptv();
+      site.ready.complete([LiveRoom(platform: SiteIds.iptv, roomId: 'visibility', title: '测试频道')]);
+      final services = await _pumpApp(
+        tester,
+        viewport: const Size(1280, 720),
+        history: Stream.value([_TvSite(1).room(0)]),
+        extraSites: [site],
+      );
+      addTearDown(() => _close(tester, services));
+      await _openMenuWithRemote(tester, pane);
+      await _settle(tester);
+      await _press(tester, LogicalKeyboardKey.escape);
+      expect(_focused, 'tv menu $pane');
+      await tester.pump(const Duration(seconds: 1));
+      final item = find.byKey(ValueKey('tv-menu-$pane'));
+      final viewport = tester.getRect(find.ancestor(of: item, matching: find.byType(ClipRect)).first);
+      final ring = find
+          .descendant(
+            of: item,
+            matching: find.byWidgetPredicate(
+              (widget) => widget is DecoratedBox && widget.position == DecorationPosition.foreground,
+            ),
+          )
+          .first;
+      final rect = tester.getRect(ring);
+      expect(rect.top, greaterThanOrEqualTo(viewport.top));
+      expect(
+        rect.bottom,
+        lessThanOrEqualTo(viewport.bottom),
+        reason: 'logical focus must stay visibly inside the expanded menu after the clock changes its height',
+      );
+    });
+  }
+
   testWidgets('hidden kept-alive destinations cannot receive directional focus', (tester) async {
     final ready = Completer<List<LiveRoom>>();
     final services = await _pumpApp(tester, history: Stream.fromFuture(ready.future));
