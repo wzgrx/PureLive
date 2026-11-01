@@ -568,6 +568,7 @@ void main() {
           final notices = recorded(sample);
           expect(notices, hasLength(count), reason: sample);
           var badges = 0;
+          var palettes = 0;
           var avatars = 0;
           for (final notice in notices) {
             final info = notice['info'] as List<dynamic>;
@@ -589,6 +590,16 @@ void main() {
               badges++;
               expect((message.fansName, message.fansLevel), (medal['name'], '${medal['level']}'));
               expect(message.fansName, (info[3] as List<dynamic>)[1], reason: 'info[3] says the same');
+              final legacy = info[3] as List<dynamic>;
+              if (legacy.length > 9 && medal.containsKey('color_start')) {
+                palettes++;
+                expect(
+                  (legacy[7], legacy[8], legacy[9]),
+                  (medal['color_border'], medal['color_start'], medal['color_end']),
+                  reason: 'captured parallel fields verify legacy colour indexes',
+                );
+                expect(message.fansColors!.start, LiveMessageColor.numberToColor(medal['color_start'] as int));
+              }
             } else {
               expect((message.fansName, message.fansLevel), ('', ''));
               expect(info[3], isEmpty);
@@ -600,6 +611,7 @@ void main() {
             if (face.startsWith('https://')) avatars++;
           }
           expect(badges, count - (sample == 'S13-live' ? 3 : 5), reason: sample);
+          expect(palettes, greaterThan(0), reason: 'actual recorded palettes verify colour indexes');
           expect(avatars, sample == 'S13-live' ? 0 : count, reason: sample);
         }
       });
@@ -624,6 +636,60 @@ void main() {
         base['name'] = '小***';
         (base['origin_info'] as Map<String, dynamic>)['name'] = '小***';
         expect(chats(notice).single.userName, '小路的观众', reason: 'info[2][1] unmasked');
+      });
+
+      test('native fan medal colours preserve rich gradients and legacy solids (#147)', () {
+        LiveMessage one({Object? medal, List<Object?> legacy = const []}) {
+          final meta = <Object?>[
+            0,
+            1,
+            25,
+            0xffffff,
+            1790519893202,
+            10,
+            0,
+            '',
+            0,
+            0,
+            0,
+            '',
+            0,
+            '{}',
+            '{}',
+            {
+              'user': {'medal': medal},
+            },
+          ];
+          return chats({
+            'cmd': 'DANMU_MSG',
+            'info': [
+              meta,
+              'hello',
+              [1, 'viewer'],
+              legacy,
+            ],
+          }).single;
+        }
+
+        final rich = one(
+          medal: {'name': '牌', 'level': 33, 'color_start': 7996451, 'color_end': 15304379, 'color_border': 16771156},
+        );
+        expect(rich.fansColors!.start, LiveMessageColor.numberToColor(7996451));
+        expect(rich.fansColors!.end, LiveMessageColor.numberToColor(15304379));
+        expect(rich.fansColors!.border, LiveMessageColor.numberToColor(16771156));
+        expect(one(legacy: [5, '牌', '', 1, 0x123456]).fansColors!.start, const LiveMessageColor(0x12, 0x34, 0x56));
+        final oldGradient = one(legacy: [25, '牌', '', 1, 0xabcdef, '', '', 0x112233, 0x334455, 0x667788]);
+        expect(oldGradient.fansColors!.start, const LiveMessageColor(0x33, 0x44, 0x55));
+        expect(oldGradient.fansColors!.end, const LiveMessageColor(0x66, 0x77, 0x88));
+        expect(one(medal: {'name': '牌', 'level': 1, 'color': 0}).fansColors!.start, const LiveMessageColor(0, 0, 0));
+        expect(one(medal: {'name': '牌', 'color': -1}).fansColors, isNull);
+        expect(one(medal: {'name': '牌', 'color': 0x1000000}).fansColors, isNull);
+        expect(one(medal: {'name': '', 'color': 0x123456}).fansColors, isNull);
+        expect(one(medal: {'name': '牌'}, legacy: [2, '另一牌', '', 1, 0x123456]).fansColors, isNull);
+        expect(
+          one(medal: {'name': '牌', 'level': 2}, legacy: [2, '牌', '', 1, 0x123456]).fansColors!.start,
+          const LiveMessageColor(0x12, 0x34, 0x56),
+        );
       });
 
       test('the fan badge: user.medal, else info[3]; no name, no badge; a level of 0 is left out', () {

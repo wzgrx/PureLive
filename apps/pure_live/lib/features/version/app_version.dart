@@ -2,7 +2,7 @@ import 'package:flutter/services.dart' as flutter show appBuildName, appBuildNum
 
 /// `pubspec.yaml`'s version, for builds without Flutter's build name (a
 /// test keeps it in step with `pubspec.yaml`).
-const String pubspecVersion = '5.5.1';
+const String pubspecVersion = '5.6.0';
 
 /// `pubspec.yaml`'s build number.
 const int pubspecBuild = 5133;

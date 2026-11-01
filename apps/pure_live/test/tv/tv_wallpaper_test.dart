@@ -12,6 +12,8 @@ import 'package:live_net/live_net.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/services.dart';
+import 'package:pure_live/routes/app_navigator.dart';
+import 'package:pure_live/shared/background/custom_background.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/wallpaper/tv_wallpaper_layer.dart';
 import 'package:pure_live/tv/wallpaper/tv_wallpaper_pages.dart';
@@ -20,6 +22,7 @@ import 'package:pure_live/tv/wallpaper/wallpaper_files.dart';
 import 'package:pure_live/tv/wallpaper/wallpaper_model.dart';
 import 'package:pure_live/tv/wallpaper/wallpaper_sources.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
+import 'package:pure_live/tv/widgets/tv_settings_rows.dart';
 
 import '../qa_capture.dart';
 import '../support.dart';
@@ -142,7 +145,11 @@ void main() {
       await tester.runAsync(services.close);
     }
 
-    Future<(AppServices, TvWallpaperStore)> pump(WidgetTester tester, Widget child) async {
+    Future<(AppServices, TvWallpaperStore)> pump(
+      WidgetTester tester,
+      Widget child, {
+      Future<File?> Function()? picker,
+    }) async {
       await prepareQaFonts(tester);
       tester.view
         ..physicalSize = const Size(1920, 1080)
@@ -162,6 +169,7 @@ void main() {
           overrides: [
             appServicesProvider.overrideWithValue(services),
             tvWallpaperStoreProvider.overrideWithValue(store),
+            if (picker != null) customBackgroundPickerProvider.overrideWithValue(picker),
           ],
           child: MaterialApp(
             theme: ThemeData(colorScheme: scheme),
@@ -180,6 +188,77 @@ void main() {
       await tester.pump();
       return (services, store);
     }
+
+    testWidgets('TV local images use bounded owned copies, preserve blur originals and keep source files on clear', (
+      tester,
+    ) async {
+      final directory = Directory.systemTemp.createTempSync('tv_local_background_source_');
+      addTearDown(() => directory.deleteSync(recursive: true));
+      final source = File('${directory.path}/source.png')..writeAsBytesSync((await tester.runAsync(_png))!);
+      final bytes = source.readAsBytesSync();
+      File? selected = source;
+      var picks = 0;
+      final (services, store) = await pump(
+        tester,
+        const TvWallpaperSettingsPage(),
+        picker: () async {
+          picks++;
+          return selected;
+        },
+      );
+      addTearDown(() => close(tester, services));
+      final previousToast = AppNavigator.toast;
+      final errors = <String>[];
+      AppNavigator.toast = errors.add;
+      addTearDown(() => AppNavigator.toast = previousToast);
+      Future<void> drive(Future<void> operation) async {
+        var finished = false;
+        Object? failure;
+        final observed = operation.then(
+          (_) => finished = true,
+          onError: (Object error) {
+            failure = error;
+            finished = true;
+          },
+        );
+        for (var i = 0; i < 10 && !finished; i++) {
+          await tester.pump();
+          await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+        }
+        expect(finished, isTrue, reason: 'native image and store work must settle');
+        await observed;
+        expect(failure, isNull);
+      }
+
+      await drive(services.store.settings.set(Settings.tvWallpaperBlur, 4));
+      await tester.runAsync(() async {
+        tester
+            .widget<TvLinkRow>(find.byWidgetPredicate((w) => w is TvLinkRow && w.id == 'wallpaper-local-image'))
+            .onTap();
+        await Future<void>.delayed(const Duration(seconds: 1));
+      });
+      for (var i = 0; i < 3 && store.current.kind != TvWallpaperKind.image; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+        await tester.pump();
+      }
+      expect(picks, 1);
+      expect(errors, isEmpty);
+      expect(store.current.kind, TvWallpaperKind.image);
+      final original = File(Uri.parse(store.current.source).toFilePath());
+      expect(original.parent.path, (await store.files.folder).path);
+      expect(original.existsSync(), isTrue, reason: 'changing blur must retain the imported original');
+      expect(File(store.current.value).existsSync(), isTrue);
+      await drive(store.setBlur(0));
+      expect(store.current.value, original.path);
+      selected = null;
+      await tester.tap(find.byKey(const ValueKey('tv-setting-wallpaper-local-image')));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+      await tester.pump();
+      expect(store.current.value, original.path, reason: 'cancelled picker keeps the selected image');
+      await drive(store.clear());
+      expect(original.existsSync(), isFalse);
+      expect(source.readAsBytesSync(), bytes);
+    });
 
     testWidgets('the layer: nothing without a background, a colour with one', (tester) async {
       final (services, store) = await pump(tester, const TvWallpaperLayer());

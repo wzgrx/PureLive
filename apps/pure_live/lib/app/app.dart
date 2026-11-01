@@ -34,6 +34,7 @@ import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/app_router.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/routes/tv_router.dart';
+import 'package:pure_live/shared/background/custom_background.dart';
 import 'package:pure_live/shared/images.dart';
 import 'package:pure_live/tv/tv_app.dart';
 
@@ -343,7 +344,11 @@ class _PureLiveAppState extends ConsumerState<PureLiveApp> with WidgetsBindingOb
               onBack: AppNavigator.mouseBack,
               child: framed,
             );
-            if (tv) framed = TvAppFrame(child: framed);
+            if (tv) {
+              framed = TvAppFrame(child: framed);
+            } else {
+              framed = CustomBackgroundFrame(child: framed);
+            }
             return LiveUiScope(
               config: uiConfig,
               child: MediaQuery(

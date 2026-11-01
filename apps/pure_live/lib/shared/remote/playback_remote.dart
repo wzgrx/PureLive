@@ -6,6 +6,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:pure_live/shared/net/lan_address.dart';
 import 'package:pure_live/shared/net/mdns_peers.dart';
+import 'package:pure_live/shared/remote/local_ice_binding.dart';
 import 'package:pure_live/shared/remote/remote_access.dart';
 import 'package:pure_live/shared/remote/remote_web.dart';
 
@@ -56,6 +57,8 @@ final class PlaybackRemote extends ChangeNotifier {
   final DateTime Function() _now;
   final List<RemotePlaybackTarget> _targets = [];
   final Map<String, DateTime> _sessions = {};
+  final Map<String, String> _sessionPeers = {};
+  LocalIceBinding? _iceBinding;
   HttpServer? _server;
   RawDatagramSocket? _discovery;
   String _code = '';
@@ -211,6 +214,22 @@ final class PlaybackRemote extends ChangeNotifier {
       return;
     }
     _server = server;
+    try {
+      final binding = await LocalIceBinding.bind(
+        server.address,
+        allows: (peer) {
+          _expire();
+          return running && _sessions.keys.any((token) => _sessionPeers[token] == peer.address);
+        },
+      );
+      if (!identical(_server, server)) {
+        binding.close();
+        return;
+      }
+      _iceBinding = binding;
+    } on SocketException {
+      // Host candidates remain usable if UDP is unavailable.
+    }
     address = bestLanAddress(await localIpv4Addresses());
     if (!identical(_server, server)) return;
     revoke();
@@ -272,6 +291,7 @@ final class PlaybackRemote extends ChangeNotifier {
   void revoke() {
     _generation++;
     _sessions.clear();
+    _sessionPeers.clear();
     unawaited(onRevokeScreen?.call());
     _code = (100000 + Random.secure().nextInt(900000)).toString();
     _wrongCodes = 0;
@@ -282,6 +302,7 @@ final class PlaybackRemote extends ChangeNotifier {
     final expired = _sessions.entries.where((entry) => !entry.value.isAfter(_now())).map((entry) => entry.key).toList();
     for (final token in expired) {
       _sessions.remove(token);
+      _sessionPeers.remove(token);
       unawaited(onSessionRevoked?.call(token));
     }
     if (expired.isNotEmpty && _sessions.isEmpty) unawaited(onRevokeScreen?.call());
@@ -290,7 +311,10 @@ final class PlaybackRemote extends ChangeNotifier {
   bool _authorized(HttpRequest request) {
     _expire();
     final auth = request.headers.value(HttpHeaders.authorizationHeader) ?? '';
-    return auth.startsWith('Bearer ') && _sessions.containsKey(auth.substring(7));
+    if (!auth.startsWith('Bearer ') || !_sessions.containsKey(auth.substring(7))) return false;
+    final peer = request.connectionInfo?.remoteAddress.address;
+    if (peer != null) _sessionPeers[auth.substring(7)] = peer;
+    return true;
   }
 
   Future<Map<String, dynamic>> _json(HttpRequest request) async {
@@ -358,6 +382,8 @@ final class PlaybackRemote extends ChangeNotifier {
         } else {
           final token = _nonce();
           _sessions[token] = _now().add(const Duration(hours: 12));
+          final peer = request.connectionInfo?.remoteAddress.address;
+          if (peer != null) _sessionPeers[token] = peer;
           response.headers.contentType = ContentType.json;
           response.write(jsonEncode({'token': token, 'name': 'PureLive ${Platform.operatingSystem}'}));
           notifyListeners();
@@ -372,11 +398,13 @@ final class PlaybackRemote extends ChangeNotifier {
             'targetId': target == null ? null : _targetId(target),
             'state': target == null ? null : _snapshot(target),
             'screen': screenState?.call(),
+            'localIcePort': _iceBinding?.port,
           }),
         );
       } else if (request.method == 'POST' && request.uri.path == '/api/unpair') {
         final token = request.headers.value(HttpHeaders.authorizationHeader)!.substring(7);
         _sessions.remove(token);
+        _sessionPeers.remove(token);
         await onSessionRevoked?.call(token);
         if (_sessions.isEmpty) await onRevokeScreen?.call();
         notifyListeners();
@@ -491,7 +519,10 @@ final class PlaybackRemote extends ChangeNotifier {
     _server = null;
     _discovery?.close();
     _discovery = null;
+    _iceBinding?.close();
+    _iceBinding = null;
     _sessions.clear();
+    _sessionPeers.clear();
     _code = '';
     await onRevokeScreen?.call();
     await _mdns.stop();

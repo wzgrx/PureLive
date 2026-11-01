@@ -11,7 +11,6 @@ import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/settings/settings_dialogs.dart';
 import 'package:pure_live/tv/wallpaper/wallpaper_files.dart';
@@ -25,7 +24,7 @@ final Provider<TvWallpaperStore> tvWallpaperStoreProvider = Provider((ref) {
   return TvWallpaperStore(
     settings: services.store.settings,
     files: TvWallpaperFiles(
-      folder: getApplicationSupportDirectory().then((folder) => Directory(p.join(folder.path, 'tv_wallpaper'))),
+      folder: Future.value(Directory(p.join(services.dataRoot.path, 'tv_wallpaper'))),
       http: services.http,
     ),
   );

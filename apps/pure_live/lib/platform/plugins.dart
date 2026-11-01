@@ -19,6 +19,7 @@ import 'package:pure_live/features/settings/data_tools.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/overlay_window.dart';
 import 'package:pure_live/routes/app_navigator.dart';
+import 'package:pure_live/shared/background/custom_background.dart';
 import 'package:pure_live/shared/in_app_web.dart';
 import 'package:pure_live/shared/qr_scan.dart';
 import 'package:pure_live/shared/rooms/share_code.dart';
@@ -57,6 +58,7 @@ void installPluginHooks(AppServices services) {
 /// the download folder; sharing the log file on phones.
 List<Override> pluginOverrides() => [
   iptvFilePickerProvider.overrideWithValue(pickIptvFile),
+  customBackgroundPickerProvider.overrideWithValue(pickBackgroundImage),
   backupPickerProvider.overrideWithValue(pickBackupPath),
   recordDirectoryPickerProvider.overrideWithValue(pickRecordDirectory),
   downloadDirectoryPickerProvider.overrideWithValue(pickDownloadDirectory),
@@ -134,6 +136,12 @@ Future<bool> openLocalFile(String path) async {
 /// MIME type, which most providers do not know for playlists and guides, so
 /// it shows every file and the importer checks the content.
 bool get _filterByExtension => !Platform.isAndroid;
+
+/// Uses the system document picker; no broad filesystem permission is needed.
+Future<File?> pickBackgroundImage() async {
+  final file = await FilePicker.pickFile(dialogTitle: i18n('custom_background_image'), type: FileType.image);
+  return file?.path == null ? null : File(file!.path!);
+}
 
 /// The IPTV import's file (3.x `FilePicker.platform.pickFiles` with the
 /// kind's extensions). On Android the picker copies the chosen document into

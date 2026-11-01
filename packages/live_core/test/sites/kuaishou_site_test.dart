@@ -517,7 +517,7 @@ void main() {
       expect(setup.http.requests.single.headers.containsKey('cookie'), isFalse);
     });
 
-    test('result 2 is RateLimited (REG-KUAISHOU-015); the search page is the referer; never a cookie', () async {
+    test('result 2 is RateLimited (REG-KUAISHOU-015); the search page is the referer and explicit login is sent only to the search host', () async {
       final vault = MemoryCookieVault()..set('kuaishou', 'did=user');
       addTearDown(vault.dispose);
       final setup = _setup(['S06-search-author-ratelimited'], cookies: vault);
@@ -531,7 +531,7 @@ void main() {
         request.headers['referer'],
         'https://live.kuaishou.com/search?keyword=%E7%8E%8B%E8%80%85%E8%8D%A3%E8%80%80',
       );
-      expect(request.headers.containsKey('cookie'), isFalse);
+      expect(request.headers['cookie'], 'did=user');
     });
 
     test('result 10 (the guest gate) is RiskControl on the author search too', () async {
@@ -966,9 +966,70 @@ void main() {
       }
       expect(
         site.needsResolving('https://v.kuaishou.com/AbCd12'),
-        isFalse,
-        reason: 'share links unsupported, as in 3.x',
+        isTrue,
+        reason: 'official share links resolve under the bounded link session',
       );
+    });
+
+    test('official mobile landings expose only a validated public room id (#150)', () {
+      expect(site.roomIdFromUrl('https://klsg24an.m.chenzhongtech.com/fw/live/ugreen007?share=public'), 'ugreen007');
+      for (final url in [
+        'https://m.chenzhongtech.com.evil.test/fw/live/abc',
+        'https://m.chenzhongtech.com/fw/live/search',
+        'https://m.chenzhongtech.com/fw/live/abc/extra',
+        'https://user@live.kuaishou.com/u/abc',
+      ]) {
+        expect(site.roomIdFromUrl(url), isNull);
+      }
+    });
+
+    test(
+      'official short links use one header request and never visit or send cookies to their mobile landing',
+      () async {
+        final http = ReplayHttp([
+          _synthetic(
+            'https://v.kuaishou.com/AbCd12',
+            '',
+            status: 302,
+            headers: {
+              'location': ['https://klsg24an.m.chenzhongtech.com/fw/live/fixture_room?share=public'],
+            },
+          ),
+        ]);
+        final vault = MemoryCookieVault()..set('kuaishou', 'did=synthetic_user');
+        addTearDown(vault.dispose);
+        final registry = SiteRegistry({'kuaishou': () => KuaishouSite(http, cookies: vault)});
+        final parser = LinkParser(registry, http);
+        expect(parser.containsSupportedLink('快来看 https://v.kuaishou.com/AbCd12。'), isTrue);
+        expect(await parser.parse('快来看 https://v.kuaishou.com/AbCd12。'), const RoomLink('kuaishou', 'fixture_room'));
+        expect(http.requests, hasLength(1));
+        expect(http.requests.single.url.host, 'v.kuaishou.com');
+        expect(http.requests.single.followRedirects, isFalse);
+        expect(http.requests.single.headers.containsKey('cookie'), isFalse);
+      },
+    );
+
+    test('short links never follow foreign hosts, credentials or redirect loops', () async {
+      for (final target in [
+        'https://evil.test/u/abc',
+        'http://127.0.0.1/private',
+        'https://user@live.kuaishou.com/u/abc',
+        'https://v.kuaishou.com/AbCd12',
+      ]) {
+        final http = ReplayHttp([
+          _synthetic(
+            'https://v.kuaishou.com/AbCd12',
+            '',
+            status: 302,
+            headers: {
+              'location': [target],
+            },
+          ),
+        ]);
+        final parser = LinkParser(SiteRegistry({'kuaishou': () => KuaishouSite(http)}), http);
+        expect(await parser.parse('https://v.kuaishou.com/AbCd12'), isNull);
+        expect(http.requests, hasLength(1));
+      }
     });
 
     test('share texts resolve without a request', () async {

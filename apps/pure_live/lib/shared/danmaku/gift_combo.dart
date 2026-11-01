@@ -59,6 +59,7 @@ LiveMessage giftMessageWith(LiveMessage message, LiveGift gift, {String? text}) 
   userLevel: message.userLevel,
   fansLevel: message.fansLevel,
   fansName: message.fansName,
+  fansColors: message.fansColors,
   isLocal: message.isLocal,
   messageId: message.messageId,
   sentAt: message.sentAt,

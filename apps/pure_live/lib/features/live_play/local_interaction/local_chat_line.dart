@@ -131,7 +131,15 @@ class LocalChatLine extends StatelessWidget {
 /// and the PK partner's "对方" (E06.2 c3, the same block as "本地").
 class ChatChip extends StatelessWidget {
   /// Creates the mark.
-  const new({required this.text, required this.background, required this.style, this.leading, super.key});
+  const new({
+    required this.text,
+    required this.background,
+    required this.style,
+    this.leading,
+    this.gradient,
+    this.border,
+    super.key,
+  });
 
   /// The words.
   final String text;
@@ -141,6 +149,12 @@ class ChatChip extends StatelessWidget {
 
   /// The block's colour.
   final Color background;
+
+  /// Optional native fan medal colours.
+  final Gradient? gradient;
+
+  /// Optional native fan medal outline.
+  final BoxBorder? border;
 
   /// The words' style.
   final TextStyle? style;
@@ -157,6 +171,8 @@ class ChatChip extends StatelessWidget {
       // Round ends at any size (9 for the 18 high chip).
       decoration: BoxDecoration(
         color: background,
+        gradient: gradient,
+        border: border,
         borderRadius: BorderRadius.circular((style?.fontSize ?? 12) * (style?.height ?? 18 / 12) / 2),
       ),
       child: Padding(

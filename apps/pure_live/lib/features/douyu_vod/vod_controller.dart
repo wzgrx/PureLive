@@ -1,16 +1,16 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_media/live_media.dart';
 import 'package:live_net/live_net.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/features/douyu_vod/vod_progress.dart';
+import 'package:pure_live/shared/rooms/archive_playback.dart';
 
 /// One on-demand player. Generation guards cover detail, rendition, segment and
 /// comment requests. The session retains its normal transport/recovery policy.
-final class DouyuVodController extends ChangeNotifier {
+final class DouyuVodController extends ArchivePlaybackController {
   /// Owns [session]; [source] and local [progress] remain app-owned.
   new({required this.source, required this.session, required this.progress, this.initialVolume = 1}) {
     _states = session.states.listen(_onState);
@@ -20,10 +20,14 @@ final class DouyuVodController extends ChangeNotifier {
   final DouyuVodSource source;
 
   /// The page's native player session.
+  @override
   final PlaybackSession session;
 
   /// Local progress/history.
   final DouyuVodProgressStore progress;
+
+  @override
+  bool get supportsDanmaku => true;
 
   /// Same initial volume as the app's playback preference.
   final double initialVolume;
@@ -37,40 +41,55 @@ final class DouyuVodController extends ChangeNotifier {
   int _generation = 0;
   bool _disposed = false;
   bool _ready = false;
+  Future<void>? _retirement;
+
+  @override
+  Future<void> get retirement => _retirement ?? Future.value();
   Duration _lastSaved = Duration.zero;
   Duration? _pendingPosition;
 
   /// Keeps a requested position until the engine acknowledges the new clock.
+  @override
   Duration get position => _pendingPosition ?? session.state.position;
 
   /// Selected video metadata, available after its detail request.
+  @override
   DouyuVodVideo? get video => _detail?.video;
 
   /// Server-offered renditions, including unavailable permission tiers.
+  @override
   List<DouyuVodQuality> qualities = const [];
 
   /// Actually selected rendition id.
+  @override
   String? qualityId;
 
   /// Ordered segments of this broadcast.
+  @override
   List<DouyuVodVideo> segments = const [];
 
   /// Loading/resolving a video or switching its rendition.
+  @override
   bool busy = false;
 
   /// Failure for the UI to translate; never display signed URLs from it.
+  @override
   Object? error;
 
   /// Whether the optional timeline is shown.
+  @override
   bool danmakuVisible = true;
 
   /// Timeline comments converted to the shared overlay's model.
+  @override
   Stream<LiveMessage> get messages => _messages.stream;
 
   /// Clears the flying layer after a seek/video change.
+  @override
   Stream<LiveRetraction> get retractions => _retractions.stream;
 
   /// Opens metadata, restores local position, then loads the permitted rendition.
+  @override
   Future<void> open(String id, {Duration? start}) async {
     final volume = _ready ? session.state.volume : initialVolume;
     await record();
@@ -196,6 +215,7 @@ final class DouyuVodController extends ChangeNotifier {
   }
 
   /// A rendition change preserves the exact position, volume and pause state.
+  @override
   Future<void> selectQuality(String id) async {
     if (_disposed || busy || id == qualityId || !qualities.any((item) => item.id == id && item.playable)) return;
     final generation = _generation;
@@ -239,6 +259,7 @@ final class DouyuVodController extends ChangeNotifier {
   }
 
   /// Seeks the media and comment clocks together.
+  @override
   Future<void> seek(Duration position) async {
     if (_disposed || !_ready || busy) return;
     final duration = session.state.duration;
@@ -254,6 +275,7 @@ final class DouyuVodController extends ChangeNotifier {
   }
 
   /// Hiding also clears the current frame; reenabling starts at the current clock.
+  @override
   void toggleDanmaku() {
     danmakuVisible = !danmakuVisible;
     _timeline?.seek(position);
@@ -281,6 +303,7 @@ final class DouyuVodController extends ChangeNotifier {
 
   /// Saves before video replacement or page disposal; transient opening states
   /// must not overwrite an existing position with zero.
+  @override
   Future<void> record() async {
     final selected = video;
     if (!_ready || selected == null) return;
@@ -292,13 +315,14 @@ final class DouyuVodController extends ChangeNotifier {
   @override
   void dispose() {
     if (_disposed) return;
-    unawaited(record());
+    final saved = record().catchError((Object _) {});
     _disposed = true;
     _generation++;
     _cancel?.cancel();
     _timeline?.dispose();
     unawaited(_states?.cancel());
-    unawaited(session.dispose());
+    _retirement = Future.wait<void>([session.dispose(), saved]).then((_) {});
+    unawaited(_retirement);
     unawaited(_messages.close());
     unawaited(_retractions.close());
     super.dispose();

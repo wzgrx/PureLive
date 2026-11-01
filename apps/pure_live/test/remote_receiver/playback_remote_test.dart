@@ -121,8 +121,8 @@ void main() {
       await request.drain<void>();
       final response = request.response
         ..persistentConnection = false
-        ..headers.contentType = ContentType.json;
-      response.write(jsonEncode(request.uri.path == '/api/pair' ? {'token': 'a' * 43} : <String, Object?>{}));
+        ..headers.contentType = ContentType.json
+        ..write(jsonEncode(request.uri.path == '/api/pair' ? {'token': 'a' * 43} : <String, Object?>{}));
       await response.close();
     });
     final client = PlaybackRemoteClient(Uri.parse('http://127.0.0.1:${server.port}/'));

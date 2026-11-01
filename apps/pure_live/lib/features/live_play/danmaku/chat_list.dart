@@ -863,8 +863,20 @@ class ChatLineView extends StatelessWidget {
     final douyuColor = platform == SiteIds.douyu
         ? douyuFanBadgeColor(int.tryParse(level) ?? 0, dark: theme.brightness == Brightness.dark)
         : null;
-    final chipBackground = douyuColor?.withValues(alpha: 0.16) ?? scheme.primary;
-    final chipInk = douyuColor == null
+    Color native(LiveMessageColor color) => Color.fromARGB(255, color.r, color.g, color.b);
+    final colors = message.fansColors;
+    final nativeStart = colors == null ? null : native(colors.start);
+    final nativeEnd = colors?.end == null ? nativeStart : native(colors!.end!);
+    final chipBackground = nativeStart ?? douyuColor?.withValues(alpha: 0.16) ?? scheme.primary;
+    final lightest = nativeStart == null
+        ? 0.0
+        : [nativeStart.computeLuminance(), nativeEnd!.computeLuminance()].reduce((a, b) => a > b ? a : b);
+    final darkest = nativeStart == null
+        ? 0.0
+        : [nativeStart.computeLuminance(), nativeEnd!.computeLuminance()].reduce((a, b) => a < b ? a : b);
+    final chipInk = nativeStart != null
+        ? ((darkest + 0.05) / 0.05 >= 1.05 / (lightest + 0.05) ? Colors.black : Colors.white)
+        : douyuColor == null
         ? scheme.onPrimary
         : _readableOn(douyuColor, Color.alphaBlend(chipBackground, background));
     return [
@@ -873,6 +885,10 @@ class ChatLineView extends StatelessWidget {
           key: const ValueKey('live-play-chat-fans'),
           text: level.isEmpty ? fans : '$fans $level',
           background: chipBackground,
+          gradient: nativeStart != null && nativeEnd != nativeStart
+              ? LinearGradient(colors: [nativeStart, nativeEnd!])
+              : null,
+          border: colors?.border == null ? null : Border.all(color: native(colors!.border!)),
           style: ChatChip.styleOf(theme, sizing)?.copyWith(color: chipInk),
         ),
       ),

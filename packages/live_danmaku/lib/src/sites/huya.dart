@@ -239,14 +239,39 @@ abstract final class HuyaDanmakuProtocol {
   static LiveMessage _chat(Uint8List? body, int eventId) {
     final notice = TarsStruct.decode(body ?? const []);
     final sender = notice.struct(0);
+    final medal = _fanBadge(notice);
     return LiveMessage(
       type: LiveMessageType.chat,
       color: color(notice.struct(6)?.integer(0) ?? 0),
       message: notice.string(3) ?? '',
       userName: sender?.string(2) ?? '',
       userId: '${sender?.integer(0) ?? 0}',
+      fansName: medal.name,
+      fansLevel: medal.level,
       messageId: _messageId(eventId),
     );
+  }
+
+  /// MessageNotice decorations carry BadgeInfo in app 10400. Other
+  /// decorations (nobility, activities) must not be interpreted as fan medals.
+  /// Malformed optional decorations never discard an otherwise valid chat.
+  static ({String name, String level}) _fanBadge(TarsStruct notice) {
+    for (final tag in const [8, 9, 12, 15]) {
+      for (final item in notice.list(tag)) {
+        if (item is! TarsStruct || item.integer(0) != 10400) continue;
+        final bytes = item.bytes(2);
+        if (bytes == null) continue;
+        try {
+          final badge = TarsStruct.decode(bytes);
+          final name = (badge.string(3) ?? '').trim();
+          final level = badge.integer(4) ?? 0;
+          if (name.isNotEmpty && level > 0) return (name: name, level: '$level');
+        } on FormatException {
+          continue;
+        }
+      }
+    }
+    return (name: '', level: '');
   }
 
   /// The combo key of a gift from sender [uid] with `lComboSeqId` [sequence]

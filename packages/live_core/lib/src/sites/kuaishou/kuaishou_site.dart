@@ -380,12 +380,29 @@ final class KuaishouSite extends LiveSite
   Future<List<LiveRoom>> searchRooms(String keyword, {int page = 1, int pageSize = 30}) async {
     final text = keyword.trim();
     if (text.isEmpty) return const [];
+    for (final url in LinkParser.sharedHttpUrls(text)) {
+      var roomId = roomIdFromUrl(url);
+      if (roomId == null && needsResolving(url)) {
+        final session = ShortLinkSession(http, timeout: const Duration(seconds: 12), site: _site);
+        try {
+          final resolution = await resolveUrl(url, session).timeout(const Duration(seconds: 12));
+          if (resolution is LinkRoom) roomId = resolution.roomId;
+        } finally {
+          session.close();
+        }
+      }
+      if (roomId != null) {
+        if (page != 1 || pageSize <= 0) return const [];
+        return [await getRoomDetail(roomId: roomId)];
+      }
+    }
     final number = page < 1 ? 1 : page;
     final encoded = Uri.encodeQueryComponent(text);
+    final cookie = _login();
     final response = await _get(
       // Built by hand: Uri drops the `=` of an empty value, and the site gets `lssid=`.
       Uri.parse('https://$_host/live_api/search/author?keyword=$encoded&page=$number&lssid='),
-      {..._webHeaders(), 'referer': 'https://$_host/search?keyword=$encoded'},
+      {..._webHeaders(), 'referer': 'https://$_host/search?keyword=$encoded', if (cookie.isNotEmpty) 'cookie': cookie},
     );
     return KuaishouApi.searchRooms(response.text, status: response.status).take(max(pageSize, 0)).toList();
   }
@@ -516,18 +533,49 @@ final class KuaishouSite extends LiveSite
   // Links ---------------------------------------------------------------------
 
   /// A room page `/u/{id}` on `live.kuaishou.com` or `live.kuaishou.cn`;
-  /// other pages there (search, categories) are not rooms. Share links
-  /// (`v.kuaishou.com`) and mobile pages are not supported, as in 3.x.
+  /// other pages there (search, categories) are not rooms. Official mobile
+  /// share landings encode the same public id in `/fw/live/{id}`.
   @override
   String? roomIdFromUrl(String url) {
     final uri = Uri.tryParse(url);
-    if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) return null;
+    if (uri == null || uri.userInfo.isNotEmpty || !(uri.isScheme('http') || uri.isScheme('https'))) return null;
     final host = uri.host.toLowerCase();
+    if (host == 'm.chenzhongtech.com' || host.endsWith('.m.chenzhongtech.com')) {
+      final parts = RoomPaths.segments(uri);
+      if (parts.length != 3 || parts[0] != 'fw' || parts[1] != 'live') return null;
+      return RoomPaths.isRoomIdentifier(parts[2], _roomIdPattern) ? parts[2] : null;
+    }
     if (host != _host && host != 'live.kuaishou.cn') return null;
     final segments = RoomPaths.segments(uri);
     if (segments.length < 2 || segments.first.toLowerCase() != 'u') return null;
     final id = segments[1].trim();
     return RoomPaths.isRoomIdentifier(id, _roomIdPattern) ? id : null;
+  }
+
+  /// Only the official short host is fetched; landing hosts are parsed, not visited.
+  @override
+  bool needsResolving(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null || !ShortLinkSession.isHttpUri(uri) || uri.host.toLowerCase() != 'v.kuaishou.com') return false;
+    final parts = RoomPaths.segments(uri);
+    return parts.length == 1 && RoomPaths.isRoomIdentifier(parts.single, _roomIdPattern);
+  }
+
+  /// Header-only, bounded redirects with no login cookie or arbitrary-host fetch.
+  @override
+  Future<LinkResolution?> resolveUrl(String url, ShortLinkSession session) async {
+    if (!needsResolving(url)) return null;
+    var current = Uri.parse(url);
+    for (var hop = 0; hop < ShortLinkSession.maxRequests; hop++) {
+      final response = await session.get(current, headers: _browser.headers);
+      final next = ShortLinkSession.redirectTarget(current, response);
+      if (next == null) return null;
+      final room = roomIdFromUrl(next.toString());
+      if (room != null) return LinkRoom(room);
+      if (!needsResolving(next.toString())) return null;
+      current = next;
+    }
+    return null;
   }
 }
 

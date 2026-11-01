@@ -37,9 +37,13 @@ path = [
   { glob = "apps/pure_live/lib/shared/net/lan_address.dart", sub = "J05" },
   { glob = "apps/pure_live/lib/shared/net/mdns_peers.dart", sub = "J05" },
   { glob = "apps/pure_live/lib/shared/remote/screen_*.dart", sub = "N02" },
+  { glob = "apps/pure_live/lib/shared/remote/local_ice_binding.dart", sub = "N02" },
   { glob = "apps/pure_live/lib/shared/remote/", sub = "J05", note = "配对、发现、播放遥控和浏览器控制页，不导出账号" },
 
   { glob = "apps/pure_live/lib/features/douyu_vod/vod_controller.dart", sub = "V01" },
+  { glob = "apps/pure_live/lib/features/huya_replay/", sub = "C03" },
+  { glob = "apps/pure_live/lib/shared/background/", sub = "A11" },
+  { glob = "apps/pure_live/lib/shared/rooms/archive_playback.dart", sub = "C03" },
   { glob = "apps/pure_live/lib/features/douyu_vod/vod_progress.dart", sub = "V01" },
   { glob = "apps/pure_live/lib/features/douyu_vod/", sub = "A15" },
   { glob = "apps/pure_live/lib/shared/audio/", sub = "G05" },
@@ -339,6 +343,8 @@ channel = [
 
 # 单个设置的归属（键是存储用的键名），优先于下面的分节默认值。
 setting = [
+  { key = "customBackground", sub = "A11" },
+  { key = "screenCaptureHint", sub = "N02" },
   # app 分节（默认 J01）
   { key = "enableDenseFavorites", sub = "I04" },
   { key = "enableBackgroundPlay", sub = "C02" },

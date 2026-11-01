@@ -285,6 +285,9 @@ class LiveRoomController extends ChangeNotifier {
   /// The room as known now (the card's data until the detail arrives).
   LiveRoom get room => _room;
 
+  /// Whether an external playback owner may still restore this room.
+  bool get isDisposed => _disposed;
+
   int? _vipCount;
 
   /// A VIP count received in this room session, separate from real viewers.

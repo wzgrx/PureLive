@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:pure_live/features/huya_replay/huya_archive_page.dart';
 import 'package:pure_live/features/toolbox/toolbox_actions.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
@@ -164,6 +165,15 @@ class _ToolboxPageState extends ConsumerState<ToolboxPage> {
         children: [
           // c9: the cards of the settings pages, at most 720 wide.
           for (final child in [
+            Card(
+              child: ListTile(
+                key: const ValueKey('toolbox-huya-archives'),
+                leading: const Icon(AppIcons.vodCatalog),
+                title: Text(i18n('huya_replay_title')),
+                subtitle: Text(i18n('huya_replay_hint')),
+                onTap: () => unawaited(openHuyaArchives(context)),
+              ),
+            ),
             Card(
               child: ListTile(
                 key: const ValueKey('toolbox-douyu-vod'),

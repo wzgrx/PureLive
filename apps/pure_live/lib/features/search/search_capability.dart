@@ -94,6 +94,7 @@ abstract final class SearchCapabilities {
       paged: true,
       webSearch: true,
       anchors: true,
+      noteKey: 'search_scope_kuaishou',
     ),
     SiteIds.cc: SearchCapability(coverage: SearchCoverage.liveAndOffline, paged: true, webSearch: true, anchors: true),
     SiteIds.twitch: SearchCapability(coverage: SearchCoverage.liveAndOffline, paged: true, webSearch: true),

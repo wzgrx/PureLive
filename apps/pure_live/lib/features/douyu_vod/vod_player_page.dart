@@ -8,34 +8,45 @@ import 'package:live_core/live_core.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/app/music_player.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/features/douyu_vod/vod_controller.dart';
 import 'package:pure_live/features/douyu_vod/vod_page.dart' show vodTime;
+import 'package:pure_live/features/huya_replay/huya_archive_controller.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/screen_orientation.dart';
 import 'package:pure_live/shared/audio/audio_focus.dart';
 import 'package:pure_live/shared/danmaku/danmaku_overlay.dart';
 import 'package:pure_live/shared/danmaku/danmaku_settings.dart';
 import 'package:pure_live/shared/danmaku/danmaku_settings_content.dart';
+import 'package:pure_live/shared/rooms/archive_playback.dart';
+import 'package:pure_live/tv/wallpaper/tv_wallpaper_layer.dart';
 
 /// Native on-demand playback with one shared control surface on every client:
 /// exact seeking, allowed renditions, resume, same-session segments and comments.
 class DouyuVodPlayerPage extends ConsumerStatefulWidget {
   /// Opens an official video hash id.
-  const new({required this.videoId, super.key});
+  const new({required this.videoId, this.archiveVideo, this.onRetire, super.key});
 
   /// The `/show/` hash id, never a media URL.
   final String videoId;
+
+  /// Official Huya metadata selects the shared archive controller.
+  final HuyaArchiveVideo? archiveVideo;
+
+  /// Lets an owning live page await native cleanup before resuming.
+  final ValueChanged<Future<void>>? onRetire;
 
   @override
   ConsumerState<DouyuVodPlayerPage> createState() => _DouyuVodPlayerPageState();
 }
 
 class _DouyuVodPlayerPageState extends ConsumerState<DouyuVodPlayerPage> with WidgetsBindingObserver {
-  late final DouyuVodController _controller;
+  late final ArchivePlaybackController _controller;
+  late final Future<void> _wallpaperHold;
   RoomAudioFocus? _audioFocus;
   Timer? _hide;
   bool _fullscreen = false;
@@ -67,14 +78,24 @@ class _DouyuVodPlayerPageState extends ConsumerState<DouyuVodPlayerPage> with Wi
         volumeGainDb: settings.get(Settings.volumeBoostDb),
       ),
     );
-    _controller = DouyuVodController(
-      source: ref.read(douyuVodProvider),
-      session: session,
-      progress: ref.read(douyuVodProgressProvider),
-      initialVolume: settings.get(Settings.globalVolumeMute)
-          ? 0
-          : settings.get(_mobile ? Settings.defaultMobileVolume : Settings.defaultDesktopVolume),
-    );
+    _controller = widget.archiveVideo == null
+        ? DouyuVodController(
+            source: ref.read(douyuVodProvider),
+            session: session,
+            progress: ref.read(douyuVodProgressProvider),
+            initialVolume: settings.get(Settings.globalVolumeMute)
+                ? 0
+                : settings.get(_mobile ? Settings.defaultMobileVolume : Settings.defaultDesktopVolume),
+          )
+        : HuyaArchiveController(
+            source: ref.read(huyaArchiveProvider),
+            session: session,
+            video: widget.archiveVideo!,
+            progress: ref.read(huyaArchiveProgressProvider),
+            initialVolume: settings.get(Settings.globalVolumeMute)
+                ? 0
+                : settings.get(_mobile ? Settings.defaultMobileVolume : Settings.defaultDesktopVolume),
+          );
     if (SystemAudioFocus.available) {
       _audioFocus = RoomAudioFocus(
         session: session,
@@ -85,7 +106,8 @@ class _DouyuVodPlayerPageState extends ConsumerState<DouyuVodPlayerPage> with Wi
       )..start();
     }
     unawaited(yieldMusicToOtherPlayback(ref));
-    unawaited(_controller.open(widget.videoId));
+    _wallpaperHold = TvWallpaperVideo.hold();
+    unawaited(_wallpaperHold.then((_) => _controller.open(widget.videoId)));
     _controller.addListener(_changed);
   }
 
@@ -116,6 +138,8 @@ class _DouyuVodPlayerPageState extends ConsumerState<DouyuVodPlayerPage> with Wi
     if (_fullscreen) unawaited(_restoreFullscreen());
     _controller.removeListener(_changed);
     _controller.dispose();
+    widget.onRetire?.call(_controller.retirement);
+    unawaited(TvWallpaperVideo.releaseAfter(Future.wait([_wallpaperHold, _controller.retirement])));
     _surface.dispose();
     _play.dispose();
     super.dispose();
@@ -238,21 +262,22 @@ class _DouyuVodPlayerPageState extends ConsumerState<DouyuVodPlayerPage> with Wi
                 outputSize: !_mobile,
                 keepScreenOn: watchSetting(ref, Settings.enableScreenKeepOn),
               ),
-              DanmakuFrameRateBuilder(
-                builder: (context, fps, refreshRate) => IgnorePointer(
-                  child: DanmakuOverlay(
-                    messages: _controller.messages,
-                    retractions: _controller.retractions,
-                    look: look,
-                    running: state.status == PlaybackStatus.playing,
-                    visible: _controller.danmakuVisible,
-                    maxVisible: watchSetting(ref, Settings.danmakuMaxVisibleCount),
-                    fps: fps,
-                    refreshRate: refreshRate,
-                    giftClearance: const EdgeInsets.only(top: 48, bottom: 130),
+              if (_controller.supportsDanmaku)
+                DanmakuFrameRateBuilder(
+                  builder: (context, fps, refreshRate) => IgnorePointer(
+                    child: DanmakuOverlay(
+                      messages: _controller.messages,
+                      retractions: _controller.retractions,
+                      look: look,
+                      running: state.status == PlaybackStatus.playing,
+                      visible: _controller.danmakuVisible,
+                      maxVisible: watchSetting(ref, Settings.danmakuMaxVisibleCount),
+                      fps: fps,
+                      refreshRate: refreshRate,
+                      giftClearance: const EdgeInsets.only(top: 48, bottom: 130),
+                    ),
                   ),
                 ),
-              ),
               if (_controller.busy || {PlaybackStatus.opening, PlaybackStatus.buffering}.contains(state.status))
                 const Center(child: CircularProgressIndicator()),
               if (_controller.error != null || state.status == PlaybackStatus.error)
@@ -296,7 +321,8 @@ class _DouyuVodPlayerPageState extends ConsumerState<DouyuVodPlayerPage> with Wi
                           ),
                           Expanded(
                             child: Text(
-                              video?.title ?? i18n('douyu_vod_title'),
+                              video?.title ??
+                                  i18n(widget.archiveVideo == null ? 'douyu_vod_title' : 'huya_replay_title'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: context.textStyles.t14.copyWith(
@@ -415,19 +441,21 @@ class _DouyuVodPlayerPageState extends ConsumerState<DouyuVodPlayerPage> with Wi
                                         ),
                                       ),
                                     ),
-                                    IconButton(
-                                      tooltip: i18n('douyu_vod_danmaku'),
-                                      onPressed: _controller.toggleDanmaku,
-                                      icon: DanmakuIcon(
-                                        _controller.danmakuVisible ? DanmakuIconKind.on : DanmakuIconKind.off,
+                                    if (_controller.supportsDanmaku)
+                                      IconButton(
+                                        tooltip: i18n('douyu_vod_danmaku'),
+                                        onPressed: _controller.toggleDanmaku,
+                                        icon: DanmakuIcon(
+                                          _controller.danmakuVisible ? DanmakuIconKind.on : DanmakuIconKind.off,
+                                        ),
                                       ),
-                                    ),
-                                    IconButton(
-                                      key: const ValueKey('vod-danmaku-settings'),
-                                      tooltip: i18n('douyu_vod_danmaku_settings'),
-                                      onPressed: () => unawaited(_danmakuSettings()),
-                                      icon: const DanmakuIcon(DanmakuIconKind.settings),
-                                    ),
+                                    if (_controller.supportsDanmaku)
+                                      IconButton(
+                                        key: const ValueKey('vod-danmaku-settings'),
+                                        tooltip: i18n('douyu_vod_danmaku_settings'),
+                                        onPressed: () => unawaited(_danmakuSettings()),
+                                        icon: const DanmakuIcon(DanmakuIconKind.settings),
+                                      ),
                                     IconButton(
                                       tooltip: i18n('volume'),
                                       onPressed: () =>

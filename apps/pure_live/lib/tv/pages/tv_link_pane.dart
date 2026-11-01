@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:pure_live/features/huya_replay/huya_archive_page.dart';
 import 'package:pure_live/features/toolbox/toolbox_actions.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
@@ -133,6 +134,11 @@ class _TvLinkPaneState extends ConsumerState<TvLinkPane> {
             spacing: scale.px(12),
             runSpacing: scale.px(12),
             children: [
+              TvButton(
+                key: const ValueKey('tv-link-huya-archives'),
+                label: i18n('huya_replay_title'),
+                onTap: () => unawaited(openHuyaArchives(context)),
+              ),
               TvButton(
                 key: const ValueKey('tv-link-douyu-vod'),
                 label: i18n('douyu_vod_title'),

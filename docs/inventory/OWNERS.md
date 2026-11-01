@@ -6,7 +6,7 @@
 
 路径规则按 OWNERS.toml 里的顺序第一条匹配的生效，所以一条目录规则只管前面的规则没拿走的文件。本页只随归属表、设置、来源和通道变化，加删代码文件不用重新生成。
 
-路径规则 238 条；设置 295 个（分节默认 24 条、单独指定 109 个）；来源 35 个；通道 23 个。
+路径规则 242 条；设置 297 个（分节默认 24 条、单独指定 111 个）；来源 35 个；通道 23 个。
 
 | 子分类 | 路径规则 | 设置 | 播放 | 弹幕 | 通道 |
 |---|---:|---:|---:|---:|---:|
@@ -19,7 +19,7 @@
 | A08 弹幕界面 | 5 | 11 |  |  |  |
 | A09 浏览界面 | 9 | 11 |  |  |  |
 | A10 录制界面 | 6 |  |  |  |  |
-| A11 设置界面 | 2 |  |  |  |  |
+| A11 设置界面 | 3 | 1 |  |  |  |
 | A12 账号和数据界面 | 6 |  |  |  |  |
 | A13 网络电视和多画面界面 | 2 |  |  |  |  |
 | A15 小页面 | 5 |  |  |  |  |
@@ -28,7 +28,7 @@
 | A18 苹果平台界面 | 3 | 1 |  |  | 1 |
 | C01 进房和房间逻辑 | 2 | 3 |  |  |  |
 | C02 小窗、画中画、后台播放 | 3 | 8 |  |  | 1 |
-| C03 直播间工具 |  | 2 |  |  |  |
+| C03 直播间工具 | 2 | 2 |  |  |  |
 | D01 平台弹幕协议 | 1 | 1 |  | 30 |  |
 | D02 过滤和屏蔽 | 2 | 10 |  |  |  |
 | D03 飞行弹幕引擎 | 2 |  |  |  |  |
@@ -72,7 +72,7 @@
 | L02 节目单和回看 | 3 |  |  |  |  |
 | L03 点播和音乐 | 1 |  |  |  |  |
 | N01 多画面 | 1 | 1 |  |  |  |
-| N02 投屏 | 3 |  |  |  | 2 |
+| N02 投屏 | 4 | 1 |  |  | 2 |
 | O01 通知和前台服务 | 8 | 6 |  |  | 4 |
 | O02 画中画 | 1 |  |  |  | 1 |
 | O03 分享接收和快捷方式 | 3 | 1 |  |  | 2 |
@@ -144,7 +144,8 @@
 
 ## A11 设置界面
 
-- 代码：`apps/pure_live/lib/features/settings/`、`apps/pure_live/lib/shared/settings/`
+- 代码：`apps/pure_live/lib/shared/background/`、`apps/pure_live/lib/features/settings/`、`apps/pure_live/lib/shared/settings/`
+- 设置：`customBackground`
 
 ## A12 账号和数据界面
 
@@ -187,6 +188,7 @@
 
 ## C03 直播间工具
 
+- 代码：`apps/pure_live/lib/features/huya_replay/`、`apps/pure_live/lib/shared/rooms/archive_playback.dart`
 - 设置：`enableAsmrSleepMode`、`asmrSleepMinutes`
 
 ## D01 平台弹幕协议
@@ -395,7 +397,8 @@
 
 ## N02 投屏
 
-- 代码：`apps/pure_live/lib/shared/remote/screen_*.dart`、`apps/pure_live/android/**/ScreenCapturePlugin.kt`、`packages/live_cast/`
+- 代码：`apps/pure_live/lib/shared/remote/screen_*.dart`、`apps/pure_live/lib/shared/remote/local_ice_binding.dart`、`apps/pure_live/android/**/ScreenCapturePlugin.kt`、`packages/live_cast/`
+- 设置：`screenCaptureHint`
 - 通道：`pure_live/screen_capture`、`pure_live/multicast_lock`
 
 ## O01 通知和前台服务
