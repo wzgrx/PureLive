@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "file": "page1.html",
+      "source_sha256": "bc15e80f0a07d76a99a4e6d9e01f4bd8bc5d505093a514d278028081fdf7c55a",
+      "capture": "2026-11-01",
+      "source": "https://www.huya.com/video/u/294636272?tabName=live&pageIndex=1",
+      "sanitization": "Only the public archive response retained; analytics, page scripts and non-archive state removed. Anonymous request identity fields are empty."
+    },
+    {
+      "file": "page2.html",
+      "source_sha256": "2fba3364fbe9fc2ec84b9043a491b336e7de841a28602935b39a73dc2d4ee165",
+      "capture": "2026-11-01",
+      "source": "https://www.huya.com/video/u/294636272?tabName=live&pageIndex=2",
+      "sanitization": "Only the public archive response retained; analytics, page scripts and non-archive state removed. Anonymous request identity fields are empty."
+    }
+  ],
+  "qualities": {
+    "source": "https://liveapi.huya.com/moment/getMomentContent?videoId=1131139550",
+    "capture": "2026-11-01",
+    "source_sha256": "60f0da3f242985d3b3298bf9ee2c0353b7d47edfc961d231ab9f259210f920cd",
+    "sanitization": "Only definition labels/dimensions and synthetic media URLs retained; no media signatures, account or analytics data."
+  }
+}
