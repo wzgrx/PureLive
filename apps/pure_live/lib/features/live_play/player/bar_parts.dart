@@ -34,6 +34,9 @@ class PlayerBattery extends StatefulWidget {
   /// Reads the level (percent), null for none.
   final Future<int?> Function() read;
 
+  // Keep the last figure through control-bar/floating-row transitions.
+  static final Expando<int> _recentLevels = Expando();
+
   @override
   State<PlayerBattery> createState() => _PlayerBatteryState();
 }
@@ -45,13 +48,16 @@ class _PlayerBatteryState extends State<PlayerBattery> {
   @override
   void initState() {
     super.initState();
+    _level = PlayerBattery._recentLevels[widget.read];
     unawaited(_refresh());
     _poll = Timer.periodic(const Duration(minutes: 1), (_) => unawaited(_refresh()));
   }
 
   Future<void> _refresh() async {
-    final level = await widget.read();
-    if (mounted && level != _level) setState(() => _level = level);
+    final read = widget.read;
+    final level = await read();
+    PlayerBattery._recentLevels[read] = level;
+    if (mounted && widget.read == read && level != _level) setState(() => _level = level);
   }
 
   @override

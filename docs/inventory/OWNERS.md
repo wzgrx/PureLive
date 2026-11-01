@@ -6,7 +6,7 @@
 
 路径规则按 OWNERS.toml 里的顺序第一条匹配的生效，所以一条目录规则只管前面的规则没拿走的文件。本页只随归属表、设置、来源和通道变化，加删代码文件不用重新生成。
 
-路径规则 244 条；设置 297 个（分节默认 24 条、单独指定 111 个）；来源 35 个；通道 23 个。
+路径规则 244 条；设置 298 个（分节默认 24 条、单独指定 111 个）；来源 35 个；通道 23 个。
 
 | 子分类 | 路径规则 | 设置 | 播放 | 弹幕 | 通道 |
 |---|---:|---:|---:|---:|---:|
@@ -43,7 +43,7 @@
 | E05 平台框架和模型 | 1 |  |  |  |  |
 | E06 平台层升级 | 1 |  |  |  |  |
 | E07 平台巡检 | 1 |  |  |  |  |
-| G01 引擎 | 4 | 13 |  |  |  |
+| G01 引擎 | 4 | 14 |  |  |  |
 | G02 会话和恢复 | 1 |  |  |  |  |
 | G03 起播速度和弱网 | 1 |  |  |  |  |
 | G04 画面 |  | 3 |  |  |  |
@@ -260,7 +260,7 @@
 ## G01 引擎
 
 - 代码：`apps/pure_live/lib/shared/rooms/playback_telemetry.dart`、`packages/live_media/`、`packages/live_player/lib/src/engine*.dart`、`packages/live_player/lib/src/mpv_*.dart`
-- 设置：`videoPlayerKey`、`enableCodec`、`preferH264`、`bilibiliPreferRaw`、`playerCompatMode`、`customPlayerOutput`、`videoOutputDriver`、`audioOutputDriver`、`videoHardwareDecoder`、`floatWindowPosition`、`useSystemPip`、`floatOverlayTipShown`、`playbackHud`
+- 设置：`videoPlayerKey`、`enableCodec`、`preferH264`、`bilibiliPreferRaw`、`playerCompatMode`、`customPlayerOutput`、`videoOutputDriver`、`audioOutputDriver`、`videoHardwareDecoder`、`floatWindowPosition`、`useSystemPip`、`floatOverlayTipShown`、`playbackHud`、`playbackLineDetails`
 
 ## G02 会话和恢复
 

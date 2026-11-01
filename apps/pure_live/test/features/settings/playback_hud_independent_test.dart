@@ -50,11 +50,11 @@ void main() {
     expect(config.separate, isTrue);
     expect(config.styleFor('clock').corner, 'topLeft');
     expect(config.styleFor('speed').corner, 'bottomRight');
-    expect(config.corner, 'topRight');
+    expect(config.corner, 'topLeft');
     await tapKey('playback-hud-separate');
     expect(
       PlaybackHudConfig.fromJson(services.store.settings.get(Settings.playbackHud)).styleFor('speed').corner,
-      'topRight',
+      'topLeft',
     );
     await tapKey('playback-hud-reset');
     expect(services.store.settings.get(Settings.playbackHud), isEmpty);

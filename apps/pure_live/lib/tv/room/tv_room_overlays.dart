@@ -221,7 +221,7 @@ class TvRoomControls extends StatelessWidget {
   Widget build(BuildContext context) =>
       PlaybackLineBuilder(session: controller.session, telemetry: controller.telemetry, builder: _contents);
 
-  Widget _contents(BuildContext context, PlaybackState playback, PlaybackLinePresentation lines) {
+  Widget _contents(BuildContext context, PlaybackState playback, PlaybackLineChoices lines) {
     final scale = TvScale.of(context);
     final room = controller.room;
     final qualities = controller.qualities;

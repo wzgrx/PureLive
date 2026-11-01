@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/toolbox/toolbox_actions.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
@@ -116,12 +118,15 @@ class _ToolboxPageState extends ConsumerState<ToolboxPage> {
         _link.text,
         chooseQuality: (qualities) =>
             _choose(title: i18n('toolbox_select_quality'), items: qualities, label: (quality, _) => quality.quality),
-        chooseLine: (urls) => _choose(
-          title: i18n('toolbox_select_line'),
-          items: urls,
-          label: (line, index) => playbackLineName(index, line: line),
-          subtitle: (line) => line.url,
-        ),
+        chooseLine: (urls) {
+          final details = ref.read(storeProvider).settings.get(Settings.playbackLineDetails);
+          return _choose(
+            title: i18n('toolbox_select_line'),
+            items: urls,
+            label: (line, index) => playbackLineName(index, line: details ? line : null),
+            subtitle: details ? playbackLineOrigin : null,
+          );
+        },
       ),
     );
   }

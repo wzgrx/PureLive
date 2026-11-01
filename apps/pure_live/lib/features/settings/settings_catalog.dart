@@ -825,6 +825,14 @@ List<SettingsEntry> _build() {
       settings: [Settings.playbackHud],
       keywords: ['时间', '时钟', '网速', '常驻', 'clock', 'speed', 'HUD'],
     )
+    ..toggle(
+      'playback_line_details',
+      'playback_line_details',
+      Settings.playbackLineDetails,
+      AppIcons.settingsVideo,
+      desc: 'playback_line_details_desc',
+      keywords: ['线路', '编码', 'Raw', 'CDN', 'codec', 'line'],
+    )
     ..group = 'audio_settings'
     ..toggle(
       'audio_mixing',

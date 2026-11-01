@@ -9,6 +9,12 @@ import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/rooms/playback_hud_config.dart';
 import 'package:pure_live/shared/rooms/playback_telemetry.dart';
 
+/// Geometry shared by the fullscreen status row and its control-bar host.
+const double playbackStatusBarHeight = 52;
+
+/// The back button remains clear of passive status information.
+const double playbackStatusLeadingWidth = 48;
+
 /// Formats bytes actually read by this media session; unknown is not zero.
 String playbackHudRate(double? rate) {
   if (rate == null || !rate.isFinite || rate < 0) return '—';
@@ -75,7 +81,16 @@ class _PlayerClockState extends State<PlayerClock> {
 /// Input-transparent information, placed independently of auto-hiding controls.
 class PlaybackHud extends ConsumerWidget {
   /// [clearance] keeps information clear of bars, captions and other overlays.
-  const new({required this.telemetry, required this.controls, this.clearance = EdgeInsets.zero, super.key});
+  const new({
+    required this.telemetry,
+    required this.controls,
+    this.clearance = EdgeInsets.zero,
+    this.fullscreen = false,
+    this.phone = false,
+    this.compactHeader = false,
+    this.compactLeading,
+    super.key,
+  });
 
   /// The room's one statistics sampler; only speed subscribes to it.
   final PlaybackTelemetry telemetry;
@@ -86,10 +101,70 @@ class PlaybackHud extends ConsumerWidget {
   /// Extra room-specific safe space, in logical pixels.
   final EdgeInsets clearance;
 
+  /// Actual fullscreen state, independent of the stream's aspect ratio.
+  final bool fullscreen;
+
+  /// Phone/tablet portrait views rely on the system clock instead.
+  final bool phone;
+
+  /// This room puts the same information in its visible control bar.
+  final bool compactHeader;
+
+  /// Optional battery supplied by the room without a shared-to-feature import.
+  final Widget? compactLeading;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final config = PlaybackHudConfig.fromJson(watchSetting(ref, Settings.playbackHud));
-    return PlaybackHudView(config: config, telemetry: telemetry, controls: controls, clearance: clearance);
+    if (phone && (!fullscreen || MediaQuery.orientationOf(context) == Orientation.portrait)) {
+      return const SizedBox.shrink();
+    }
+    if (compactHeader && config.compactHeader) {
+      if (controls || !config.visible(controls: controls, fullscreen: fullscreen)) return const SizedBox.shrink();
+      return Positioned(
+        top: 0,
+        left: 0,
+        right: 0,
+        child: IgnorePointer(
+          child: ExcludeFocus(
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: 1.3,
+              child: SafeArea(
+                bottom: false,
+                child: SizedBox(
+                  height: playbackStatusBarHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: playbackStatusLeadingWidth),
+                    child: Row(
+                      key: const ValueKey('playback-hud-status-row'),
+                      children: [
+                        ?compactLeading,
+                        Flexible(
+                          child: PlaybackHudView(
+                            config: config,
+                            telemetry: telemetry,
+                            controls: controls,
+                            inline: true,
+                            fullscreen: fullscreen,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return PlaybackHudView(
+      config: config,
+      telemetry: telemetry,
+      controls: controls,
+      clearance: clearance,
+      fullscreen: fullscreen,
+    );
   }
 }
 
@@ -101,6 +176,8 @@ class PlaybackHudView extends StatelessWidget {
     required this.telemetry,
     required this.controls,
     this.clearance = EdgeInsets.zero,
+    this.inline = false,
+    this.fullscreen = true,
     super.key,
   });
 
@@ -116,9 +193,15 @@ class PlaybackHudView extends StatelessWidget {
   /// Space reserved by room controls and captions.
   final EdgeInsets clearance;
 
+  /// Compact content inside the battery's row rather than a separate corner.
+  final bool inline;
+
+  /// Whether this viewport represents fullscreen playback.
+  final bool fullscreen;
+
   @override
   Widget build(BuildContext context) {
-    if (!config.visible(controls: controls)) return const SizedBox.shrink();
+    if (!config.visible(controls: controls, fullscreen: fullscreen)) return const SizedBox.shrink();
     final base = Theme.of(context).textTheme.bodyMedium;
     final mono = switch (Theme.of(context).platform) {
       TargetPlatform.windows => 'Consolas',
@@ -135,16 +218,55 @@ class PlaybackHudView extends StatelessWidget {
         _ => null,
       },
       fontFamilyFallback: item.font == 'app' ? base?.fontFamilyFallback : null,
-      fontWeight: FontWeight.w600,
+      fontWeight: inline ? FontWeight.w400 : FontWeight.w600,
+      height: inline ? 1 : null,
       color: Color(item.color),
       shadows: OnVideoColors.shadows,
     ).tabular;
     Widget clock() => PlayerClock(style: style(config.styleFor('clock')));
     Widget rate(double? speed) => Text(
-      '${i18n('playback_hud_speed')}: ${playbackHudRate(speed)}',
+      inline || config.compactHeader
+          ? playbackHudRate(speed)
+          : '${i18n('playback_hud_speed')}: ${playbackHudRate(speed)}',
+      semanticsLabel: '${i18n('playback_hud_speed')}: ${playbackHudRate(speed)}',
       key: const ValueKey('playback-hud-speed'),
       style: style(config.styleFor('speed')),
     );
+    if (inline) {
+      Widget chip(Widget child) => Container(
+        constraints: const BoxConstraints(minHeight: 17),
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: OnVideoColors.chipOutline,
+          border: Border.all(color: OnVideoColors.foreground),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: child,
+      );
+      Widget content(double? speed) => FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (config.clock) chip(clock()),
+            if (config.clock && config.speed) const SizedBox(width: 6),
+            if (config.speed) chip(rate(speed)),
+          ],
+        ),
+      );
+      return IgnorePointer(
+        child: ExcludeFocus(
+          child: RepaintBoundary(
+            key: const ValueKey('playback-hud'),
+            child: config.speed
+                ? ListenableBuilder(listenable: telemetry, builder: (_, _) => content(telemetry.downloadAverage))
+                : content(null),
+          ),
+        ),
+      );
+    }
     Widget contents(double? speed) {
       final groups = <String, List<Widget>>{};
       if (config.clock) (groups[config.styleFor('clock').corner] ??= []).add(clock());

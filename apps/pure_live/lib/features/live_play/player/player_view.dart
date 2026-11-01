@@ -959,7 +959,16 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
             ],
           ),
         ),
-        if (!pip) PlaybackHud(telemetry: _room.telemetry, controls: _controls && !_locked, clearance: _giftClearance()),
+        if (!pip)
+          PlaybackHud(
+            telemetry: _room.telemetry,
+            controls: _controls && !_locked,
+            clearance: _giftClearance(),
+            fullscreen: !_inline,
+            phone: widget.platform.mobile,
+            compactHeader: arrangement == ControlsArrangement.landscape && !_inline,
+            compactLeading: const PlayerBattery(),
+          ),
         // U.2k c9: the local gift banner, on its own layer in the middle of
         // the picture, clear of the bars (D08.4).
         if (LocalRoomScope.maybeOf(context) case final local?)
@@ -1037,7 +1046,10 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
                             left: 0,
                             top: 0,
                             right: 0,
-                            child: PlayerTopBar(actions: controls ? actions : actions.reducedCopy()),
+                            child: PlayerTopBar(
+                              actions: controls ? actions : actions.reducedCopy(),
+                              showStatus: _controls && !_locked,
+                            ),
                           ),
                         if (!_locked && controls) Positioned(left: 0, right: 0, bottom: 0, child: bottomBar),
                         if (!_locked && widget.edge != null)

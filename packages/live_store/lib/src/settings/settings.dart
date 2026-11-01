@@ -997,6 +997,9 @@ abstract final class Settings {
   /// Local clock and media input-rate presentation; absent keys retain defaults.
   static const playbackHud = JsonSetting('playbackHud', section: 'player', defaultValue: {});
 
+  /// Opt-in codec, Raw and CDN annotations; older installations stay concise.
+  static const playbackLineDetails = BoolSetting('playbackLineDetails', section: 'player', defaultValue: false);
+
   /// Opt-in coexistence with external media; system interruptions still apply.
   static const allowAudioMixing = BoolSetting('allowAudioMixing', section: 'volume', defaultValue: false);
 
@@ -2185,6 +2188,7 @@ abstract final class Settings {
     roomVolumes,
     roomVolumeGains,
     playbackHud,
+    playbackLineDetails,
     customBackground,
     screenCaptureHint,
     allowAudioMixing,

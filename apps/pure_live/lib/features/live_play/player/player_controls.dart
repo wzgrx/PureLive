@@ -28,6 +28,8 @@ import 'package:pure_live/features/live_play/player/recording_badge.dart';
 import 'package:pure_live/features/live_play/switch_room/room_switch_panel.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
+import 'package:pure_live/shared/rooms/playback_hud.dart';
+import 'package:pure_live/shared/rooms/playback_hud_config.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 
 /// How far the shade under a control bar reaches past the bar into the
@@ -281,16 +283,20 @@ class VideoIconButton extends StatelessWidget {
 /// - portrait fullscreen (U.2b change 6): back, the title, follow, record and
 ///   the menu; under them the clock and battery, switch room, audio, cast and
 ///   picture-in-picture.
-class PlayerTopBar extends StatelessWidget {
+class PlayerTopBar extends ConsumerWidget {
   /// Creates the bar.
-  const new({required this.actions, super.key});
+  const new({required this.actions, this.showStatus = true, super.key});
 
   /// The player's actions.
   final PlayerBarActions actions;
 
+  /// Hidden controls leave the passive status row to the independent overlay.
+  final bool showStatus;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final arrangement = actions.arrangement;
+    final hud = PlaybackHudConfig.fromJson(watchSetting(ref, Settings.playbackHud));
     final portrait = arrangement == ControlsArrangement.portraitFullscreen;
     final Widget content = switch (arrangement) {
       ControlsArrangement.inline => SizedBox(
@@ -314,7 +320,30 @@ class PlayerTopBar extends StatelessWidget {
         child: Row(
           children: [
             _back(context),
-            const PlayerBattery(),
+            _StatusSlot(
+              visible: showStatus,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .3),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const PlayerBattery(),
+                      if (hud.compactHeader)
+                        PlaybackHudView(
+                          config: hud,
+                          telemetry: actions.controller.telemetry,
+                          controls: true,
+                          fullscreen: actions.display != RoomDisplay.inline,
+                          inline: true,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             const SizedBox(width: 4),
             Expanded(child: _VideoTitle(controller: actions.controller)),
             ..._trailing(context, switchRoom: true),
@@ -986,4 +1015,39 @@ class _ShadedBar extends StatelessWidget {
       child,
     ],
   );
+}
+
+// Keep the title in place while the surrounding controls fade. Hidden status
+// owns no battery polling, clock timer or statistics subscription.
+class _StatusSlot extends StatefulWidget {
+  const new({required this.visible, required this.child});
+  final bool visible;
+  final Widget child;
+  @override
+  State<_StatusSlot> createState() => _StatusSlotState();
+}
+
+class _StatusSlotState extends State<_StatusSlot> {
+  final GlobalKey _measure = GlobalKey();
+  Size _last = Size.zero;
+  void _remember() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.visible) return;
+      final render = _measure.currentContext?.findRenderObject();
+      if (render is RenderBox && render.hasSize) _last = render.size;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.visible) return SizedBox.fromSize(size: _last);
+    _remember();
+    return NotificationListener<SizeChangedLayoutNotification>(
+      onNotification: (_) {
+        _remember();
+        return false;
+      },
+      child: SizeChangedLayoutNotifier(key: _measure, child: widget.child),
+    );
+  }
 }

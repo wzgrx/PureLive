@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_media/live_media.dart';
 import 'package:live_player/live_player.dart';
+import 'package:live_store/live_store.dart';
+import 'package:pure_live/app/services.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/rooms/playback_telemetry.dart';
 
@@ -213,10 +216,43 @@ final class PlaybackLinePresentation extends ChangeNotifier {
   }
 }
 
+/// A display policy that leaves playback plans and line indexes untouched.
+final class PlaybackLineChoices {
+  /// The optional detailed presentation is created only after opting in.
+  new(this.session, {required this.detailed, PlaybackTelemetry? telemetry})
+    : presentation = detailed ? PlaybackLinePresentation.of(session, telemetry: telemetry) : null;
+
+  /// Current playback state owner.
+  final PlaybackSession session;
+
+  /// Whether metadata is visible.
+  final bool detailed;
+
+  /// Null for concise mode, which performs no native codec lookup.
+  final PlaybackLinePresentation? presentation;
+
+  /// The same one-based concise names used by older clients.
+  List<String> get labels =>
+      presentation?.labels ?? [for (var i = 0; i < session.state.lineCount; i++) playbackLineName(i)];
+
+  /// Extra descriptions disappear together with detailed names.
+  List<String> get origins => presentation?.origins ?? List.filled(session.state.lineCount, '');
+
+  /// Current selection or a safe fallback.
+  String name(int index) => presentation?.name(index) ?? playbackLineName(index);
+
+  /// Metadata for a resolved choice, with evidence only from the playing quality.
+  String choiceName(int index, LivePlayLine? line, {bool playingQuality = true}) => !detailed
+      ? playbackLineName(index)
+      : playingQuality
+      ? presentation!.choiceName(index, line)
+      : playbackLineName(index, line: line);
+}
+
 /// Session and codec changes rebuild the same line controls on every layout.
 class PlaybackLineBuilder extends StatelessWidget {
   /// The optional sampler is the room's existing HUD sampler.
-  const new({required this.session, required this.builder, this.telemetry, super.key});
+  const new({required this.session, required this.builder, this.telemetry, this.detailed, super.key});
 
   /// The current playback owner.
   final PlaybackSession session;
@@ -224,12 +260,30 @@ class PlaybackLineBuilder extends StatelessWidget {
   /// Optional existing shared sampler.
   final PlaybackTelemetry? telemetry;
 
+  /// Explicit policy for isolated previews; application callers use settings.
+  final bool? detailed;
+
   /// Builds controls from current state and verified metadata.
-  final Widget Function(BuildContext context, PlaybackState state, PlaybackLinePresentation lines) builder;
+  final Widget Function(BuildContext context, PlaybackState state, PlaybackLineChoices lines) builder;
 
   @override
   Widget build(BuildContext context) {
-    final lines = PlaybackLinePresentation.of(session, telemetry: telemetry);
-    return ListenableBuilder(listenable: lines, builder: (context, _) => builder(context, session.state, lines));
+    Widget contents({required bool details}) {
+      final choices = PlaybackLineChoices(session, detailed: details, telemetry: telemetry);
+      if (choices.presentation case final presentation?) {
+        return ListenableBuilder(
+          listenable: presentation,
+          builder: (context, _) => builder(context, session.state, choices),
+        );
+      }
+      return StreamBuilder<PlaybackState>(
+        stream: session.states,
+        initialData: session.state,
+        builder: (context, snapshot) => builder(context, snapshot.data ?? session.state, choices),
+      );
+    }
+
+    if (detailed case final value?) return contents(details: value);
+    return Consumer(builder: (context, ref, _) => contents(details: watchSetting(ref, Settings.playbackLineDetails)));
   }
 }
