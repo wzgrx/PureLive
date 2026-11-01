@@ -87,7 +87,10 @@ final class PlaybackRemoteClient {
   Future<Map<String, dynamic>> _request(String path, [Map<String, Object?>? body]) async {
     if (_closed || remoteControlUri(uri.toString()) == null) throw const SocketException('invalid receiver');
     final request = await _http.openUrl(body == null ? 'GET' : 'POST', uri.resolve('/api/$path'));
-    request.followRedirects = false;
+    // The receiver deliberately closes each response; do not pool a closing socket.
+    request
+      ..persistentConnection = false
+      ..followRedirects = false;
     if (_token != null) request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $_token');
     if (body != null) {
       request.headers.contentType = ContentType.json;

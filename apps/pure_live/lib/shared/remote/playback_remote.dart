@@ -294,13 +294,28 @@ final class PlaybackRemote extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> _json(HttpRequest request) async {
-    if (request.headers.contentType?.mimeType != 'application/json') throw const FormatException('json required');
+    final json = request.headers.contentType?.mimeType == 'application/json';
+    final limit = request.uri.path.startsWith('/api/screen/') ? 65536 : 16384;
+    final elapsed = Stopwatch()..start();
     final bytes = <int>[];
+    var received = 0;
+    var oversized = false;
     await for (final chunk in request.timeout(const Duration(seconds: 10))) {
-      bytes.addAll(chunk);
-      final limit = request.uri.path.startsWith('/api/screen/') ? 65536 : 16384;
-      if (bytes.length > limit) throw const FormatException('oversized');
+      received += chunk.length;
+      // Cancelling the input on the first excess chunk may reset the socket
+      // before the 400 headers arrive. Drain only a bounded excess, with no
+      // excess stored and no unbounded stream kept alive by periodic chunks.
+      if (received > limit + 65536) throw const FormatException('body read budget exceeded');
+      if (elapsed.elapsed > const Duration(seconds: 10)) throw TimeoutException('body read deadline');
+      if (received > limit) {
+        oversized = true;
+        bytes.clear();
+      } else if (!oversized && json) {
+        bytes.addAll(chunk);
+      }
     }
+    if (!json) throw const FormatException('json required');
+    if (oversized) throw const FormatException('oversized');
     final value = jsonDecode(utf8.decode(bytes));
     if (value is! Map<String, dynamic>) throw const FormatException('object required');
     return value;
