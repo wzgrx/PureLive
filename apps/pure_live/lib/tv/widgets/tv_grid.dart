@@ -32,6 +32,7 @@ class TvGrid extends StatefulWidget {
     this.mainSpacing = 24,
     this.onEndReached,
     this.onLeaveUp,
+    this.onLeaveLeft,
     this.padding,
     super.key,
   });
@@ -47,6 +48,9 @@ class TvGrid extends StatefulWidget {
 
   /// Builds a cell.
   final TvGridCellBuilder itemBuilder;
+
+  /// Left on the first column, when this grid belongs to a two-column pane.
+  final VoidCallback? onLeaveLeft;
 
   /// The gap between columns, in logical pixels.
   final double crossSpacing;
@@ -77,6 +81,7 @@ class TvGridState extends State<TvGrid> {
   EdgeInsets _padding = EdgeInsets.zero;
   int? _last;
   bool _inside = false;
+  int _focusRequest = 0;
 
   /// The cell focused last, if any.
   int? get lastFocused => _last;
@@ -126,14 +131,26 @@ class TvGridState extends State<TvGrid> {
   bool focusIndex(int index) {
     if (widget.itemCount == 0) return false;
     final target = index.clamp(0, widget.itemCount - 1);
+    final request = ++_focusRequest;
+    final origin = FocusManager.instance.primaryFocus;
     _reveal(target);
     final node = _node(target);
-    if (node.context != null) {
+    void commit() {
+      // An explicit return/zap target outranks memory from geometric re-entry.
+      _last = target;
       node.requestFocus();
+    }
+
+    if (node.context != null) {
+      commit();
     } else {
       // Built by the scroll above in the next frame.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && node.context != null) node.requestFocus();
+        if (!mounted || request != _focusRequest || node.context == null) return;
+        if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
+        final primary = FocusManager.instance.primaryFocus;
+        if (primary != origin && primary is! FocusScopeNode) return;
+        commit();
       });
     }
     return true;
@@ -169,7 +186,11 @@ class TvGridState extends State<TvGrid> {
     final lastRow = (count - 1) ~/ columns;
     switch (event.logicalKey) {
       case LogicalKeyboardKey.arrowLeft:
-        if (column == 0) return KeyEventResult.ignored;
+        if (column == 0) {
+          if (widget.onLeaveLeft == null) return KeyEventResult.ignored;
+          widget.onLeaveLeft!();
+          return KeyEventResult.handled;
+        }
         focusIndex(index - 1);
         return KeyEventResult.handled;
       case LogicalKeyboardKey.arrowRight:

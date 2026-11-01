@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pure_live/tv/tv_theme.dart';
+import 'package:pure_live/tv/widgets/tv_focus_region.dart';
 
 /// The keys that confirm: the remote's OK (`select`), Enter, the gamepad's A
 /// and Space (keyboards while testing on a computer).
@@ -119,6 +120,20 @@ class _TvFocusableState extends State<TvFocusable> {
   bool _longFired = false;
 
   FocusNode get _node => widget.focusNode ?? (_own ??= FocusNode(debugLabel: 'TvFocusable'));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.enabled) TvFocusReady.notify(context);
+  }
+
+  @override
+  void didUpdateWidget(TvFocusable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.enabled && (!oldWidget.enabled || widget.focusNode != oldWidget.focusNode)) {
+      TvFocusReady.notify(context);
+    }
+  }
 
   @override
   void dispose() {

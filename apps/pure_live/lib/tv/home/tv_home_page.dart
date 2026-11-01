@@ -27,6 +27,7 @@ import 'package:pure_live/tv/tv_navigation.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/video/video_panes.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
+import 'package:pure_live/tv/widgets/tv_focus_region.dart';
 import 'package:pure_live/tv/widgets/tv_nav_item.dart';
 
 /// The modes of the TV home (A17.2 X1, pure_live_TV's 直播 / 视频 / 音乐):
@@ -372,6 +373,7 @@ class _TvHomePageState extends ConsumerState<TvHomePage> with WidgetsBindingObse
   void _remember() {
     final primary = FocusManager.instance.primaryFocus;
     if (primary == null || primary is FocusScopeNode) return;
+    if (_pendingEntry != null && primary != _menuNode(_pane)) _pendingEntry = null;
     final paneNode = _paneNodes[_pane];
     final inPane = paneNode != null && paneNode.hasFocus;
     final cameFromPane = _inPane;
@@ -385,6 +387,29 @@ class _TvHomePageState extends ConsumerState<TvHomePage> with WidgetsBindingObse
   }
 
   bool _inPane = false;
+  TvPane? _pendingEntry;
+  bool _entryQueued = false;
+
+  void _queueEntry() {
+    if (_pendingEntry != _pane || _entryQueued) return;
+    _entryQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _entryQueued = false;
+      if (!mounted || _pendingEntry != _pane) return;
+      final primary = FocusManager.instance.primaryFocus;
+      if (!(ModalRoute.of(context)?.isCurrent ?? true) ||
+          (primary != null && primary is! FocusScopeNode && primary != _menuNode(_pane))) {
+        _pendingEntry = null;
+        return;
+      }
+      if (_enter()) _pendingEntry = null;
+    });
+  }
+
+  void _requestEntry() {
+    _pendingEntry = _pane;
+    _queueEntry();
+  }
 
   @override
   void focusMenu() => _menuNode(_pane).requestFocus();
@@ -409,26 +434,22 @@ class _TvHomePageState extends ConsumerState<TvHomePage> with WidgetsBindingObse
       remembered.requestFocus();
       return true;
     }
-    final first = _paneNode(_pane).traversalDescendants.where((node) => node.context != null).firstOrNull;
-    if (first == null) return false;
-    first.requestFocus();
-    return true;
+    return tvFocusFirst(_paneNode(_pane));
   }
 
   void _select(TvPane pane) {
     if (pane == _pane) {
       if (pane == TvPane.favorites) HomeSignals.favoritesReselected.value++;
-      _enter();
+      if (!_enter()) _requestEntry();
       return;
     }
     setState(() {
       _pane = pane;
       _visited.add(pane);
     });
-    // The destination builds in this frame; move in once it is laid out.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_enter()) _menuNode(pane).requestFocus();
-    });
+    // A loading placeholder has no target. Resume only when content notifies
+    // readiness, while this destination and the user's entry intent still own it.
+    _requestEntry();
   }
 
   /// Back on the home: the destination's own level, then the menu, then
@@ -463,7 +484,11 @@ class _TvHomePageState extends ConsumerState<TvHomePage> with WidgetsBindingObse
   KeyEventResult _menuKey(TvPane? pane, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowRight) return _enter() ? KeyEventResult.handled : KeyEventResult.ignored;
+    if (key == LogicalKeyboardKey.arrowRight) {
+      if (!_enter()) _requestEntry();
+      return KeyEventResult.handled;
+    }
+    _pendingEntry = null;
     if (key != LogicalKeyboardKey.arrowUp && key != LogicalKeyboardKey.arrowDown) return KeyEventResult.ignored;
     final index = _rail.indexOf(pane);
     if (index < 0) return KeyEventResult.ignored;
@@ -618,11 +643,16 @@ class _TvHomePageState extends ConsumerState<TvHomePage> with WidgetsBindingObse
                 focusNode: _paneNode(pane),
                 skipTraversal: true,
                 canRequestFocus: false,
-                child: TvHomeScope(
-                  host: this,
-                  pane: pane,
-                  shown: pane == _pane,
-                  child: KeyedSubtree(key: ValueKey('tv-pane-${pane.name}'), child: _content(pane)),
+                child: TvFocusReady(
+                  onReady: () {
+                    if (_pendingEntry == pane) _queueEntry();
+                  },
+                  child: TvHomeScope(
+                    host: this,
+                    pane: pane,
+                    shown: pane == _pane,
+                    child: KeyedSubtree(key: ValueKey('tv-pane-${pane.name}'), child: _content(pane)),
+                  ),
                 ),
               )
             else

@@ -43,6 +43,8 @@ class TvTabBar extends StatefulWidget {
     this.onRefresh,
     this.onDown,
     this.onUp,
+    this.onLeft,
+    this.onRight,
     this.busy = false,
     this.small = false,
     this.secondary = false,
@@ -67,6 +69,12 @@ class TvTabBar extends StatefulWidget {
 
   /// Up returns to a parent filter row when supplied.
   final bool Function()? onUp;
+
+  /// Left at the first tab; null leaves for the home rail by geometry.
+  final bool Function()? onLeft;
+
+  /// Right at the last tab; null keeps the focus at the row boundary.
+  final bool Function()? onRight;
 
   /// The content is loading.
   final bool busy;
@@ -150,6 +158,22 @@ class TvTabBarState extends State<TvTabBar> {
 
   KeyEventResult _key(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight) {
+      final index = widget.tabs.indexWhere((tab) => _nodes[tab.id] == node);
+      final rtl = Directionality.of(context) == TextDirection.rtl;
+      final next = index + ((key == LogicalKeyboardKey.arrowRight) != rtl ? 1 : -1);
+      if (index >= 0 && next >= 0 && next < widget.tabs.length) {
+        _node(widget.tabs[next].id).requestFocus();
+        return KeyEventResult.handled;
+      }
+      final boundary = key == LogicalKeyboardKey.arrowLeft ? widget.onLeft : widget.onRight;
+      if (boundary != null) {
+        boundary();
+        return KeyEventResult.handled;
+      }
+      return key == LogicalKeyboardKey.arrowRight ? KeyEventResult.handled : KeyEventResult.ignored;
+    }
     final move = switch (event.logicalKey) {
       LogicalKeyboardKey.arrowDown => widget.onDown,
       LogicalKeyboardKey.arrowUp => widget.onUp,

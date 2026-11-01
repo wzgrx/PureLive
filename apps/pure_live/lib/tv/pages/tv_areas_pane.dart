@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_store/live_store.dart';
@@ -42,6 +43,7 @@ class _TvAreasPaneState extends ConsumerState<TvAreasPane> {
   final Map<String, GlobalKey<TvGridState>> _grids = {};
   final Map<String, AreaCatalog> _catalogs = {};
   String? _current;
+  final FocusNode _allPlatforms = FocusNode(debugLabel: 'tv areas all platforms');
 
   GlobalKey<TvGridState> _grid(String key) => _grids[key] ??= GlobalKey();
 
@@ -55,6 +57,7 @@ class _TvAreasPaneState extends ConsumerState<TvAreasPane> {
     for (final catalog in _catalogs.values) {
       catalog.dispose();
     }
+    _allPlatforms.dispose();
     super.dispose();
   }
 
@@ -79,6 +82,16 @@ class _TvAreasPaneState extends ConsumerState<TvAreasPane> {
       });
     }
     final tab = current;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    bool enterContent() {
+      if (tab == SiteIds.iptv) return _iptv.currentState?.enter() ?? false;
+      final catalog = _catalog(tab);
+      if (catalog.categories.length > 1) return _categoryTabs.currentState?.focusSelected() ?? false;
+      final categories = catalog.categories;
+      if (categories.isEmpty) return false;
+      return _grid('$tab/${categories[catalog.selected].id}').currentState?.enter() ?? false;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -104,18 +117,37 @@ class _TvAreasPaneState extends ConsumerState<TvAreasPane> {
                     unawaited(_catalog(tab).refresh());
                   }
                 },
-                onDown: () {
-                  if (tab == SiteIds.iptv) return _iptv.currentState?.enter() ?? false;
-                  final catalog = _catalog(tab);
-                  if (catalog.categories.length > 1) return _categoryTabs.currentState?.focusSelected() ?? false;
-                  final categories = catalog.categories;
-                  if (categories.isEmpty) return false;
-                  return _grid('$tab/${categories[catalog.selected].id}').currentState?.enter() ?? false;
-                },
+                onLeft: rtl
+                    ? () {
+                        _allPlatforms.requestFocus();
+                        return true;
+                      }
+                    : null,
+                onRight: !rtl
+                    ? () {
+                        _allPlatforms.requestFocus();
+                        return true;
+                      }
+                    : null,
+                onDown: enterContent,
               ),
             ),
             TvButton(
               key: const ValueKey('tv-areas-all-platforms'),
+              focusNode: _allPlatforms,
+              onKey: (_, event) {
+                if (event is KeyUpEvent) return KeyEventResult.ignored;
+                if (event.logicalKey == (rtl ? LogicalKeyboardKey.arrowRight : LogicalKeyboardKey.arrowLeft)) {
+                  _platformTabs.currentState?.focusRemembered();
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+                    event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                  return KeyEventResult.handled;
+                }
+                if (event.logicalKey == LogicalKeyboardKey.arrowDown && enterContent()) return KeyEventResult.handled;
+                return KeyEventResult.ignored;
+              },
               label: i18n('tv_all_platforms'),
               small: true,
               onTap: () async {
@@ -173,6 +205,7 @@ class _TvAreasPaneState extends ConsumerState<TvAreasPane> {
                 busy: catalog.isLoading,
                 onSelect: catalog.select,
                 onRefresh: () => unawaited(catalog.refresh()),
+                onUp: () => _platformTabs.currentState?.focusRemembered() ?? false,
                 onDown: () => gridKey.currentState?.enter() ?? false,
               ),
             Expanded(

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_store/live_store.dart';
@@ -14,6 +15,7 @@ import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 import 'package:pure_live/tv/home/tv_home_page.dart';
 import 'package:pure_live/tv/tv_theme.dart';
+import 'package:pure_live/tv/widgets/tv_focus_region.dart';
 import 'package:pure_live/tv/widgets/tv_room_grid.dart';
 import 'package:pure_live/tv/widgets/tv_room_row.dart';
 import 'package:pure_live/tv/widgets/tv_status.dart';
@@ -115,7 +117,10 @@ class _TvFavoritesPaneState extends ConsumerState<TvFavoritesPane> {
         final gridKey = _grid(key);
         final rowsKey = _rowsKey(key);
         final offline = _group == FollowGroup.offline;
-        bool enter() => offline ? rowsKey.currentState?.enter() ?? false : gridKey.currentState?.enter() ?? false;
+        final rtl = Directionality.of(context) == TextDirection.rtl;
+        bool enter() =>
+            (offline ? rowsKey.currentState?.enter() ?? false : gridKey.currentState?.enter() ?? false) ||
+            tvFocusFirst(_bodyFocus);
         bool enterFrom(GlobalKey<TvTabBarState> header) {
           _lastHeader = header;
           if (_tagTabs.currentState?.focusRemembered() ?? false) return true;
@@ -181,6 +186,12 @@ class _TvFavoritesPaneState extends ConsumerState<TvFavoritesPane> {
                     onSelect: (index) => setState(() => _group = _groups[index].$1),
                     onRefresh: refresh,
                     onDown: () => enterFrom(_groupTabs),
+                    onLeft: rtl && platforms.length > 2
+                        ? () => _platformTabs.currentState?.focusRemembered() ?? false
+                        : null,
+                    onRight: !rtl && platforms.length > 2
+                        ? () => _platformTabs.currentState?.focusRemembered() ?? false
+                        : null,
                   ),
                 ),
                 if (platforms.length > 2) ...[
@@ -205,6 +216,8 @@ class _TvFavoritesPaneState extends ConsumerState<TvFavoritesPane> {
                       onSelect: (index) => setState(() => _platform = platforms[index]),
                       onRefresh: refresh,
                       onDown: () => enterFrom(_platformTabs),
+                      onLeft: !rtl ? () => _groupTabs.currentState?.focusRemembered() ?? false : null,
+                      onRight: rtl ? () => _groupTabs.currentState?.focusRemembered() ?? false : null,
                     ),
                   ),
                 ],
@@ -225,7 +238,20 @@ class _TvFavoritesPaneState extends ConsumerState<TvFavoritesPane> {
                 onUp: _focusHeader,
               ),
             Expanded(
-              child: Focus(focusNode: _bodyFocus, skipTraversal: true, canRequestFocus: false, child: body),
+              child: Focus(
+                focusNode: _bodyFocus,
+                skipTraversal: true,
+                canRequestFocus: false,
+                onKeyEvent: (_, event) {
+                  if (event is KeyUpEvent) return KeyEventResult.ignored;
+                  if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                    leaveUp();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: body,
+              ),
             ),
           ],
         );

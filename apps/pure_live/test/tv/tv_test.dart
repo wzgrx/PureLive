@@ -32,6 +32,8 @@ import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/danmaku/danmaku_overlay.dart';
 import 'package:pure_live/shared/rooms/share_code.dart';
 import 'package:pure_live/tv/home/tv_home_page.dart';
+import 'package:pure_live/tv/pages/tv_favorites_pane.dart';
+import 'package:pure_live/tv/pages/tv_history_pane.dart';
 import 'package:pure_live/tv/room/tv_live_play_page.dart';
 import 'package:pure_live/tv/settings/tv_settings_catalog.dart';
 import 'package:pure_live/tv/settings/tv_settings_section_page.dart';
@@ -135,6 +137,72 @@ final class _ExtraTvSite extends LiveSite {
   Future<LiveRoom> getRoomDetail({required String roomId}) async => rooms.firstWhere((room) => room.roomId == roomId);
 }
 
+final class _DelayedIptv extends LiveSite {
+  final ready = Completer<List<LiveRoom>>();
+  @override
+  String get id => SiteIds.iptv;
+  @override
+  String get name => '本地测试';
+  @override
+  Future<List<LiveRoom>> getRecommendRooms({int page = 1, int pageSize = 30}) => ready.future;
+  @override
+  Future<List<LiveCategory>> getCategories(int page, int pageSize) async => [];
+}
+
+Future<void> _openMenuWithRemote(WidgetTester tester, String pane) async {
+  for (var i = 0; i < 15 && _focused != 'tv menu $pane'; i++) {
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+  }
+  expect(_focused, 'tv menu $pane');
+  await _press(tester, LogicalKeyboardKey.select);
+}
+
+Future<void> _expectVisibleControlsReachable(WidgetTester tester, String pane) async {
+  final root = find.byKey(ValueKey('tv-pane-$pane'));
+  final bounds = tester.getRect(root);
+  final expected = <FocusNode>{};
+  for (final widget in tester.widgetList<Focus>(find.descendant(of: root, matching: find.byType(Focus)))) {
+    final node = widget.focusNode;
+    if (node != null &&
+        node.canRequestFocus &&
+        !node.skipTraversal &&
+        node.context != null &&
+        node.rect.overlaps(bounds) &&
+        !node.rect.isEmpty) {
+      expected.add(node);
+    }
+  }
+  final initial = FocusManager.instance.primaryFocus!;
+  final queue = <FocusNode>[initial];
+  final reached = <FocusNode>{initial};
+  for (var cursor = 0; cursor < queue.length && cursor < 100; cursor++) {
+    final from = queue[cursor];
+    if (from.context == null || !from.canRequestFocus) continue;
+    for (final key in [
+      LogicalKeyboardKey.arrowUp,
+      LogicalKeyboardKey.arrowDown,
+      LogicalKeyboardKey.arrowLeft,
+      LogicalKeyboardKey.arrowRight,
+    ]) {
+      from.requestFocus(); // Replay a previously reached vertex, not an unreachable control.
+      await tester.pump(const Duration(seconds: 1));
+      await _press(tester, key);
+      final next = FocusManager.instance.primaryFocus;
+      if (next != null && !next.debugLabel.toString().startsWith('tv menu') && reached.add(next)) {
+        queue.add(next);
+      }
+    }
+  }
+  final unreachable = expected.where((node) => node.context != null && !reached.contains(node)).toList();
+  expect(
+    unreachable.map((node) => node.debugLabel),
+    isEmpty,
+    reason: '$pane: every initially visible enabled control must have a D-pad path from the real entry',
+  );
+}
+
+bool _buttonFocused(WidgetTester tester, String text) => Focus.of(tester.element(find.text(text))).hasFocus;
+
 final List<String> _toasts = [];
 final GlobalKey _menuFrame = GlobalKey();
 
@@ -155,9 +223,12 @@ Future<AppServices> _pumpApp(
   bool taggedFollows = false,
   bool singleQuality = false,
   Stream<IptvOverview>? iptvOverview,
+  Stream<List<LiveRoom>>? history,
+  Size viewport = const Size(1920, 1080),
+  double textScale = 1,
 }) async {
   tester.view
-    ..physicalSize = const Size(1920, 1080)
+    ..physicalSize = viewport
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final base = (await tester.runAsync(testServices))!;
@@ -172,6 +243,7 @@ Future<AppServices> _pumpApp(
     ]);
     await settings.set(Settings.uiMode, mode);
     await settings.set(Settings.language, '简体中文');
+    await settings.set(Settings.textScaleFactor, textScale);
     if (noticeAccepted) await base.store.meta.set(TvHomePage.noticeKey, '1');
   });
   final site = _TvSite(rooms, offline: offline, singleQuality: singleQuality);
@@ -219,6 +291,7 @@ Future<AppServices> _pumpApp(
       overrides: [
         appServicesProvider.overrideWithValue(services),
         remoteSyncServiceProvider.overrideWithValue(() => _LayoutOnlySync(services.store)),
+        if (history != null) tvHistoryProvider.overrideWith((ref) => history),
         if (iptvOverview != null) iptvOverviewProvider.overrideWith((ref) => iptvOverview),
         televisionDeviceProvider.overrideWithValue(television),
         danmakuProvider.overrideWithValue(DanmakuRegistry({SiteIds.bilibili: FakeDanmaku.new})),
@@ -259,6 +332,173 @@ Future<void> _press(WidgetTester tester, LogicalKeyboardKey key) async {
 String? get _focused => FocusManager.instance.primaryFocus?.debugLabel;
 
 void main() {
+  for (final id in ['live', 'replay', 'offline']) {
+    for (final viewport in [const Size(1280, 720), const Size(1920, 1080)]) {
+      for (final scale in [1.0, 1.5]) {
+        testWidgets('issue141 app remote: empty favorite $id enters search and returns $viewport scale=$scale', (
+          tester,
+        ) async {
+          final services = await _pumpApp(tester, viewport: viewport, textScale: scale);
+          addTearDown(() => _close(tester, services));
+          await _press(tester, LogicalKeyboardKey.arrowRight);
+          for (var i = 0; i < ['live', 'replay', 'offline'].indexOf(id); i++) {
+            await _press(tester, LogicalKeyboardKey.arrowRight);
+          }
+          expect(_focused, 'tab $id');
+          await _press(tester, LogicalKeyboardKey.arrowDown);
+          expect(_buttonFocused(tester, '搜索直播'), isTrue);
+          await _press(tester, LogicalKeyboardKey.arrowUp);
+          expect(_focused, 'tab $id');
+        });
+      }
+    }
+  }
+
+  testWidgets('issue142 cold history entry follows asynchronous data instead of one frame', (tester) async {
+    final ready = Completer<List<LiveRoom>>();
+    final services = await _pumpApp(tester, history: Stream.fromFuture(ready.future));
+    addTearDown(() => _close(tester, services));
+    await _openMenuWithRemote(tester, 'history');
+    ready.complete([_TvSite(1).room(0).copyWith(lastWatchedAt: DateTime.now().millisecondsSinceEpoch)]);
+    await _settle(tester);
+    expect(_buttonFocused(tester, '刷新'), isTrue, reason: 'first entry completes when content is mounted');
+  });
+
+  testWidgets('issue142 history visits actions then filters then cards with reversible vertical edges', (tester) async {
+    final room = _TvSite(1).room(0).copyWith(lastWatchedAt: DateTime.now().millisecondsSinceEpoch);
+    final services = await _pumpApp(tester, history: Stream.value([room]));
+    addTearDown(() => _close(tester, services));
+    await _openMenuWithRemote(tester, 'history');
+    await _settle(tester);
+    // Warm entry avoids depending on the separately covered asynchronous handoff.
+    if (_focused == 'tv menu history') await _press(tester, LogicalKeyboardKey.select);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    expect(_focused, 'tab all-days', reason: 'actions Down cannot skip the date filters');
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    expect(_focused, 'tab today');
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    expect(_focused, 'tab today', reason: 'row end must not jump diagonally into the actions');
+    await _press(tester, LogicalKeyboardKey.arrowUp);
+    expect(_buttonFocused(tester, '刷新'), isTrue);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    expect(_focused, 'cell 0');
+    await _press(tester, LogicalKeyboardKey.arrowUp);
+    expect(_focused, 'tab today');
+  });
+
+  testWidgets('issue142 cold IPTV handoff and every channel row return to the playlist column', (tester) async {
+    final site = _DelayedIptv();
+    final services = await _pumpApp(tester, extraSites: [site]);
+    addTearDown(() => _close(tester, services));
+    await _openMenuWithRemote(tester, 'iptv');
+    site.ready.complete([
+      for (var i = 0; i < 12; i++) LiveRoom(platform: SiteIds.iptv, roomId: 'test-$i', title: '频道$i'),
+    ]);
+    await _settle(tester);
+    expect(_focused, 'playlist hot');
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    for (var row = 0; row < 3; row++) {
+      if (row > 0) await _press(tester, LogicalKeyboardKey.arrowDown);
+      expect(_focused, 'cell ${row * 4}');
+      await _press(tester, LogicalKeyboardKey.arrowLeft);
+      expect(_focused, 'playlist hot', reason: 'row $row must share the playlist boundary');
+      await _press(tester, LogicalKeyboardKey.arrowRight);
+      expect(_focused, 'cell ${row * 4}', reason: 'the playlist restores the last channel');
+    }
+    await _press(tester, LogicalKeyboardKey.arrowLeft);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    expect(_focused, 'iptv manage');
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    expect(_focused, 'iptv manage', reason: 'bottom edge cannot enter the home rail');
+  });
+
+  testWidgets('pending content never steals focus after the user moved to another menu item', (tester) async {
+    final ready = Completer<List<LiveRoom>>();
+    final services = await _pumpApp(tester, history: Stream.fromFuture(ready.future));
+    addTearDown(() => _close(tester, services));
+    await _openMenuWithRemote(tester, 'history');
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    final selected = _focused;
+    ready.complete([_TvSite(1).room(0)]);
+    await _settle(tester);
+    expect(_focused, selected);
+  });
+
+  testWidgets('pending content cannot take focus from a covering dialog', (tester) async {
+    final ready = Completer<List<LiveRoom>>();
+    final services = await _pumpApp(tester, history: Stream.fromFuture(ready.future));
+    addTearDown(() => _close(tester, services));
+    await _openMenuWithRemote(tester, 'history');
+    final context = tester.element(find.byType(TvHomePage));
+    unawaited(
+      showDialog<void>(
+        context: context,
+        builder: (_) => const AlertDialog(content: Text('覆盖页面')),
+      ),
+    );
+    await _settle(tester);
+    final before = FocusManager.instance.primaryFocus;
+    ready.complete([_TvSite(1).room(0)]);
+    await _settle(tester);
+    expect(FocusManager.instance.primaryFocus, same(before));
+    expect(find.text('覆盖页面'), findsOneWidget);
+    Navigator.of(context).pop();
+    await _settle(tester);
+  });
+
+  testWidgets('late completion from a previous destination cannot interrupt the current destination', (tester) async {
+    final ready = Completer<List<LiveRoom>>();
+    final services = await _pumpApp(tester, history: Stream.fromFuture(ready.future));
+    addTearDown(() => _close(tester, services));
+    await _openMenuWithRemote(tester, 'history');
+    await _press(tester, LogicalKeyboardKey.arrowUp);
+    await _press(tester, LogicalKeyboardKey.select);
+    final before = FocusManager.instance.primaryFocus;
+    ready.complete([_TvSite(1).room(0)]);
+    await _settle(tester);
+    expect(FocusManager.instance.primaryFocus, same(before));
+  });
+
+  testWidgets('TV graph: empty favorites, populated history and IPTV expose all visible controls to D-pad', (
+    tester,
+  ) async {
+    final site = _DelayedIptv();
+    final rooms = [
+      for (var i = 0; i < 8; i++) _TvSite(8).room(i).copyWith(lastWatchedAt: DateTime.now().millisecondsSinceEpoch),
+    ];
+    final services = await _pumpApp(tester, extraSites: [site], history: Stream.value(rooms));
+    addTearDown(() => _close(tester, services));
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _expectVisibleControlsReachable(tester, 'favorites');
+    // Return through the rail and enter each next destination using the actual menu.
+    final scope = TvHomeScope.maybeOf(tester.element(find.byType(TvFavoritesPane)))!;
+    scope.host.focusMenu();
+    await _settle(tester);
+    await _openMenuWithRemote(tester, 'history');
+    await _settle(tester);
+    await _expectVisibleControlsReachable(tester, 'history');
+    scope.host.focusMenu();
+    await _settle(tester);
+    await _openMenuWithRemote(tester, 'iptv');
+    site.ready.complete([
+      for (var i = 0; i < 8; i++) LiveRoom(platform: SiteIds.iptv, roomId: 'graph-$i', title: '频道$i'),
+    ]);
+    await _settle(tester);
+    await _expectVisibleControlsReachable(tester, 'iptv');
+  });
+
+  testWidgets('hidden kept-alive destinations cannot receive directional focus', (tester) async {
+    final ready = Completer<List<LiveRoom>>();
+    final services = await _pumpApp(tester, history: Stream.fromFuture(ready.future));
+    addTearDown(() => _close(tester, services));
+    final node = tester.widget<TvFocusable>(find.byKey(const ValueKey('tv-tab-live'))).focusNode!;
+    await _openMenuWithRemote(tester, 'history');
+    expect(node.canRequestFocus, isFalse, reason: 'IndexedStack retains widgets, not their input eligibility');
+    ready.complete([]);
+    await _settle(tester);
+  });
+
   testWidgets('issue112 one quality remains focusable and Right advances from its initial focus', (tester) async {
     final services = await _pumpApp(tester, singleQuality: true);
     await _press(tester, LogicalKeyboardKey.arrowDown);

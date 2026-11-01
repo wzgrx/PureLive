@@ -7690,3 +7690,29 @@ from = "https://github.com/wzgrx/PureLive/issues/138"
 date = "2026-11-01"
 commit = "b81cc8dbfe0cfb41d04dbb62ff1f397231883015"
 note = "本轮范围已交付；同源包、受控证据与摘要完成，原设备和账号边界另行记录。"
+
+[[task]]
+id = "V02.78"
+title = "电视导航全面复核与冷启动焦点"
+type = "界面"
+status = "开发中"
+size = "大"
+tier = 1
+from = "GitHub #141、#142及全部电视反馈复核"
+stages = ["全量复核与失败反证", "共享焦点边界和入场修复", "遥控矩阵与原生验证"]
+done = 0
+branch = "ai/V02.78"
+next = "先证实焦点图和异步入场反证，再做共享实现"
+
+[[task]]
+id = "A17.29"
+title = "电视焦点区域与异步入场"
+type = "界面"
+status = "开发中"
+size = "大"
+tier = 1
+from = "GitHub #141、#142及全部电视反馈复核"
+stages = ["全量复核与失败反证", "共享焦点边界和入场修复", "遥控矩阵与原生验证"]
+done = 0
+branch = "ai/V02.78"
+next = "先证实焦点图和异步入场反证，再做共享实现"
