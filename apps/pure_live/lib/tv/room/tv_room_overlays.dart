@@ -5,6 +5,7 @@ import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/features/live_play/danmaku/super_chat_unread.dart';
 import 'package:pure_live/features/live_play/logic/room_controller.dart';
 import 'package:pure_live/i18n/i18n.dart';
+import 'package:pure_live/shared/rooms/playback_lines.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/widgets/tv_button.dart';
@@ -217,12 +218,14 @@ class TvRoomControls extends StatelessWidget {
   final VoidCallback? onSuperChat;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      PlaybackLineBuilder(session: controller.session, telemetry: controller.telemetry, builder: _contents);
+
+  Widget _contents(BuildContext context, PlaybackState playback, PlaybackLinePresentation lines) {
     final scale = TvScale.of(context);
     final room = controller.room;
     final qualities = controller.qualities;
     final quality = qualities.isEmpty ? null : qualities[controller.qualityIndex.clamp(0, qualities.length - 1)];
-    final playback = controller.session.state;
     final title = room.title.trim();
     final figures = [
       for (final figure in audienceFigures(room, vipCount: controller.vipCount))
@@ -282,14 +285,14 @@ class TvRoomControls extends StatelessWidget {
                     onTap: qualities.isNotEmpty ? onQuality : null,
                   ),
                 ),
-                if (playback.lineCount > 1)
+                if (playback.lineCount > 0)
                   _gap(
                     scale,
                     TvButton(
                       key: const ValueKey('tv-room-line'),
                       icon: AppIcons.switchLine,
-                      label: i18n('toolbox_line', args: {'index': '${playback.lineIndex + 1}'}),
-                      onTap: onLine,
+                      label: lines.name(playback.lineIndex),
+                      onTap: playback.lineCount > 1 ? onLine : null,
                     ),
                   ),
                 _gap(

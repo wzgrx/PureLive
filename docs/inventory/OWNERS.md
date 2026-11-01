@@ -6,7 +6,7 @@
 
 路径规则按 OWNERS.toml 里的顺序第一条匹配的生效，所以一条目录规则只管前面的规则没拿走的文件。本页只随归属表、设置、来源和通道变化，加删代码文件不用重新生成。
 
-路径规则 243 条；设置 297 个（分节默认 24 条、单独指定 111 个）；来源 35 个；通道 23 个。
+路径规则 244 条；设置 297 个（分节默认 24 条、单独指定 111 个）；来源 35 个；通道 23 个。
 
 | 子分类 | 路径规则 | 设置 | 播放 | 弹幕 | 通道 |
 |---|---:|---:|---:|---:|---:|
@@ -15,7 +15,7 @@
 | A03 动效和手感 | 3 |  |  |  |  |
 | A04 尺寸和适配 | 1 |  |  |  |  |
 | A06 首页和全局 | 3 |  |  |  |  |
-| A07 直播间界面 | 4 | 12 |  |  | 1 |
+| A07 直播间界面 | 5 | 12 |  |  | 1 |
 | A08 弹幕界面 | 5 | 11 |  |  |  |
 | A09 浏览界面 | 9 | 11 |  |  |  |
 | A10 录制界面 | 6 |  |  |  |  |
@@ -124,7 +124,7 @@
 
 ## A07 直播间界面
 
-- 代码：`apps/pure_live/lib/platform/overlay_window.dart`、`apps/pure_live/android/**/FloatingOverlay.kt`、`apps/pure_live/lib/features/live_play/`、`apps/pure_live/lib/shared/rooms/playback_hud*.dart`
+- 代码：`apps/pure_live/lib/platform/overlay_window.dart`、`apps/pure_live/android/**/FloatingOverlay.kt`、`apps/pure_live/lib/features/live_play/`、`apps/pure_live/lib/shared/rooms/playback_hud*.dart`、`apps/pure_live/lib/shared/rooms/playback_lines.dart`
 - 设置：`enablePortraitStreamAdaptation`、`portraitAdaptiveHeight`、`portraitLayoutMode`、`portraitFullscreenPolicy`、`portraitFullscreenDisplayMode`、`portraitPipFollowSource`、`portraitDanmakuMode`、`rememberPortraitRoomOverride`、`portraitFullscreenSwipeSwitch`、`portraitRoomOverrides`、`livePlayChatCollapsed`、`roomSwitcherLayout`
 - 通道：`pure_live/overlay`
 

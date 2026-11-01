@@ -129,7 +129,7 @@ class LiveRoomController extends ChangeNotifier {
 
   /// One lazily polled source for the HUD and the playback information panel.
   PlaybackTelemetry get telemetry => _telemetry ??= PlaybackTelemetry(
-    identity: () => (session.engine, session.state.source, session.state.line),
+    identity: () => (session.engine, session.state.source, session.state.line, session.input),
     read: () async {
       final engine = session.engine;
       if (engine case final PlaybackStatsSource source) return await source.readStats();

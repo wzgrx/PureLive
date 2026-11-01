@@ -108,7 +108,7 @@ final class ToolboxController extends ChangeNotifier {
   Future<void> directLink(
     String text, {
     required ToolboxChooser<LivePlayQuality> chooseQuality,
-    required ToolboxChooser<String> chooseLine,
+    required ToolboxChooser<LivePlayLine> chooseLine,
   }) => _run(text, ToolboxAction.directLink, (link, cancel) async {
     final room = await _resolve(link, cancel);
     if (room == null) return;
@@ -141,7 +141,10 @@ final class ToolboxController extends ChangeNotifier {
       notify('toolbox_get_url_failed');
       return;
     }
-    final url = urls.length == 1 ? urls.single : await _untimed(cancel, () => chooseLine(urls));
+    final picked = resolution.lines.length == 1
+        ? resolution.lines.single
+        : await _untimed(cancel, () => chooseLine(resolution.lines));
+    final url = picked?.url;
     if (url == null) return;
     try {
       await copy(url);

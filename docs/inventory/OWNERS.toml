@@ -176,6 +176,7 @@ path = [
   { glob = "apps/pure_live/lib/shared/rooms/share_code.dart", sub = "E04" },
   { glob = "apps/pure_live/lib/shared/rooms/playback_hud*.dart", sub = "A07" },
   { glob = "apps/pure_live/lib/shared/rooms/playback_telemetry.dart", sub = "G01" },
+  { glob = "apps/pure_live/lib/shared/rooms/playback_lines.dart", sub = "A07" },
   { glob = "apps/pure_live/lib/shared/rooms/", sub = "A09" },
   { glob = "apps/pure_live/lib/shared/under_construction.dart", sub = "A02" },
 

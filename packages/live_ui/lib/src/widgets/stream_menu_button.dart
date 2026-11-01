@@ -36,6 +36,7 @@ class StreamMenuButton extends StatefulWidget {
     this.onVideo = false,
     this.preferAbove = false,
     this.onMenu,
+    this.descriptions,
     super.key,
   });
 
@@ -44,6 +45,9 @@ class StreamMenuButton extends StatefulWidget {
 
   /// The choices, in the platform's order.
   final List<String> entries;
+
+  /// Optional source details under each choice, in the same order.
+  final List<String>? descriptions;
 
   /// The index of the current choice.
   final int current;
@@ -89,6 +93,7 @@ class _StreamMenuButtonState extends State<StreamMenuButton> {
     final chosen = await showSmallMenu(
       _outline.currentContext ?? context,
       entries: widget.entries,
+      descriptions: widget.descriptions,
       current: widget.current,
       entryKey: widget.entryKey,
       preferAbove: widget.preferAbove,
@@ -145,7 +150,9 @@ class _StreamMenuButtonState extends State<StreamMenuButton> {
                           ),
                           const SizedBox(width: 5),
                         ],
-                        Text(widget.label, style: style, maxLines: 1),
+                        Flexible(
+                          child: Text(widget.label, style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
                         const SizedBox(width: 2),
                         Icon(_open ? AppIcons.foldUp : AppIcons.dropDown, size: 18, color: ink),
                       ],
