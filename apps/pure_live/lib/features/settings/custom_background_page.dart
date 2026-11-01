@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/services.dart';
+import 'package:pure_live/app/ui_mode.dart';
 import 'package:pure_live/features/settings/settings_dialogs.dart';
 import 'package:pure_live/features/settings/settings_tiles.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/background/custom_background.dart';
+import 'package:pure_live/tv/wallpaper/tv_wallpaper_pages.dart';
 
 /// Shared phone/desktop static background controls, under appearance.
 class CustomBackgroundPage extends ConsumerStatefulWidget {
@@ -52,6 +54,9 @@ class _CustomBackgroundPageState extends ConsumerState<CustomBackgroundPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tv = UiMode.parse(watchSetting(ref, Settings.uiMode))
+        .showsTv(television: ref.watch(televisionDeviceProvider));
+    if (tv) return const TvWallpaperSettingsPage();
     final config = CustomBackgroundConfig.fromJson(watchSetting(ref, Settings.customBackground));
     return Scaffold(
       key: const ValueKey('settings-custom-background'),
@@ -62,7 +67,7 @@ class _CustomBackgroundPageState extends ConsumerState<CustomBackgroundPage> {
           SettingsRow(
             key: const ValueKey('background-pick-image'),
             title: i18n('custom_background_image'),
-            subtitle: _busy ? i18n('loading') : i18n('custom_background_image_desc'),
+            subtitle: _busy ? i18n('refresh_loading') : i18n('custom_background_image_desc'),
             onTap: _busy ? null : () => unawaited(_image()),
           ),
           SettingsRow(
@@ -88,7 +93,7 @@ class _CustomBackgroundPageState extends ConsumerState<CustomBackgroundPage> {
                 context: context,
                 title: i18n('custom_background_fit'),
                 options: [
-                  for (final v in ['cover', 'contain', 'fill'])
+                  for (final v in CustomBackgroundConfig.fits)
                     (value: v, label: i18n('custom_background_$v'), description: null),
                 ],
                 selected: config.fit,

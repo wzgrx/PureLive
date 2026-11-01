@@ -180,7 +180,7 @@ class _HuyaArchivePageState extends ConsumerState<HuyaArchivePage> {
                   FilledButton(
                     key: const ValueKey('huya-archive-search'),
                     onPressed: _busy ? null : () => unawaited(_submit()),
-                    child: Text(i18n('search')),
+                    child: Text(i18n('douyu_vod_search')),
                   ),
                 ],
               ),

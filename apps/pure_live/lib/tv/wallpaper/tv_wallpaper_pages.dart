@@ -230,7 +230,7 @@ class _LocalWallpaperRowState extends ConsumerState<_LocalWallpaperRow> {
     id: 'wallpaper-local-image',
     icon: TvIcons.wallpaperLibrary,
     title: i18n('custom_background_image'),
-    subtitle: i18n(_busy ? 'loading' : 'custom_background_image_desc'),
+    subtitle: i18n(_busy ? 'refresh_loading' : 'custom_background_image_desc'),
     onTap: () => unawaited(_pick()),
   );
 }

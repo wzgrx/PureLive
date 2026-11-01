@@ -14,6 +14,7 @@ import 'package:pure_live/app/services.dart';
 /// Persisted phone/desktop background; TV keeps its existing wallpaper settings.
 @immutable
 final class CustomBackgroundConfig {
+
   /// Default is disabled and does not change the theme.
   const new({this.kind = 'none', this.file = '', this.color = 0xff172136, this.mask = 0.7, this.fit = 'cover'});
 
@@ -28,9 +29,11 @@ final class CustomBackgroundConfig {
       file: file is String && CustomBackgroundFiles.ownedName.hasMatch(file) ? file : '',
       color: color is int && color >= 0 && color <= 0xffffffff ? color | 0xff000000 : 0xff172136,
       mask: mask is num && mask.isFinite ? mask.toDouble().clamp(0, 1) : 0.7,
-      fit: const {'cover', 'contain', 'fill'}.contains(value['fit']) ? value['fit']! as String : 'cover',
+      fit: fits.contains(value['fit']) ? value['fit']! as String : 'cover',
     );
   }
+  /// Shared supported image fitting modes for validation, UI and translations.
+  static const Set<String> fits = {'cover', 'contain', 'fill'};
 
   /// none, image or color.
   final String kind;

@@ -316,6 +316,7 @@ void main() {
         RoutePath.kPlaybackRemote,
         RoutePath.kScreenMirror,
         RoutePath.kDouyuVod,
+        RoutePath.kHuyaArchives,
         // U.2k: the local interaction settings (3.x pushed the page directly).
         RoutePath.kLocalInteraction,
         // U.11a: the log page moved out of the backup page (3.x) into settings.

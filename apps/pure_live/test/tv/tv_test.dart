@@ -1884,9 +1884,19 @@ void main() {
       await _press(tester, LogicalKeyboardKey.select);
       expect(services.store.settings.get(Settings.playbackHud)['mode'], 'off');
 
-      for (var i = 0; i < 5; i++) {
+      for (
+        var i = 0;
+        i < 12 &&
+            FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<SettingsSliderRow>()?.key !=
+                const ValueKey('playback-hud-size');
+        i++
+      ) {
         await _press(tester, LogicalKeyboardKey.arrowDown);
       }
+      expect(
+        FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<SettingsSliderRow>()?.key,
+        const ValueKey('playback-hud-size'),
+      );
       await _press(tester, LogicalKeyboardKey.arrowRight);
       await _settle(tester);
       expect(services.store.settings.get(Settings.playbackHud)['size'], 19);

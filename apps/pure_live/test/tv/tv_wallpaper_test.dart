@@ -12,6 +12,7 @@ import 'package:live_net/live_net.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/services.dart';
+import 'package:pure_live/features/settings/custom_background_page.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/background/custom_background.dart';
 import 'package:pure_live/tv/tv_theme.dart';
@@ -149,6 +150,7 @@ void main() {
       WidgetTester tester,
       Widget child, {
       Future<File?> Function()? picker,
+      bool tvMode = false,
     }) async {
       await prepareQaFonts(tester);
       tester.view
@@ -156,6 +158,7 @@ void main() {
         ..devicePixelRatio = 2;
       addTearDown(tester.view.reset);
       final services = (await tester.runAsync(testServices))!;
+      if (tvMode) await tester.runAsync(() => services.store.settings.set(Settings.uiMode, 'tv'));
       await tester.runAsync(loadStrings);
       final folder = Directory.systemTemp.createTempSync('tv_wallpaper');
       addTearDown(() => folder.deleteSync(recursive: true));
@@ -258,6 +261,14 @@ void main() {
       await drive(store.clear());
       expect(original.existsSync(), isFalse);
       expect(source.readAsBytesSync(), bytes);
+    });
+
+    testWidgets('shared appearance entry opens TV wallpaper controls when TV mode is selected', (tester) async {
+      final (services, _) = await pump(tester, const CustomBackgroundPage(), tvMode: true);
+      await tester.pump();
+      expect(find.byKey(const ValueKey('tv-settings-page-wallpaper')), findsOneWidget);
+      expect(find.byKey(const ValueKey('settings-custom-background')), findsNothing);
+      await close(tester, services);
     });
 
     testWidgets('the layer: nothing without a background, a colour with one', (tester) async {
