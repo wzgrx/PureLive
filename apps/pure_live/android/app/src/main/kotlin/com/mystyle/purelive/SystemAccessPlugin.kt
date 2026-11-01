@@ -29,6 +29,8 @@ import io.flutter.plugin.common.PluginRegistry
  * - `autoRotate`: whether the system's auto-rotate is on; leaving a
  *   fullscreen with it off turns the phone upright before letting go (O05.3).
  *   Only read: writing the setting would need WRITE_SETTINGS.
+ * - `needsLegacySystemBars`: read-only API-level check for Flutter's normal
+ *   overlays fallback before Android 10; Dart owns the actual mode request.
  */
 internal class SystemAccessPlugin :
     FlutterPlugin,
@@ -85,9 +87,11 @@ internal class SystemAccessPlugin :
             "requestLocalNetwork" -> requestLocalNetwork(result)
             "sensorLandscape" -> result.success(sensorLandscape())
             "autoRotate" -> result.success(autoRotate())
+            "needsLegacySystemBars" -> result.success(Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
             else -> result.notImplemented()
         }
     }
+
 
     private fun canInstallPackages(): Boolean {
         val context = context ?: return false

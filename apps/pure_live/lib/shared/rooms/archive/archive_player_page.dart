@@ -15,6 +15,7 @@ import 'package:pure_live/app/services.dart';
 import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/screen_orientation.dart';
+import 'package:pure_live/platform/system_ui.dart';
 import 'package:pure_live/shared/audio/audio_focus.dart';
 import 'package:pure_live/shared/danmaku/danmaku_overlay.dart';
 import 'package:pure_live/shared/danmaku/danmaku_settings.dart';
@@ -183,7 +184,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
         setState(() => _fullscreen = true);
         if (_mobile) {
           await ScreenOrientation.landscape();
-          if (mounted && _fullscreen) await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+          if (mounted && _fullscreen) await SystemUiVisibility.fullscreen();
         } else {
           await DesktopWindow.setFullScreen(on: true);
         }
@@ -195,7 +196,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
 
   Future<void> _restoreFullscreen() async {
     if (_mobile) {
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      await SystemUiVisibility.restore();
       await ScreenOrientation.restore(sideways: _sidewaysBefore);
     } else if (!_desktopAlreadyFullscreen) {
       await DesktopWindow.setFullScreen(on: false);

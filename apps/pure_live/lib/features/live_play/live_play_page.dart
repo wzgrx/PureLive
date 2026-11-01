@@ -58,6 +58,7 @@ import 'package:pure_live/features/live_play/switch_room/room_switch_panel.dart'
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/overlay_window.dart';
 import 'package:pure_live/platform/screen_orientation.dart';
+import 'package:pure_live/platform/system_ui.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_observer.dart';
@@ -728,7 +729,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     }
     _restorePortrait = landscape;
     _sidewaysBefore = mounted && MediaQuery.orientationOf(context) == Orientation.landscape;
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    await SystemUiVisibility.fullscreen();
     if (portrait) {
       await ScreenOrientation.portrait();
     } else if (!landscape && orientation == FullscreenOrientation.followSystem) {
@@ -749,7 +750,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     });
     _restorePortrait = false;
     _sidewaysBefore = mounted && MediaQuery.orientationOf(context) == Orientation.landscape;
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    await SystemUiVisibility.fullscreen();
     await ScreenOrientation.portrait();
   }
 
@@ -862,7 +863,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   /// The system bars back; the phone upright first while auto-rotate is off,
   /// [upright] whatever (O05.3; 3.x `exitFullscreenWithOrientationRestore`).
   Future<void> _restoreSystemUi({bool upright = false}) async {
-    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    await SystemUiVisibility.restore();
     await ScreenOrientation.restore(upright: upright, sideways: _sidewaysBefore);
   }
 

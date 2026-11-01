@@ -158,6 +158,7 @@ class _HuyaArchivePageState extends ConsumerState<HuyaArchivePage> {
                 children: [
                   if (title != null && title.isNotEmpty) Text(title, style: Theme.of(context).textTheme.titleMedium),
                   Text(i18n('huya_replay_hint')),
+                  const SizedBox(height: 8),
                   if (tv)
                     TvInputField(
                       key: const ValueKey('huya-archive-input'),

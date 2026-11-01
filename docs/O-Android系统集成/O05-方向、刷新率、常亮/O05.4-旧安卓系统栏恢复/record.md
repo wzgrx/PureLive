@@ -1,0 +1,5 @@
+# 记录
+
+2026-11-01，b8ebecc原生包：虎牙公开录像正常播放、暂停、快进、切720P，保存进度98533ms；进入全屏再返回目录后状态栏仍消失。window实际mSystemUiVisibility=0x1706，mLastStatusBarVisibility=0x170e，旧截图及XML保留。
+
+根因由当前SDK和官方文档核对：edgeToEdge只从API29可用，API28请求被忽略，留下先前immersiveSticky。新增仅旧系统执行的Flutter公开overlays回退（原生只读SDK判断，不直接修改窗口绕过框架缓存），所有相关页面通过同一个平台帮助类恢复；序号阻止已被新全屏请求替代的延迟回退。新增生产渠道/晚返回/平台边界用例。旧六包和Apple任务41306865730作废保留，未公开；最终源码重新原生和完整门禁验收。

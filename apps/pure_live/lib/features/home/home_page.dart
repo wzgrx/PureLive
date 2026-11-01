@@ -16,6 +16,7 @@ import 'package:pure_live/features/popular/popular_page.dart';
 import 'package:pure_live/features/recorder/recorder_page.dart';
 import 'package:pure_live/features/version/update_feed.dart';
 import 'package:pure_live/features/version/update_prompt.dart';
+import 'package:pure_live/platform/system_ui.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_observer.dart';
@@ -112,7 +113,7 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       if (!mounted) return;
       // Edge to edge (3.x); the bars' style is the app's SystemBarsScope
       // (A06.5).
-      if (Platform.isAndroid) unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+      if (Platform.isAndroid) unawaited(SystemUiVisibility.restore());
       final launch = ref.read(appServicesProvider).launch;
       if (launch.room case final room?) unawaited(AppNavigator.toLiveRoomDetail(liveRoom: room));
       if (launch.isPrimary) _updateTimer = Timer(startupUpdateCheckDelay, _checkForUpdate);
