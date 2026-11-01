@@ -875,7 +875,7 @@ class ChatLineView extends StatelessWidget {
         ? 0.0
         : [nativeStart.computeLuminance(), nativeEnd!.computeLuminance()].reduce((a, b) => a < b ? a : b);
     final chipInk = nativeStart != null
-        ? ((darkest + 0.05) / 0.05 >= 1.05 / (lightest + 0.05) ? Colors.black : Colors.white)
+        ? ((darkest + 0.05) / 0.05 >= 1.05 / (lightest + 0.05) ? OnVideoColors.ground : OnVideoColors.foreground)
         : douyuColor == null
         ? scheme.onPrimary
         : _readableOn(douyuColor, Color.alphaBlend(chipBackground, background));

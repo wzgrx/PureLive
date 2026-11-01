@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:live_store/live_store.dart';
+import 'package:live_ui/live_ui.dart';
 import 'package:path/path.dart' as p;
 import 'package:pure_live/app/services.dart';
 
@@ -85,8 +86,8 @@ final class CustomBackgroundFiles {
       }
       final factor = math.min(1, math.min(2560 / math.max(width, height), math.sqrt(6000000 / (width * height))));
       codec = await descriptor.instantiateCodec(
-        targetWidth: math.max(1, (width * factor).round()),
-        targetHeight: math.max(1, (height * factor).round()),
+        targetWidth: math.max(1, (width * factor).floor()),
+        targetHeight: math.max(1, (height * factor).floor()),
       );
       image = (await codec.getNextFrame()).image;
       final encoded = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -158,7 +159,7 @@ class CustomBackgroundFrame extends ConsumerWidget {
     if (config.kind == 'none' || (config.kind == 'image' && file == null)) return child;
     final theme = Theme.of(context);
     return Theme(
-      data: theme.copyWith(scaffoldBackgroundColor: Colors.transparent),
+      data: theme.copyWith(scaffoldBackgroundColor: OnVideoColors.clear),
       child: Stack(
         fit: StackFit.expand,
         children: [

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/services.dart';
-import 'package:pure_live/features/douyu_vod/vod_progress.dart';
-import 'package:pure_live/features/huya_replay/huya_archive_controller.dart';
+import 'package:pure_live/shared/rooms/archive/douyu_archive_progress.dart';
+import 'package:pure_live/shared/rooms/archive/huya_archive_controller.dart';
 
 /// The Bilibili video-on-demand plumbing (M14.0 `live_vod`): the app's HTTP
 /// client (same proxy and rate rules as the live platform, site id

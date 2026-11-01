@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_ui/live_ui.dart';
-import 'package:pure_live/features/huya_replay/huya_archive_page.dart';
 import 'package:pure_live/features/toolbox/toolbox_actions.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/links/supported_platforms.dart';
+import 'package:pure_live/shared/rooms/archive_navigation.dart';
 
 /// Reads the clipboard text (tests replace it).
 final Provider<Future<String?> Function()> toolboxClipboardProvider = Provider<Future<String?> Function()>(

@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/services.dart';
-import 'package:pure_live/features/settings/settings_dialogs.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
@@ -244,12 +243,12 @@ class _PlaybackRemotePageState extends ConsumerState<PlaybackRemotePage> {
                 i18n('screen_capture_hint_${ScreenCaptureHint.of(watchSetting(ref, Settings.screenCaptureHint)).name}'),
               ),
               onTap: () async {
-                final selected = await showChoiceDialog<String>(
+                final selected = await showAppOptionDialog<String>(
                   context: context,
                   title: i18n('screen_capture_hint_title'),
                   options: [
                     for (final mode in ['full', 'compact', 'hidden'])
-                      (value: mode, label: i18n('screen_capture_hint_$mode'), description: null),
+                      AppDialogOption(value: mode, label: i18n('screen_capture_hint_$mode')),
                   ],
                   selected: ScreenCaptureHint.of(ref.read(storeProvider).settings.get(Settings.screenCaptureHint)).name,
                 );

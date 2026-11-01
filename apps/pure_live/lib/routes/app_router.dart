@@ -13,6 +13,7 @@ import 'package:pure_live/features/favorite/favorite_page.dart';
 import 'package:pure_live/features/history/history_page.dart';
 import 'package:pure_live/features/home/home_page.dart';
 import 'package:pure_live/features/hot_areas/hot_areas_page.dart';
+import 'package:pure_live/features/huya_replay/huya_archive_page.dart';
 import 'package:pure_live/features/live_play/live_play_page.dart';
 import 'package:pure_live/features/multiview/multiview_page.dart';
 import 'package:pure_live/features/popular/popular_page.dart';
@@ -32,6 +33,7 @@ import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_observer.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/routes/settings_route_pages.dart';
+import 'package:pure_live/shared/rooms/archive_navigation.dart';
 
 /// Builds a page from how it was opened.
 typedef PageBuilder = Widget Function(RouteArgs route);
@@ -65,6 +67,12 @@ final Map<String, PageBuilder> pageRoutes = {
   RoutePath.kVersionHistory: (route) => AboutPage(route: route),
   RoutePath.kToolbox: (route) => ToolboxPage(route: route),
   RoutePath.kDouyuVod: (route) => DouyuVodCatalogPage(route: route),
+  RoutePath.kHuyaArchives: (route) {
+    final args = route.arguments;
+    return args is HuyaArchiveArguments
+        ? HuyaArchivePage(room: args.room, beforePlay: args.beforePlay, onRetire: args.onRetire)
+        : const HuyaArchivePage();
+  },
   RoutePath.kFavoriteAreas: (route) => AreasPage(route: route),
   RoutePath.kHuyaCookie: (route) => AccountPage(route: route),
   RoutePath.kDouyuAccountCookie: (route) => AccountPage(route: route),

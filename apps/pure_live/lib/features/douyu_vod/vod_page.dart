@@ -10,6 +10,9 @@ import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/features/douyu_vod/vod_player_page.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/route_args.dart';
+import 'package:pure_live/shared/rooms/archive/archive_time.dart';
+
+export 'package:pure_live/shared/rooms/archive/archive_time.dart' show vodTime;
 
 /// One responsive/focusable catalog for phones, desktop and TV. Search uses the
 /// official separate video/replay tabs, author pages use their own server pages.
@@ -326,12 +329,4 @@ class _DouyuVodPageState extends ConsumerState<DouyuVodCatalogPage> {
       ),
     ),
   );
-}
-
-/// Human-readable clock shared by catalogs, resume positions and controls.
-String vodTime(Duration position) {
-  final seconds = position.inSeconds.clamp(0, 31536000);
-  final minutes = (seconds ~/ 60) % 60;
-  final rest = (seconds % 60).toString().padLeft(2, '0');
-  return seconds >= 3600 ? '${seconds ~/ 3600}:${minutes.toString().padLeft(2, '0')}:$rest' : '${seconds ~/ 60}:$rest';
 }

@@ -98,6 +98,9 @@ abstract final class RoutePath {
   /// Official Douyu videos and replay sessions.
   static const kDouyuVod = '/douyu_vod';
 
+  /// Official Huya broadcast recordings.
+  static const kHuyaArchives = '/huya_archives';
+
   /// Huya cookie.
   static const kHuyaCookie = '/huya_cookie';
 

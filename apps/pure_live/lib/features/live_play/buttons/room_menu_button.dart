@@ -10,7 +10,6 @@ import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/app/services.dart';
-import 'package:pure_live/features/huya_replay/huya_archive_page.dart';
 import 'package:pure_live/features/live_play/dialogs/playback_info_panel.dart';
 import 'package:pure_live/features/live_play/dialogs/player_dialogs.dart';
 import 'package:pure_live/features/live_play/dialogs/room_dialogs.dart';
@@ -21,6 +20,7 @@ import 'package:pure_live/features/live_play/switch_room/room_switch_panel.dart'
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/background_guide.dart';
 import 'package:pure_live/routes/app_navigator.dart';
+import 'package:pure_live/shared/rooms/archive_navigation.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 import 'package:pure_live/shared/rooms/share_code.dart';

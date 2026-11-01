@@ -222,7 +222,7 @@ class ScreenCaptureIndicatorView extends StatelessWidget {
                         key: const ValueKey('screen-capture-compact-stop'),
                         tooltip: i18n('screen_share_stop'),
                         onPressed: () => unawaited(share.stop()),
-                        icon: const Icon(Icons.stop_screen_share_outlined),
+                        icon: const Icon(AppIcons.stopRecording),
                       )
                     : Padding(
                         padding: const EdgeInsets.only(left: 12),

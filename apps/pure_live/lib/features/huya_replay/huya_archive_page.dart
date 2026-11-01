@@ -10,29 +10,11 @@ import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/app/ui_mode.dart';
 import 'package:pure_live/app/vod.dart';
-import 'package:pure_live/features/douyu_vod/vod_player_page.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
+import 'package:pure_live/shared/rooms/archive/archive_player_page.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
-
-/// Opens the same archive catalogue from room menus and toolboxes on every layout.
-Future<bool> openHuyaArchives(BuildContext context, {LiveRoom? room, Future<void> Function()? beforePlay}) async {
-  var retirement = Future<void>.value();
-  await Navigator.of(context).push<void>(
-    MaterialPageRoute(
-      settings: const RouteSettings(name: 'huya-archives'),
-      builder: (_) => HuyaArchivePage(room: room, beforePlay: beforePlay, onRetire: (future) => retirement = future),
-    ),
-  );
-  try {
-    await retirement;
-    return true;
-  } on Object {
-    AppNavigator.toast(i18n('huya_replay_open_failed'));
-    return false;
-  }
-}
 
 /// Public presenter archive with deterministic pagination, errors and retry.
 class HuyaArchivePage extends ConsumerStatefulWidget {
@@ -150,7 +132,7 @@ class _HuyaArchivePageState extends ConsumerState<HuyaArchivePage> {
       await Navigator.of(context).push<void>(
         MaterialPageRoute(
           settings: const RouteSettings(name: 'huya-archive-player'),
-          builder: (_) => DouyuVodPlayerPage(videoId: video.id, archiveVideo: video, onRetire: widget.onRetire),
+          builder: (_) => ArchivePlayerPage(videoId: video.id, archiveVideo: video, onRetire: widget.onRetire),
         ),
       );
     } on Object {

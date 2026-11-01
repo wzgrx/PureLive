@@ -7,3 +7,11 @@
 官方样本：https://www.huya.com/video/u/294636272?tabName=live&pageIndex=1；质量：https://liveapi.huya.com/moment/getMomentContent?videoId=1131139550。API5项、回放控制器与原斗鱼12项、各布局目录及牌子渲染22项通过；最终同源原生录像播放与退出验证尚需执行。
 
 完整门禁、同源构建和最终原生结果将在发布验收中追加。原始证据保存在仓库外 `outputs/purelive-551-20261101/`。
+
+## 共享层与最终门禁
+
+首个5.6.0冻结提交6fb03c8的完整门禁发现跨功能目录引用和新增原始图标/颜色，检查失败并中止；日志和源码bundle保留在仓库外source-attempt1-ui-structure，未启动任何官方构建或Apple任务。
+
+共用原生播放器、斗鱼/虎牙控制器、进度和时间格式移至`apps/pure_live/lib/shared/rooms/archive/`；原斗鱼导入路径保留兼容导出及类型别名。各功能经共享导航和注册路由进入虎牙目录，不互相导入页面。遥控提示使用live_ui共用选项弹窗，图标和黑白/透明色使用AppIcons及OnVideoColors。未放宽结构基线。
+
+共享层相关31项回归通过，包括目录/播放器、原斗鱼、工具箱以及路由参数和真实清理完成前不得恢复的三项契约；完整14成员门禁按新冻结提交重新执行。
