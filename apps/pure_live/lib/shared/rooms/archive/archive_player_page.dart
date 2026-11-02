@@ -272,6 +272,91 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
     final look = danmakuLookOf(ref);
     final portrait =
         MediaQuery.sizeOf(context).width < 600 && MediaQuery.orientationOf(context) == Orientation.portrait;
+    final controlButtons = <Widget>[
+      IconButton(
+        key: const ValueKey('vod-play-pause'),
+        focusNode: _play,
+        tooltip: i18n(state.status == PlaybackStatus.playing ? 'pause' : 'play'),
+        onPressed: _controller.busy
+            ? null
+            : () {
+                if (state.status == PlaybackStatus.completed) {
+                  unawaited(_controller.open(video!.id, start: Duration.zero));
+                } else {
+                  unawaited(_controller.session.togglePlayPause());
+                }
+                _showControls();
+              },
+        icon: Icon(state.status == PlaybackStatus.playing ? AppIcons.pause : AppIcons.play),
+      ),
+      IconButton(
+        tooltip: i18n('douyu_vod_rewind'),
+        onPressed: () => unawaited(_controller.seek(_controller.position - const Duration(seconds: 10))),
+        icon: const Icon(AppIcons.vodRewind),
+      ),
+      IconButton(
+        tooltip: i18n('douyu_vod_forward'),
+        onPressed: () => unawaited(_controller.seek(_controller.position + const Duration(seconds: 10))),
+        icon: const Icon(AppIcons.vodForward),
+      ),
+      TextButton(
+        key: const ValueKey('archive-rate'),
+        onPressed: _controller.busy || video == null ? null : () => unawaited(_rate()),
+        child: Text(archiveRateLabel(_controller.rate)),
+      ),
+      PopupMenuButton<String>(
+        tooltip: i18n('douyu_vod_quality'),
+        enabled: !_controller.busy,
+        initialValue: _controller.qualityId,
+        onSelected: (id) => unawaited(_controller.selectQuality(id)),
+        itemBuilder: (_) => [
+          for (final quality in _controller.qualities)
+            PopupMenuItem(
+              value: quality.id,
+              enabled: quality.playable,
+              child: Text('${quality.label}${quality.playable ? '' : ' (${i18n('douyu_vod_restricted')})'}'),
+            ),
+        ],
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+            _controller.qualities.where((q) => q.id == _controller.qualityId).firstOrNull?.label ??
+                i18n('douyu_vod_quality'),
+          ),
+        ),
+      ),
+      if (_controller.supportsDanmaku)
+        IconButton(
+          tooltip: i18n('douyu_vod_danmaku'),
+          onPressed: _controller.toggleDanmaku,
+          icon: DanmakuIcon(_controller.danmakuVisible ? DanmakuIconKind.on : DanmakuIconKind.off),
+        ),
+      if (_controller.supportsDanmaku)
+        IconButton(
+          key: const ValueKey('vod-danmaku-settings'),
+          tooltip: i18n('douyu_vod_danmaku_settings'),
+          onPressed: () => unawaited(_danmakuSettings()),
+          icon: const DanmakuIcon(DanmakuIconKind.settings),
+        ),
+      IconButton(
+        tooltip: i18n('volume'),
+        onPressed: () => unawaited(_controller.session.setVolume(state.volume > 0 ? 0 : 1)),
+        icon: Icon(state.volume > 0 ? AppIcons.volumeHigh : AppIcons.volumeMuted),
+      ),
+      SizedBox(
+        width: 120,
+        child: Slider(
+          value: state.volume.clamp(0, 1),
+          onChanged: (value) => unawaited(_controller.session.setVolume(value)),
+        ),
+      ),
+      IconButton(
+        key: const ValueKey('vod-fullscreen'),
+        tooltip: i18n('fullscreen'),
+        onPressed: () => unawaited(_toggleFullscreen()),
+        icon: Icon(_fullscreen ? AppIcons.exitFullscreen : AppIcons.fullscreen),
+      ),
+    ];
     final transport = Theme(
       data: ThemeData.dark(useMaterial3: true),
       child: Material(
@@ -308,100 +393,17 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
                     Text(vodTime(duration)),
                   ],
                 ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      IconButton(
-                        key: const ValueKey('vod-play-pause'),
-                        focusNode: _play,
-                        tooltip: i18n(state.status == PlaybackStatus.playing ? 'pause' : 'play'),
-                        onPressed: _controller.busy
-                            ? null
-                            : () {
-                                if (state.status == PlaybackStatus.completed) {
-                                  unawaited(_controller.open(video!.id, start: Duration.zero));
-                                } else {
-                                  unawaited(_controller.session.togglePlayPause());
-                                }
-                                _showControls();
-                              },
-                        icon: Icon(state.status == PlaybackStatus.playing ? AppIcons.pause : AppIcons.play),
-                      ),
-                      IconButton(
-                        tooltip: i18n('douyu_vod_rewind'),
-                        onPressed: () =>
-                            unawaited(_controller.seek(_controller.position - const Duration(seconds: 10))),
-                        icon: const Icon(AppIcons.vodRewind),
-                      ),
-                      IconButton(
-                        tooltip: i18n('douyu_vod_forward'),
-                        onPressed: () =>
-                            unawaited(_controller.seek(_controller.position + const Duration(seconds: 10))),
-                        icon: const Icon(AppIcons.vodForward),
-                      ),
-                      TextButton(
-                        key: const ValueKey('archive-rate'),
-                        onPressed: _controller.busy || video == null ? null : () => unawaited(_rate()),
-                        child: Text(archiveRateLabel(_controller.rate)),
-                      ),
-                      PopupMenuButton<String>(
-                        tooltip: i18n('douyu_vod_quality'),
-                        enabled: !_controller.busy,
-                        initialValue: _controller.qualityId,
-                        onSelected: (id) => unawaited(_controller.selectQuality(id)),
-                        itemBuilder: (_) => [
-                          for (final quality in _controller.qualities)
-                            PopupMenuItem(
-                              value: quality.id,
-                              enabled: quality.playable,
-                              child: Text(
-                                '${quality.label}${quality.playable ? '' : ' (${i18n('douyu_vod_restricted')})'}',
-                              ),
-                            ),
-                        ],
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Text(
-                            _controller.qualities.where((q) => q.id == _controller.qualityId).firstOrNull?.label ??
-                                i18n('douyu_vod_quality'),
-                          ),
-                        ),
-                      ),
-                      if (_controller.supportsDanmaku)
-                        IconButton(
-                          tooltip: i18n('douyu_vod_danmaku'),
-                          onPressed: _controller.toggleDanmaku,
-                          icon: DanmakuIcon(_controller.danmakuVisible ? DanmakuIconKind.on : DanmakuIconKind.off),
-                        ),
-                      if (_controller.supportsDanmaku)
-                        IconButton(
-                          key: const ValueKey('vod-danmaku-settings'),
-                          tooltip: i18n('douyu_vod_danmaku_settings'),
-                          onPressed: () => unawaited(_danmakuSettings()),
-                          icon: const DanmakuIcon(DanmakuIconKind.settings),
-                        ),
-                      IconButton(
-                        tooltip: i18n('volume'),
-                        onPressed: () => unawaited(_controller.session.setVolume(state.volume > 0 ? 0 : 1)),
-                        icon: Icon(state.volume > 0 ? AppIcons.volumeHigh : AppIcons.volumeMuted),
-                      ),
-                      SizedBox(
-                        width: 120,
-                        child: Slider(
-                          value: state.volume.clamp(0, 1),
-                          onChanged: (value) => unawaited(_controller.session.setVolume(value)),
-                        ),
-                      ),
-                      IconButton(
-                        key: const ValueKey('vod-fullscreen'),
-                        tooltip: i18n('fullscreen'),
-                        onPressed: () => unawaited(_toggleFullscreen()),
-                        icon: Icon(_fullscreen ? AppIcons.exitFullscreen : AppIcons.fullscreen),
-                      ),
-                    ],
+                if (portrait && !_fullscreen)
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: controlButtons,
+                  )
+                else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: controlButtons),
                   ),
-                ),
               ],
             ),
           ),
@@ -527,6 +529,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
             ? videoArea
             : SafeArea(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (portrait) ...[
                       AspectRatio(aspectRatio: 16 / 9, child: videoArea),
