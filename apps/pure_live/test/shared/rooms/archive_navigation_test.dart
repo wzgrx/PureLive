@@ -26,6 +26,58 @@ void main() {
     expect(page.onRetire, same(retire));
   });
 
+  testWidgets('Back during archive entry waits for the live decoder stop before allowing resume', (tester) async {
+    final stopping = Completer<void>();
+    var completed = false;
+    HuyaArchiveArguments? passed;
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, _) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                await openReplayArchives(context, beforePlay: () => stopping.future);
+                completed = true;
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: RoutePath.kReplayArchives,
+          builder: (context, state) {
+            passed = state.extra! as HuyaArchiveArguments;
+            return Scaffold(
+              body: TextButton(
+                onPressed: () {
+                  unawaited(passed!.beforePlay!());
+                  context.pop();
+                },
+                child: const Text('back'),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+    AppNavigator.router = router;
+    addTearDown(() {
+      AppNavigator.router = null;
+      router.dispose();
+    });
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('back'));
+    await tester.pumpAndSettle();
+    expect(completed, isFalse, reason: 'route pop alone does not mean the native live stop finished');
+    stopping.complete();
+    await tester.pumpAndSettle();
+    expect(completed, isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   for (final failCleanup in [false, true]) {
     testWidgets('route completion waits for real native retirement; failure $failCleanup never grants restoration', (
       tester,

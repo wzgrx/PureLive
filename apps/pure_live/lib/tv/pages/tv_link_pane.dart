@@ -136,8 +136,8 @@ class _TvLinkPaneState extends ConsumerState<TvLinkPane> {
             children: [
               TvButton(
                 key: const ValueKey('tv-link-huya-archives'),
-                label: i18n('huya_replay_title'),
-                onTap: () => unawaited(openHuyaArchives(context)),
+                label: i18n('replay_title'),
+                onTap: () => unawaited(openReplayArchives(context)),
               ),
               TvButton(
                 key: const ValueKey('tv-link-douyu-vod'),

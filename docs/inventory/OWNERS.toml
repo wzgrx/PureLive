@@ -42,6 +42,7 @@ path = [
 
   { glob = "apps/pure_live/lib/features/douyu_vod/vod_controller.dart", sub = "V01" },
   { glob = "apps/pure_live/lib/features/huya_replay/", sub = "C03" },
+  { glob = "apps/pure_live/lib/features/replay/", sub = "A15", note = "三个平台共用的官方回放目录" },
   { glob = "apps/pure_live/lib/shared/background/", sub = "A11" },
   { glob = "apps/pure_live/lib/shared/rooms/archive*.dart", sub = "C03" },
   { glob = "apps/pure_live/lib/shared/rooms/archive/", sub = "C03" },

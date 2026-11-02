@@ -101,6 +101,9 @@ abstract final class RoutePath {
   /// Official Huya broadcast recordings.
   static const kHuyaArchives = '/huya_archives';
 
+  /// Unified official broadcast archives.
+  static const kReplayArchives = '/replay_archives';
+
   /// Huya cookie.
   static const kHuyaCookie = '/huya_cookie';
 

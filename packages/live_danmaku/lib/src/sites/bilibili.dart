@@ -782,9 +782,9 @@ abstract final class BilibiliDanmakuProtocol {
   /// The display name: the first unmasked of the rich user in `info[0][15]`
   /// ([rich], decoded from JSON text), the notice's `uinfo`, `data.uinfo`
   /// and [legacy] (`info[2][1]`); the first rich one when all are masked,
-  /// else [legacy]. A guest gets every one of them masked (B06: the server
-  /// masks by connection, see docs/D-弹幕/D01-平台弹幕协议/D01.32-哔哩哔哩访客昵称和粉丝牌/record.md); a logged-in
-  /// connection gets the full name in `user.base.name`.
+  /// else [legacy]. Some guest connections receive full names; others receive
+  /// every candidate masked by the server. Prefer an actually returned full
+  /// candidate, regardless of login, without reconstructing hidden identities.
   static String _userName(Map<String, dynamic> notice, Object? rich, String legacy) {
     final data = notice['data'];
     final candidates = [
@@ -805,9 +805,11 @@ abstract final class BilibiliDanmakuProtocol {
     final base = user['base'];
     if (base is! Map) return '';
     final name = base['name']?.toString().trim() ?? '';
-    if (name.isNotEmpty) return name;
     final origin = base['origin_info'];
-    return origin is Map ? origin['name']?.toString().trim() ?? '' : '';
+    final original = origin is Map ? origin['name']?.toString().trim() ?? '' : '';
+    if (name.isNotEmpty && !isMaskedName(name)) return name;
+    if (original.isNotEmpty && !isMaskedName(original)) return original;
+    return name.isNotEmpty ? name : original;
   }
 
   /// `WATCHED_CHANGE`: the room's cumulative viewers, `data.num` when it is a

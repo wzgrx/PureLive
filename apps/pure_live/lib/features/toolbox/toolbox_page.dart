@@ -175,9 +175,9 @@ class _ToolboxPageState extends ConsumerState<ToolboxPage> {
               child: ListTile(
                 key: const ValueKey('toolbox-huya-archives'),
                 leading: const Icon(AppIcons.vodCatalog),
-                title: Text(i18n('huya_replay_title')),
-                subtitle: Text(i18n('huya_replay_hint')),
-                onTap: () => unawaited(openHuyaArchives(context)),
+                title: Text(i18n('replay_title')),
+                subtitle: Text(i18n('replay_input_hint')),
+                onTap: () => unawaited(openReplayArchives(context)),
               ),
             ),
             Card(

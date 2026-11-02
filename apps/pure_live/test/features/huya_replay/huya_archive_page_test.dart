@@ -63,6 +63,26 @@ Future<FakeEngine> page(
 }
 
 void main() {
+  testWidgets(
+    'portrait archive exposes fullscreen and volume without horizontal clipping, with left-aligned metadata',
+    (tester) async {
+      await page(tester, FakeHuyaArchive(), size: const Size(393, 852));
+      await tester.tap(find.byKey(ValueKey('huya-archive-${firstArchive.id}')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('vod-fullscreen')).hitTestable(), findsOneWidget);
+      for (final key in ['archive-rate', 'vod-fullscreen']) {
+        final rect = tester.getRect(find.byKey(ValueKey(key)));
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(393));
+      }
+      final title = tester.getRect(find.text(firstArchive.title).last);
+      expect(title.left, inInclusiveRange(16, 24));
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await settle(tester);
+    },
+  );
+
   for (final layout in [
     ('phone', const Size(420, 800), false),
     ('desktop', const Size(1000, 700), false),

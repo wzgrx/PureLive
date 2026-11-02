@@ -90,40 +90,43 @@ class RoomMenuPanel extends ConsumerWidget {
         listenable: controller,
         builder: (context, _) {
           final groups = roomMenuItems(controller, settings, onBars: onBars);
-          return ListView(
+          return SingleChildScrollView(
             key: const ValueKey('room-menu-list'),
             padding: const EdgeInsets.only(top: 4, bottom: 8),
-            children: [
-              for (final (index, group) in groups.indexed) ...[
-                if (index > 0) const SizedBox(height: roomMenuGroupGap),
-                PanelCard(
-                  key: ValueKey('room-menu-group-$index'),
-                  children: [
-                    // The rows' ink over the card (rounded by the rows, no
-                    // clipping: docs/specs/UI.md §9.3).
-                    Material(
-                      type: MaterialType.transparency,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          for (final (row, item) in group.indexed)
-                            Builder(
-                              builder: (context) => RoomMenuRow(
-                                item: item,
-                                borderRadius: BorderRadius.vertical(
-                                  top: row == 0 ? const Radius.circular(16) : Radius.zero,
-                                  bottom: row == group.length - 1 ? const Radius.circular(16) : Radius.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final (index, group) in groups.indexed) ...[
+                  if (index > 0) const SizedBox(height: roomMenuGroupGap),
+                  PanelCard(
+                    key: ValueKey('room-menu-group-$index'),
+                    children: [
+                      // The rows' ink over the card (rounded by the rows, no
+                      // clipping: docs/specs/UI.md §9.3).
+                      Material(
+                        type: MaterialType.transparency,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final (row, item) in group.indexed)
+                              Builder(
+                                builder: (context) => RoomMenuRow(
+                                  item: item,
+                                  borderRadius: BorderRadius.vertical(
+                                    top: row == 0 ? const Radius.circular(16) : Radius.zero,
+                                    bottom: row == group.length - 1 ? const Radius.circular(16) : Radius.zero,
+                                  ),
+                                  onTap: () => unawaited(_choose(context, ref, item.entry)),
                                 ),
-                                onTap: () => unawaited(_choose(context, ref, item.entry)),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                ],
               ],
-            ],
+            ),
           );
         },
       ),

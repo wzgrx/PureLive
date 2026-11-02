@@ -21,18 +21,49 @@ final class HuyaArchiveArguments {
 }
 
 /// Uses the route table so individual features do not import each other's pages.
-Future<bool> openHuyaArchives(BuildContext context, {LiveRoom? room, Future<void> Function()? beforePlay}) async {
-  if (!context.mounted) return true;
+Future<bool> openHuyaArchives(BuildContext context, {LiveRoom? room, Future<void> Function()? beforePlay}) =>
+    _openArchives(context, RoutePath.kHuyaArchives, room: room, beforePlay: beforePlay);
+
+/// Opens a platform-aware catalog and awaits both entry and native retirement.
+Future<bool> openReplayArchives(BuildContext context, {LiveRoom? room, Future<void> Function()? beforePlay}) =>
+    _openArchives(context, RoutePath.kReplayArchives, room: room, beforePlay: beforePlay);
+
+Future<bool> _openArchives(
+  BuildContext context,
+  String path, {
+  LiveRoom? room,
+  Future<void> Function()? beforePlay,
+}) async {
+  if (!context.mounted) return false;
+  var entering = Future<void>.value();
   var retirement = Future<void>.value();
-  await AppNavigator.toNamed<void>(
-    RoutePath.kHuyaArchives,
-    arguments: HuyaArchiveArguments(room: room, beforePlay: beforePlay, onRetire: (future) => retirement = future),
-  );
+  Object? retirementError;
   try {
+    await AppNavigator.toNamed<void>(
+      path,
+      arguments: HuyaArchiveArguments(
+        room: room,
+        beforePlay: beforePlay == null ? null : () => entering = Future<void>.sync(beforePlay),
+        onRetire: (future) {
+          retirement = future.then<void>(
+            (_) {},
+            onError: (Object error, StackTrace _) {
+              retirementError = error;
+            },
+          );
+        },
+      ),
+    );
+    // Back may close the catalog while the live decoder is still stopping.
+    // Never decide whether to resume until that owning callback has settled.
+    await entering;
     await retirement;
+    if (retirementError != null) throw StateError('Archive native retirement failed');
     return true;
   } on Object {
-    AppNavigator.toast(i18n('huya_replay_open_failed'));
+    await entering.catchError((Object _) {});
+    await retirement.catchError((Object _) {});
+    AppNavigator.toast(i18n('replay_open_failed'));
     return false;
   }
 }

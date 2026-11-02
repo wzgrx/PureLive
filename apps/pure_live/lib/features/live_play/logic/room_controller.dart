@@ -74,7 +74,7 @@ enum ChatConnection {
 
 /// What the chat list says above its lines about Bilibili's names (task
 /// B06 c1): the server masked every name (`观***`) for a connection that
-/// was not logged in; since 2026-10 guests get full names, so the hint
+/// was not logged in; some guest connections now get full names, so the hint
 /// stands on the names that arrive, not on the login alone.
 enum ChatNameHint {
   /// Nothing to say: not Bilibili, no danmaku, or full names.
@@ -241,6 +241,17 @@ class LiveRoomController extends ChangeNotifier {
   bool _disposed = false;
   int _maskedChats = 0;
   int _namedChats = 0;
+  Timer? _nameHintTimer;
+  bool _nameHintDismissed = false;
+
+  /// A brief, dismissible explanation, once per room visit (not per reconnect).
+  void dismissNameHint() {
+    if (_disposed || _nameHintDismissed) return;
+    _nameHintDismissed = true;
+    _nameHintTimer?.cancel();
+    _notify();
+  }
+
   bool _unsupportedShown = false;
   bool _historyRecorded = false;
   // C01.4: entering the room says once that the platform served another
@@ -391,12 +402,12 @@ class LiveRoomController extends ChangeNotifier {
   static const int maskedChatsForExpiredLogin = 3;
 
   /// What the chat list says about Bilibili's names (B06 c1): nothing while
-  /// the names come in full (guests get them since 2026-10); once this
+  /// the names come in full, including anonymous connections; once this
   /// connection got [maskedChatsForExpiredLogin] masked names and no full
   /// one, [ChatNameHint.guest] without a login and
   /// [ChatNameHint.loginExpired] with one.
   ChatNameHint get nameHint {
-    if (_room.platform != SiteIds.bilibili) return ChatNameHint.none;
+    if (_nameHintDismissed || _room.platform != SiteIds.bilibili) return ChatNameHint.none;
     if (_chatConnection == ChatConnection.idle || _chatConnection == ChatConnection.unsupported) {
       return ChatNameHint.none;
     }
@@ -1333,6 +1344,9 @@ class LiveRoomController extends ChangeNotifier {
           if (masked
               ? _maskedChats == maskedChatsForExpiredLogin && _namedChats == 0
               : _namedChats == 1 && _maskedChats >= maskedChatsForExpiredLogin) {
+            if (masked && !_nameHintDismissed) {
+              _nameHintTimer ??= Timer(const Duration(seconds: 8), dismissNameHint);
+            }
             _notify();
           }
         }
@@ -1592,6 +1606,7 @@ class LiveRoomController extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _telemetry?.dispose();
+    _nameHintTimer?.cancel();
     _epoch++;
     _refreshTimer?.cancel();
     _superChatTimer?.cancel();

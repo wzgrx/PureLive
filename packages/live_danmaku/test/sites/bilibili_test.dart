@@ -616,6 +616,22 @@ void main() {
         }
       });
 
+      test('anonymous chat keeps a complete origin name even when base and legacy are masked', () {
+        final notice = jsonDecode(jsonEncode(recorded('S13-protover2-paired').first)) as Map<String, dynamic>;
+        final info = notice['info'] as List<dynamic>;
+        final rich = (info[0] as List<dynamic>)[15] as Map<String, dynamic>;
+        final user = rich['user'] as Map<String, dynamic>;
+        final base = user['base'] as Map<String, dynamic>;
+        user['uid'] = 0;
+        info[2] = [0, '观***'];
+        base['name'] = '观***';
+        (base['origin_info'] as Map<String, dynamic>)['name'] = '匿名连接完整昵称';
+        expect(chats(notice).single.userName, '匿名连接完整昵称');
+        expect(chats(notice).single.userId, '0');
+        (base['origin_info'] as Map<String, dynamic>)['name'] = '观***';
+        expect(chats(notice).single.userName, '观***', reason: 'no fabricated identity when every field is masked');
+      });
+
       test('c3: a logged-in chat (shaped like the recording) gives the full name and the uid', () {
         final notice = jsonDecode(jsonEncode(recorded('S13-protover2-paired').first)) as Map<String, dynamic>;
         final info = notice['info'] as List<dynamic>;

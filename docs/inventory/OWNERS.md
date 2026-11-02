@@ -6,7 +6,7 @@
 
 路径规则按 OWNERS.toml 里的顺序第一条匹配的生效，所以一条目录规则只管前面的规则没拿走的文件。本页只随归属表、设置、来源和通道变化，加删代码文件不用重新生成。
 
-路径规则 244 条；设置 298 个（分节默认 24 条、单独指定 111 个）；来源 35 个；通道 23 个。
+路径规则 245 条；设置 298 个（分节默认 24 条、单独指定 111 个）；来源 35 个；通道 23 个。
 
 | 子分类 | 路径规则 | 设置 | 播放 | 弹幕 | 通道 |
 |---|---:|---:|---:|---:|---:|
@@ -22,7 +22,7 @@
 | A11 设置界面 | 3 | 1 |  |  |  |
 | A12 账号和数据界面 | 6 |  |  |  |  |
 | A13 网络电视和多画面界面 | 2 |  |  |  |  |
-| A15 小页面 | 5 |  |  |  |  |
+| A15 小页面 | 6 |  |  |  |  |
 | A16 桌面界面 | 1 | 13 |  |  |  |
 | A17 电视界面 | 3 | 19 |  |  |  |
 | A18 苹果平台界面 | 3 | 1 |  |  | 1 |
@@ -157,7 +157,7 @@
 
 ## A15 小页面
 
-- 代码：`apps/pure_live/lib/features/douyu_vod/`、`apps/pure_live/lib/features/about/`、`apps/pure_live/lib/features/toolbox/`、`apps/pure_live/lib/features/version/`、`apps/pure_live/lib/shared/links/`
+- 代码：`apps/pure_live/lib/features/replay/`（三个平台共用的官方回放目录）、`apps/pure_live/lib/features/douyu_vod/`、`apps/pure_live/lib/features/about/`、`apps/pure_live/lib/features/toolbox/`、`apps/pure_live/lib/features/version/`、`apps/pure_live/lib/shared/links/`
 
 ## A16 桌面界面
 

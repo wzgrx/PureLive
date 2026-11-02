@@ -188,7 +188,7 @@ final class FakeDanmaku implements DanmakuConnection {
 }
 
 /// An engine that plays whatever it opens.
-final class FakeEngine implements PlayerEngine, VolumeGainControl {
+final class FakeEngine implements PlayerEngine, VolumeGainControl, PlaybackRate {
   final StreamController<EngineEvent> _events = StreamController.broadcast(sync: true);
 
   /// Opened media, in order.
@@ -196,6 +196,10 @@ final class FakeEngine implements PlayerEngine, VolumeGainControl {
 
   /// Live gain commands without a new media open.
   final List<int?> gains = [];
+
+  final List<double> rates = [];
+  @override
+  Future<void> setRate(double rate) async => rates.add(rate);
 
   @override
   Future<void> setVolumeGainDb(int? decibels) async => gains.add(decibels);
@@ -237,8 +241,12 @@ final class FakeEngine implements PlayerEngine, VolumeGainControl {
   @override
   Future<void> play() async {}
 
+  Future<void> Function()? onPause;
+
   @override
-  Future<void> pause() async {}
+  Future<void> pause() async {
+    await onPause?.call();
+  }
 
   @override
   Future<void> stop() async {}

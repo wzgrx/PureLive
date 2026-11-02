@@ -16,11 +16,14 @@ import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/screen_orientation.dart';
 import 'package:pure_live/platform/system_ui.dart';
+import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/audio/audio_focus.dart';
 import 'package:pure_live/shared/danmaku/danmaku_overlay.dart';
 import 'package:pure_live/shared/danmaku/danmaku_settings.dart';
 import 'package:pure_live/shared/danmaku/danmaku_settings_content.dart';
+import 'package:pure_live/shared/rooms/archive/archive_rate_dialog.dart';
 import 'package:pure_live/shared/rooms/archive/archive_time.dart';
+import 'package:pure_live/shared/rooms/archive/bilibili_archive_controller.dart';
 import 'package:pure_live/shared/rooms/archive/douyu_archive_controller.dart';
 import 'package:pure_live/shared/rooms/archive/huya_archive_controller.dart';
 import 'package:pure_live/shared/rooms/archive_playback.dart';
@@ -30,13 +33,16 @@ import 'package:pure_live/tv/wallpaper/tv_wallpaper_layer.dart';
 /// exact seeking, allowed renditions, resume, same-session segments and comments.
 class ArchivePlayerPage extends ConsumerStatefulWidget {
   /// Opens an official video hash id.
-  const new({required this.videoId, this.archiveVideo, this.onRetire, super.key});
+  const new({required this.videoId, this.archiveVideo, this.bilibiliVideo, this.onRetire, super.key});
 
   /// The `/show/` hash id, never a media URL.
   final String videoId;
 
   /// Official Huya metadata selects the shared archive controller.
   final HuyaArchiveVideo? archiveVideo;
+
+  /// Public Bilibili metadata selects its own parts and media contract.
+  final VodArchive? bilibiliVideo;
 
   /// Lets an owning live page await native cleanup before resuming.
   final ValueChanged<Future<void>>? onRetire;
@@ -79,7 +85,16 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
         volumeGainDb: settings.get(Settings.volumeBoostDb),
       ),
     );
-    _controller = widget.archiveVideo == null
+    _controller = widget.bilibiliVideo != null
+        ? BilibiliArchiveController(
+            source: ref.read(bilibiliReplayProvider),
+            session: session,
+            progress: ref.read(bilibiliReplayProgressProvider),
+            initialVolume: settings.get(Settings.globalVolumeMute)
+                ? 0
+                : settings.get(_mobile ? Settings.defaultMobileVolume : Settings.defaultDesktopVolume),
+          )
+        : widget.archiveVideo == null
         ? DouyuVodController(
             source: ref.read(douyuVodProvider),
             session: session,
@@ -114,7 +129,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
 
   void _changed() {
     if (!mounted) return;
-    if (_controller.session.state.status == PlaybackStatus.completed) {
+    if (_controller.error != null || _controller.session.state.status == PlaybackStatus.completed) {
       _hide?.cancel();
       _controls = true;
     }
@@ -155,6 +170,19 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
         _surface.requestFocus();
       }
     });
+  }
+
+  Future<void> _rate() async {
+    _hide?.cancel();
+    final rate = await showDialog<double>(
+      context: context,
+      builder: (_) => ArchiveRateDialog(rate: _controller.rate),
+    );
+    if (!mounted) return;
+    if (rate != null && !await _controller.setRate(rate) && mounted) {
+      AppNavigator.toast(i18n('archive_rate_unavailable'));
+    }
+    if (mounted) _showControls();
   }
 
   Future<void> _danmakuSettings() async {
@@ -203,7 +231,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
     }
   }
 
-  KeyEventResult _key(FocusNode _, KeyEvent event) {
+  KeyEventResult _key(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.escape && _fullscreen) {
@@ -218,6 +246,15 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
     if (!_controls && {LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.arrowRight}.contains(key)) {
       final step = Duration(seconds: key == LogicalKeyboardKey.arrowLeft ? -10 : 10);
       unawaited(_controller.seek(_controller.position + step));
+      return KeyEventResult.handled;
+    }
+    if (_controls &&
+        node.hasPrimaryFocus &&
+        event is KeyDownEvent &&
+        {LogicalKeyboardKey.enter, LogicalKeyboardKey.select}.contains(key)) {
+      unawaited(_controller.session.togglePlayPause());
+      _showControls();
+      _play.requestFocus();
       return KeyEventResult.handled;
     }
     if (!_controls &&
@@ -242,6 +279,146 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
     final maximum = duration.inMilliseconds.toDouble();
     final position = (_scrub ?? _controller.position.inMilliseconds.toDouble()).clamp(0.0, maximum > 0 ? maximum : 1.0);
     final look = danmakuLookOf(ref);
+    final portrait =
+        MediaQuery.sizeOf(context).width < 600 && MediaQuery.orientationOf(context) == Orientation.portrait;
+    final controlButtons = <Widget>[
+      IconButton(
+        key: const ValueKey('vod-play-pause'),
+        focusNode: _play,
+        tooltip: i18n(state.status == PlaybackStatus.playing ? 'pause' : 'play'),
+        onPressed: _controller.busy
+            ? null
+            : () {
+                if (state.status == PlaybackStatus.completed) {
+                  unawaited(_controller.open(video!.id, start: Duration.zero));
+                } else {
+                  unawaited(_controller.session.togglePlayPause());
+                }
+                _showControls();
+              },
+        icon: Icon(state.status == PlaybackStatus.playing ? AppIcons.pause : AppIcons.play),
+      ),
+      IconButton(
+        tooltip: i18n('douyu_vod_rewind'),
+        onPressed: () => unawaited(_controller.seek(_controller.position - const Duration(seconds: 10))),
+        icon: const Icon(AppIcons.vodRewind),
+      ),
+      IconButton(
+        tooltip: i18n('douyu_vod_forward'),
+        onPressed: () => unawaited(_controller.seek(_controller.position + const Duration(seconds: 10))),
+        icon: const Icon(AppIcons.vodForward),
+      ),
+      TextButton(
+        key: const ValueKey('archive-rate'),
+        onPressed: _controller.busy || video == null ? null : () => unawaited(_rate()),
+        child: Text(archiveRateLabel(_controller.rate)),
+      ),
+      PopupMenuButton<String>(
+        tooltip: i18n('douyu_vod_quality'),
+        enabled: !_controller.busy,
+        initialValue: _controller.qualityId,
+        onSelected: (id) => unawaited(_controller.selectQuality(id)),
+        itemBuilder: (_) => [
+          for (final quality in _controller.qualities)
+            PopupMenuItem(
+              value: quality.id,
+              enabled: quality.playable,
+              child: Text('${quality.label}${quality.playable ? '' : ' (${i18n('douyu_vod_restricted')})'}'),
+            ),
+        ],
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(
+            _controller.qualities.where((q) => q.id == _controller.qualityId).firstOrNull?.label ??
+                i18n('douyu_vod_quality'),
+          ),
+        ),
+      ),
+      if (_controller.supportsDanmaku)
+        IconButton(
+          tooltip: i18n('douyu_vod_danmaku'),
+          onPressed: _controller.toggleDanmaku,
+          icon: DanmakuIcon(_controller.danmakuVisible ? DanmakuIconKind.on : DanmakuIconKind.off),
+        ),
+      if (_controller.supportsDanmaku)
+        IconButton(
+          key: const ValueKey('vod-danmaku-settings'),
+          tooltip: i18n('douyu_vod_danmaku_settings'),
+          onPressed: () => unawaited(_danmakuSettings()),
+          icon: const DanmakuIcon(DanmakuIconKind.settings),
+        ),
+      IconButton(
+        tooltip: i18n('volume'),
+        onPressed: () => unawaited(_controller.session.setVolume(state.volume > 0 ? 0 : 1)),
+        icon: Icon(state.volume > 0 ? AppIcons.volumeHigh : AppIcons.volumeMuted),
+      ),
+      SizedBox(
+        width: 120,
+        child: Slider(
+          value: state.volume.clamp(0, 1),
+          onChanged: (value) => unawaited(_controller.session.setVolume(value)),
+        ),
+      ),
+      IconButton(
+        key: const ValueKey('vod-fullscreen'),
+        tooltip: i18n('fullscreen'),
+        onPressed: () => unawaited(_toggleFullscreen()),
+        icon: Icon(_fullscreen ? AppIcons.exitFullscreen : AppIcons.fullscreen),
+      ),
+    ];
+    final transport = Theme(
+      data: ThemeData.dark(useMaterial3: true),
+      child: Material(
+        color: OnVideoColors.panel,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Text(vodTime(Duration(milliseconds: position.round()))),
+                    Expanded(
+                      child: Slider(
+                        key: const ValueKey('vod-seek'),
+                        value: position,
+                        max: maximum > 0 ? maximum : 1,
+                        onChangeStart: _controller.busy || maximum <= 0
+                            ? null
+                            : (value) {
+                                _hide?.cancel();
+                                setState(() => _scrub = value);
+                              },
+                        onChanged: _controller.busy || maximum <= 0 ? null : (value) => setState(() => _scrub = value),
+                        onChangeEnd: (value) {
+                          setState(() => _scrub = null);
+                          unawaited(_controller.seek(Duration(milliseconds: value.round())));
+                          _showControls();
+                        },
+                      ),
+                    ),
+                    Text(vodTime(duration)),
+                  ],
+                ),
+                if (portrait && !_fullscreen)
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: controlButtons,
+                  )
+                else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: controlButtons),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
     final videoArea = Focus(
       onKeyEvent: _key,
       focusNode: _surface,
@@ -289,7 +466,15 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(i18n(_controller.error is NeedsLogin ? 'douyu_vod_login' : 'douyu_vod_play_failed')),
+                          Text(
+                            i18n(
+                              _controller.error is TimeoutException
+                                  ? 'replay_seek_failed'
+                                  : _controller.error is NeedsLogin
+                                  ? 'douyu_vod_login'
+                                  : 'douyu_vod_play_failed',
+                            ),
+                          ),
                           TextButton(
                             onPressed: _controller.busy
                                 ? null
@@ -315,6 +500,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
                       child: Row(
                         children: [
                           IconButton(
+                            key: const ValueKey('archive-back'),
                             tooltip: i18n('back'),
                             color: OnVideoColors.foreground,
                             icon: const Icon(AppIcons.back),
@@ -322,8 +508,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
                           ),
                           Expanded(
                             child: Text(
-                              video?.title ??
-                                  i18n(widget.archiveVideo == null ? 'douyu_vod_title' : 'huya_replay_title'),
+                              video?.title ?? i18n('replay_title'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: context.textStyles.t14.copyWith(
@@ -337,155 +522,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
                     ),
                   ),
                 ),
-              if (_controls)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Theme(
-                    data: ThemeData.dark(useMaterial3: true),
-                    child: Material(
-                      color: OnVideoColors.panel,
-                      child: SafeArea(
-                        top: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(vodTime(Duration(milliseconds: position.round()))),
-                                  Expanded(
-                                    child: Slider(
-                                      key: const ValueKey('vod-seek'),
-                                      value: position,
-                                      max: maximum > 0 ? maximum : 1,
-                                      onChangeStart: _controller.busy || maximum <= 0
-                                          ? null
-                                          : (value) {
-                                              _hide?.cancel();
-                                              setState(() => _scrub = value);
-                                            },
-                                      onChanged: _controller.busy || maximum <= 0
-                                          ? null
-                                          : (value) => setState(() => _scrub = value),
-                                      onChangeEnd: (value) {
-                                        setState(() => _scrub = null);
-                                        unawaited(_controller.seek(Duration(milliseconds: value.round())));
-                                        _showControls();
-                                      },
-                                    ),
-                                  ),
-                                  Text(vodTime(duration)),
-                                ],
-                              ),
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    IconButton(
-                                      key: const ValueKey('vod-play-pause'),
-                                      focusNode: _play,
-                                      tooltip: i18n(state.status == PlaybackStatus.playing ? 'pause' : 'play'),
-                                      onPressed: _controller.busy
-                                          ? null
-                                          : () {
-                                              if (state.status == PlaybackStatus.completed) {
-                                                unawaited(_controller.open(video!.id, start: Duration.zero));
-                                              } else {
-                                                unawaited(_controller.session.togglePlayPause());
-                                              }
-                                              _showControls();
-                                            },
-                                      icon: Icon(
-                                        state.status == PlaybackStatus.playing ? AppIcons.pause : AppIcons.play,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      tooltip: i18n('douyu_vod_rewind'),
-                                      onPressed: () => unawaited(
-                                        _controller.seek(_controller.position - const Duration(seconds: 10)),
-                                      ),
-                                      icon: const Icon(AppIcons.vodRewind),
-                                    ),
-                                    IconButton(
-                                      tooltip: i18n('douyu_vod_forward'),
-                                      onPressed: () => unawaited(
-                                        _controller.seek(_controller.position + const Duration(seconds: 10)),
-                                      ),
-                                      icon: const Icon(AppIcons.vodForward),
-                                    ),
-                                    PopupMenuButton<String>(
-                                      tooltip: i18n('douyu_vod_quality'),
-                                      enabled: !_controller.busy,
-                                      initialValue: _controller.qualityId,
-                                      onSelected: (id) => unawaited(_controller.selectQuality(id)),
-                                      itemBuilder: (_) => [
-                                        for (final quality in _controller.qualities)
-                                          PopupMenuItem(
-                                            value: quality.id,
-                                            enabled: quality.playable,
-                                            child: Text(
-                                              '${quality.label}${quality.playable ? '' : ' (${i18n('douyu_vod_restricted')})'}',
-                                            ),
-                                          ),
-                                      ],
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Text(
-                                          _controller.qualities
-                                                  .where((q) => q.id == _controller.qualityId)
-                                                  .firstOrNull
-                                                  ?.label ??
-                                              i18n('douyu_vod_quality'),
-                                        ),
-                                      ),
-                                    ),
-                                    if (_controller.supportsDanmaku)
-                                      IconButton(
-                                        tooltip: i18n('douyu_vod_danmaku'),
-                                        onPressed: _controller.toggleDanmaku,
-                                        icon: DanmakuIcon(
-                                          _controller.danmakuVisible ? DanmakuIconKind.on : DanmakuIconKind.off,
-                                        ),
-                                      ),
-                                    if (_controller.supportsDanmaku)
-                                      IconButton(
-                                        key: const ValueKey('vod-danmaku-settings'),
-                                        tooltip: i18n('douyu_vod_danmaku_settings'),
-                                        onPressed: () => unawaited(_danmakuSettings()),
-                                        icon: const DanmakuIcon(DanmakuIconKind.settings),
-                                      ),
-                                    IconButton(
-                                      tooltip: i18n('volume'),
-                                      onPressed: () =>
-                                          unawaited(_controller.session.setVolume(state.volume > 0 ? 0 : 1)),
-                                      icon: Icon(state.volume > 0 ? AppIcons.volumeHigh : AppIcons.volumeMuted),
-                                    ),
-                                    SizedBox(
-                                      width: 120,
-                                      child: Slider(
-                                        value: state.volume.clamp(0, 1),
-                                        onChanged: (value) => unawaited(_controller.session.setVolume(value)),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      key: const ValueKey('vod-fullscreen'),
-                                      tooltip: i18n('fullscreen'),
-                                      onPressed: () => unawaited(_toggleFullscreen()),
-                                      icon: Icon(_fullscreen ? AppIcons.exitFullscreen : AppIcons.fullscreen),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              if (_controls && (!portrait || _fullscreen)) Positioned(left: 0, right: 0, bottom: 0, child: transport),
             ],
           ),
         ),
@@ -501,8 +538,28 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
             ? videoArea
             : SafeArea(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(child: videoArea),
+                    if (portrait) ...[
+                      AspectRatio(aspectRatio: 16 / 9, child: videoArea),
+                      transport,
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(video?.title ?? i18n('replay_title'), style: Theme.of(context).textTheme.titleLarge),
+                              const SizedBox(height: 16),
+                              Text(
+                                i18n(_controller.supportsDanmaku ? 'douyu_vod_danmaku' : 'replay_no_history_danmaku'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ] else
+                      Expanded(child: videoArea),
                     if (_controller.segments.length > 1)
                       SizedBox(
                         height: 72,
