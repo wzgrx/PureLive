@@ -49,3 +49,24 @@ final Provider<HuyaArchiveProgress> huyaArchiveProgressProvider = Provider((ref)
     write: (value) => meta.set('huya-archive-progress-v1', value),
   );
 });
+
+/// Official broadcast replay collections, sharing the local Bilibili account.
+final Provider<BilibiliReplaySource> bilibiliReplayProvider = Provider(
+  (ref) => BilibiliReplayApi(ref.watch(vodClientProvider)),
+);
+
+/// Public room identity lookup also works when a creator is offline.
+final Provider<ReplayIdentityApi> replayIdentityProvider = Provider((ref) {
+  final services = ref.watch(appServicesProvider);
+  return ReplayIdentityApi(services.http, cookies: services.cookies);
+});
+
+/// Per-part positions; no signed URLs, cookies or names enter the progress store.
+final Provider<HuyaArchiveProgress> bilibiliReplayProgressProvider = Provider((ref) {
+  final meta = ref.watch(storeProvider).meta;
+  return HuyaArchiveProgress(
+    read: () => meta.get('bilibili-replay-progress-v1'),
+    write: (value) => meta.set('bilibili-replay-progress-v1', value),
+    idPattern: r'^BV[0-9A-Za-z]{10}:[1-9][0-9]{0,18}$',
+  );
+});

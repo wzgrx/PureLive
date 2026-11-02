@@ -201,6 +201,7 @@ List<List<RoomMenuEntry>> roomMenuGroups({
   required bool cast,
   bool local = false,
   bool huya = false,
+  bool replay = false,
   Set<RoomMenuEntry> onBars = const {},
 }) => [
   for (final group in [
@@ -209,7 +210,7 @@ List<List<RoomMenuEntry>> roomMenuGroups({
       RoomMenuEntry.timer,
       RoomMenuEntry.volume,
       RoomMenuEntry.videoFit,
-      if (huya) RoomMenuEntry.replayArchive,
+      if (huya || replay) RoomMenuEntry.replayArchive,
     ],
     [
       if (cast) RoomMenuEntry.cast,
@@ -273,7 +274,7 @@ List<List<RoomMenuItem>> roomMenuItems(
   final deadline = controller.sleepDeadline;
   RoomMenuItem item(RoomMenuEntry entry) {
     final (icon, label, description) = switch (entry) {
-      RoomMenuEntry.replayArchive => (AppIcons.vodCatalog, i18n('huya_replay_title'), null),
+      RoomMenuEntry.replayArchive => (AppIcons.vodCatalog, i18n('replay_title'), null),
       RoomMenuEntry.switchRoom => (AppIcons.switchRoom, i18n('switch_live_room'), null),
       RoomMenuEntry.timer => (
         AppIcons.sleepTimer,
@@ -313,7 +314,7 @@ List<List<RoomMenuItem>> roomMenuItems(
   return [
     for (final group in roomMenuGroups(
       iptv: controller.site.id == SiteIds.iptv,
-      huya: controller.site.id == SiteIds.huya,
+      replay: {SiteIds.huya, SiteIds.douyu, SiteIds.bilibili}.contains(controller.room.platform),
       newWindow: DesktopWindow.offersNewWindow(settings),
       local: settings.get(Settings.localInteractionEnabled),
       cast: castSupported(defaultTargetPlatform),
@@ -335,6 +336,7 @@ List<List<RoomMenuItem>> roomMenuItems(
 class RoomMenuButton extends ConsumerWidget {
   /// Creates the menu.
   const new({required this.controller, this.onVideo = false, this.onBars = const {}, this.onMenu, super.key});
+  static final Expando<bool> _archiveVisits = Expando<bool>('archive visits');
 
   /// The room.
   final LiveRoomController controller;
@@ -363,29 +365,47 @@ class RoomMenuButton extends ConsumerWidget {
     final room = controller.room;
     switch (entry) {
       case RoomMenuEntry.replayArchive:
+        if (_archiveVisits[controller] ?? false) return;
+        _archiveVisits[controller] = true;
         final navigator = Navigator.of(context);
         final session = controller.session;
         final identity = room.identityKey;
         final wasPlaying = session.state.status == PlaybackStatus.playing;
         var stopped = false;
-        final retired = await openHuyaArchives(
-          context,
-          room: room,
-          beforePlay: () async {
-            if (stopped || controller.isDisposed || controller.room.identityKey != identity) return;
-            await session.stop();
-            stopped = true;
-          },
-        );
-        if (retired &&
-            stopped &&
-            navigator.mounted &&
-            !controller.isDisposed &&
-            identical(controller.session, session) &&
-            controller.room.identityKey == identity &&
-            session.state.status == PlaybackStatus.stopped) {
-          await controller.load();
-          if (!wasPlaying && !controller.isDisposed) await session.pause();
+        var retired = false;
+        try {
+          if (wasPlaying) await session.pause();
+          if (!context.mounted) return;
+          retired = await openReplayArchives(
+            context,
+            room: room,
+            beforePlay: () async {
+              if (stopped || controller.isDisposed || controller.room.identityKey != identity) return;
+              await session.stop();
+              stopped = true;
+            },
+          );
+        } finally {
+          try {
+            final sameRoom =
+                navigator.mounted &&
+                !controller.isDisposed &&
+                identical(controller.session, session) &&
+                controller.room.identityKey == identity;
+            final foreground =
+                WidgetsBinding.instance.lifecycleState == null ||
+                WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+            if (sameRoom && foreground) {
+              if (retired && stopped && session.state.status == PlaybackStatus.stopped) {
+                await controller.load();
+                if (!wasPlaying && !controller.isDisposed) await session.pause();
+              } else if (!stopped && wasPlaying && session.state.status == PlaybackStatus.paused) {
+                await session.resume();
+              }
+            }
+          } finally {
+            _archiveVisits[controller] = false;
+          }
         }
       case RoomMenuEntry.videoFit:
         await showVideoFitMenu(context, ref.read(storeProvider).settings);

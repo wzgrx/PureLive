@@ -11,7 +11,8 @@ import 'package:pure_live/shared/rooms/archive_playback.dart';
 /// Bounded local-only positions; media URLs and browser/session data never enter it.
 final class HuyaArchiveProgress {
   /// The application meta store is replaceable in tests.
-  new({required this.read, required this.write});
+  new({required this.read, required this.write, String idPattern = r'^[1-9][0-9]{0,18}$'})
+    : _validId = RegExp(idPattern);
 
   /// Serialized local metadata.
   final Future<String?> Function() read;
@@ -19,6 +20,7 @@ final class HuyaArchiveProgress {
   /// Persists local metadata.
   final Future<void> Function(String) write;
   Future<void> _queue = Future.value();
+  final RegExp _validId;
 
   Future<Map<String, int>> _load() async {
     try {
@@ -29,7 +31,7 @@ final class HuyaArchiveProgress {
       return {
         for (final entry in json.entries.take(200))
           if (entry.key is String &&
-              RegExp(r'^[1-9][0-9]{0,18}$').hasMatch(entry.key as String) &&
+              _validId.hasMatch(entry.key as String) &&
               entry.value is int &&
               (entry.value as int) >= 0 &&
               (entry.value as int) <= 31536000000)
@@ -46,9 +48,17 @@ final class HuyaArchiveProgress {
     return Duration(milliseconds: (await _load())[id] ?? 0);
   }
 
+  /// Most recently watched part in a platform-specific namespace.
+  Future<({String id, Duration position})?> recent(String prefix) async {
+    await _queue;
+    final values = await _load();
+    final entry = values.entries.where((e) => e.key.startsWith(prefix)).firstOrNull;
+    return entry == null ? null : (id: entry.key, position: Duration(milliseconds: entry.value));
+  }
+
   /// Completion resets to zero; writes are serialized and capped at 200 ids.
   Future<void> save(String id, Duration position) {
-    if (!RegExp(r'^[1-9][0-9]{0,18}$').hasMatch(id) || position.isNegative || position.inMilliseconds > 31536000000) {
+    if (!_validId.hasMatch(id) || position.isNegative || position.inMilliseconds > 31536000000) {
       return Future.value();
     }
     return _queue = _queue.catchError((Object _) {}).then((_) async {
@@ -100,6 +110,8 @@ final class HuyaArchiveController extends ArchivePlaybackController {
   Duration? _pending;
   Duration _lastSaved = Duration.zero;
   int _generation = 0;
+  Timer? _seekDeadline;
+  int _seekSerial = 0;
   bool _disposed = false;
   bool _ready = false;
   Future<void>? _retirement;
@@ -116,6 +128,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     final volume = _ready ? session.state.volume : initialVolume;
     await record().catchError((Object _) {});
     if (_disposed) return;
+    _seekDeadline?.cancel();
     final generation = ++_generation;
     _cancel?.cancel();
     final cancel = _cancel = CancelToken();
@@ -145,7 +158,10 @@ final class HuyaArchiveController extends ArchivePlaybackController {
           refresh: () => _refresh(generation),
         ),
       );
-      if (_current(generation)) _ready = true;
+      if (_current(generation)) {
+        await restoreRate();
+        _ready = true;
+      }
     } on Object catch (failure) {
       if (_current(generation)) error = failure;
     } finally {
@@ -179,6 +195,8 @@ final class HuyaArchiveController extends ArchivePlaybackController {
   @override
   Future<void> selectQuality(String id) async {
     if (busy || _disposed || id == qualityId || qualities.every((q) => q.id != id || !q.playable)) return;
+    _seekSerial++;
+    _seekDeadline?.cancel();
     final previous = qualityId;
     qualityId = id;
     final generation = _generation;
@@ -200,7 +218,10 @@ final class HuyaArchiveController extends ArchivePlaybackController {
           refresh: () => _refresh(generation),
         ),
       );
-      if (_current(generation) && paused) await session.pause();
+      if (_current(generation)) {
+        await restoreRate();
+        if (paused) await session.pause();
+      }
     } on Object catch (failure) {
       if (_current(generation)) {
         qualityId = previous;
@@ -225,7 +246,25 @@ final class HuyaArchiveController extends ArchivePlaybackController {
         : at;
     _pending = bounded;
     notifyListeners();
-    await session.seek(bounded);
+    final serial = ++_seekSerial;
+    final generation = _generation;
+    _seekDeadline?.cancel();
+    bool current() => _current(generation) && serial == _seekSerial;
+    _seekDeadline = Timer(const Duration(seconds: 10), () {
+      if (!current() || _pending == null) return;
+      _pending = null;
+      error = TimeoutException('Archive seek was not acknowledged');
+      notifyListeners();
+    });
+    try {
+      await session.seek(bounded).timeout(const Duration(seconds: 10));
+    } on Object catch (failure) {
+      if (current()) {
+        _pending = null;
+        error = failure;
+        notifyListeners();
+      }
+    }
   }
 
   void _changed(PlaybackState state) {
@@ -251,6 +290,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
   void dispose() {
     if (_disposed) return;
     final saved = record().catchError((Object _) {});
+    _seekDeadline?.cancel();
     _disposed = true;
     _generation++;
     _cancel?.cancel();

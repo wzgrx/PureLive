@@ -17,6 +17,7 @@ final class DouyuVodVideo implements ArchiveVideo {
     this.duration = Duration.zero,
     this.pointId = '',
     this.replay = false,
+    this.publishedAt,
   });
 
   /// Reads the current web search, author, replay and video-page field shapes.
@@ -28,8 +29,9 @@ final class DouyuVodVideo implements ArchiveVideo {
       jsonString(json['owner'] ?? json['nickname'] ?? json['author'] ?? json['author_name']) ?? '',
     ),
     cover: normalizeImageUrl(json['cover'] ?? json['video_pic'] ?? json['pic']),
-    duration: douyuVodDuration(json['video_duration'] ?? json['duration'] ?? json['video_str_duration']),
+    duration: _durationOf(json),
     pointId: jsonString(json['point_id']) ?? '',
+    publishedAt: _publishedAt(json['start_time'] ?? json['create_time'] ?? json['ctime'] ?? json['publish_time']),
     replay: replay || jsonInt(json['is_replay']) == 1 || json['is_replay'] == true,
   );
 
@@ -59,6 +61,9 @@ final class DouyuVodVideo implements ArchiveVideo {
 
   /// Explicit replay mode from the list or platform field, never a title guess.
   final bool replay;
+
+  /// Public publication time when the platform supplies it.
+  final DateTime? publishedAt;
 
   /// Canonical official video page.
   Uri get uri => Uri.https('v.douyu.com', '/show/$id');
@@ -148,4 +153,20 @@ Duration douyuVodDuration(Object? value) {
     seconds = seconds * 60 + number;
   }
   return seconds <= 31536000 ? Duration(milliseconds: (seconds * 1000).round()) : Duration.zero;
+}
+
+DateTime? _publishedAt(Object? value) {
+  final seconds = int.tryParse(value?.toString() ?? '');
+  if (seconds != null && seconds > 0 && seconds < 253402300800) {
+    return DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
+  }
+  return value is String ? DateTime.tryParse(value) : null;
+}
+
+Duration _durationOf(Map<String, dynamic> json) {
+  for (final key in ['video_duration', 'duration', 'video_str_duration']) {
+    final value = douyuVodDuration(json[key]);
+    if (value > Duration.zero) return value;
+  }
+  return Duration.zero;
 }

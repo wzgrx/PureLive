@@ -39,6 +39,8 @@ final class DouyuVodController extends ArchivePlaybackController {
   final StreamController<LiveMessage> _messages = StreamController.broadcast();
   final StreamController<LiveRetraction> _retractions = StreamController.broadcast();
   int _generation = 0;
+  Timer? _seekDeadline;
+  int _seekSerial = 0;
   bool _disposed = false;
   bool _ready = false;
   Future<void>? _retirement;
@@ -94,6 +96,7 @@ final class DouyuVodController extends ArchivePlaybackController {
     final volume = _ready ? session.state.volume : initialVolume;
     await record();
     if (_disposed) return;
+    _seekDeadline?.cancel();
     final generation = ++_generation;
     _cancel?.cancel();
     final cancel = _cancel = CancelToken();
@@ -157,6 +160,7 @@ final class DouyuVodController extends ArchivePlaybackController {
         ),
       );
       if (!_current(generation)) return;
+      await restoreRate();
       _ready = true;
       unawaited(_loadSegments(detail.video, generation, cancel));
     } on Object catch (failure) {
@@ -218,6 +222,8 @@ final class DouyuVodController extends ArchivePlaybackController {
   @override
   Future<void> selectQuality(String id) async {
     if (_disposed || busy || id == qualityId || !qualities.any((item) => item.id == id && item.playable)) return;
+    _seekSerial++;
+    _seekDeadline?.cancel();
     final generation = _generation;
     final paused = session.state.status == PlaybackStatus.paused;
     final position = this.position;
@@ -243,6 +249,7 @@ final class DouyuVodController extends ArchivePlaybackController {
         ),
       );
       if (!_current(generation)) return;
+      await restoreRate();
       if (paused) await session.pause();
       _timeline?.seek(position);
     } on Object catch (failure) {
@@ -270,7 +277,25 @@ final class DouyuVodController extends ArchivePlaybackController {
         : position;
     _pendingPosition = target;
     _timeline?.seek(target);
-    await session.seek(target);
+    final serial = ++_seekSerial;
+    final generation = _generation;
+    _seekDeadline?.cancel();
+    bool current() => _current(generation) && serial == _seekSerial;
+    _seekDeadline = Timer(const Duration(seconds: 10), () {
+      if (!current() || _pendingPosition == null) return;
+      _pendingPosition = null;
+      error = TimeoutException('Archive seek was not acknowledged');
+      notifyListeners();
+    });
+    try {
+      await session.seek(target).timeout(const Duration(seconds: 10));
+    } on Object catch (failure) {
+      if (current()) {
+        _pendingPosition = null;
+        error = failure;
+        notifyListeners();
+      }
+    }
     await record();
   }
 
@@ -316,6 +341,7 @@ final class DouyuVodController extends ArchivePlaybackController {
   void dispose() {
     if (_disposed) return;
     final saved = record().catchError((Object _) {});
+    _seekDeadline?.cancel();
     _disposed = true;
     _generation++;
     _cancel?.cancel();

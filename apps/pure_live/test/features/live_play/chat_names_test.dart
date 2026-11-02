@@ -8,6 +8,7 @@ import 'package:live_danmaku/live_danmaku.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/services.dart';
+import 'package:pure_live/features/live_play/danmaku/chat_list.dart';
 import 'package:pure_live/features/live_play/live_play_page.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
@@ -130,7 +131,7 @@ void main() {
     }
     await tester.pump();
 
-    expect(_hint('访客模式下哔哩哔哩会隐藏昵称'), findsOneWidget);
+    expect(_hint('当前连接返回了部分隐藏昵称，可登录后重试'), findsOneWidget);
     expect(_hint('去登录'), findsOneWidget);
     final hint = tester.getRect(find.byKey(const ValueKey('live-play-name-hint')));
     final line = tester.getRect(find.byKey(const ValueKey('live-play-chat-line')).last);
@@ -184,13 +185,50 @@ void main() {
       danmaku.emit(DanmakuReceived(_chat('观***', '第$i条')));
     }
     await tester.pump();
-    expect(_hint('登录已失效，哔哩哔哩隐藏了昵称'), findsOneWidget);
+    expect(_hint('当前连接仍返回隐藏昵称，可重新登录后重试'), findsOneWidget);
     expect(_hint('重新登录'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('live-play-name-hint-login')));
     await _settle(tester);
     expect(find.text('扫码登录页'), findsOneWidget);
     AppNavigator.back();
     await _settle(tester);
+    await _close(tester, services);
+  });
+
+  testWidgets('masked-name hint closes once per visit and reconnect/resize cannot bring it back', (tester) async {
+    final danmaku = FakeDanmaku();
+    final services = await _pump(tester, site: FakeSite(liveRoom()), danmaku: danmaku);
+    for (var i = 0; i < 3; i++) {
+      danmaku.emit(DanmakuReceived(_chat('观***', '第$i条')));
+    }
+    await tester.pump();
+    expect(find.byKey(const ValueKey('live-play-name-hint')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('live-play-name-hint-dismiss')));
+    await tester.pump();
+    final controller = tester.widget<ChatList>(find.byType(ChatList).first).controller;
+    await tester.runAsync(controller.reconnectDanmaku);
+    tester.view.physicalSize = const Size(500, 900);
+    for (var i = 0; i < 5; i++) {
+      danmaku.emit(DanmakuReceived(_chat('观***', '后续$i')));
+    }
+    await tester.pump();
+    expect(find.byKey(const ValueKey('live-play-name-hint')), findsNothing);
+    await _close(tester, services);
+  });
+
+  testWidgets('masked-name hint expires after eight seconds; complete anonymous names remain visible', (tester) async {
+    final danmaku = FakeDanmaku();
+    final services = await _pump(tester, site: FakeSite(liveRoom()), danmaku: danmaku);
+    for (var i = 0; i < 3; i++) {
+      danmaku.emit(DanmakuReceived(_chat('观***', '第$i条')));
+    }
+    await tester.pump();
+    expect(find.byKey(const ValueKey('live-play-name-hint')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 8));
+    expect(find.byKey(const ValueKey('live-play-name-hint')), findsNothing);
+    danmaku.emit(DanmakuReceived(_chat('未登录完整昵称', '正常显示')));
+    await tester.pump();
+    expect(find.textContaining('未登录完整昵称', findRichText: true), findsOneWidget);
     await _close(tester, services);
   });
 

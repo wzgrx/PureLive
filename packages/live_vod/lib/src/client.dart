@@ -144,10 +144,20 @@ final class BilibiliVodClient {
   }
 
   /// A GET of [url] with [query] and the API cookie.
-  Future<LiveResponse> get(Uri url, {Map<String, Object?> query = const {}, String referer = referer}) async =>
-      await _send(
-        LiveRequest.get(site: vodSite, url: url, query: query, headers: _headers(await apiCookie(), referer)),
-      );
+  Future<LiveResponse> get(
+    Uri url, {
+    Map<String, Object?> query = const {},
+    String referer = referer,
+    CancelToken? cancel,
+  }) async => await _send(
+    LiveRequest.get(
+      site: vodSite,
+      url: url,
+      query: query,
+      headers: _headers(await apiCookie(), referer),
+      cancel: cancel,
+    ),
+  );
 
   /// A GET without any cookie but the login one (streams, see the class
   /// note).

@@ -805,9 +805,11 @@ abstract final class BilibiliDanmakuProtocol {
     final base = user['base'];
     if (base is! Map) return '';
     final name = base['name']?.toString().trim() ?? '';
-    if (name.isNotEmpty) return name;
     final origin = base['origin_info'];
-    return origin is Map ? origin['name']?.toString().trim() ?? '' : '';
+    final original = origin is Map ? origin['name']?.toString().trim() ?? '' : '';
+    if (name.isNotEmpty && !isMaskedName(name)) return name;
+    if (original.isNotEmpty && !isMaskedName(original)) return original;
+    return name.isNotEmpty ? name : original;
   }
 
   /// `WATCHED_CHANGE`: the room's cumulative viewers, `data.num` when it is a

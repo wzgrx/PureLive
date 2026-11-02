@@ -20,6 +20,7 @@ import 'package:pure_live/features/popular/popular_page.dart';
 import 'package:pure_live/features/recorder/recorder_page.dart';
 import 'package:pure_live/features/remote_receiver/remote_receiver_page.dart';
 import 'package:pure_live/features/remote_receiver/screen_mirror_page.dart';
+import 'package:pure_live/features/replay/replay_catalog_page.dart';
 import 'package:pure_live/features/search/search_page.dart';
 import 'package:pure_live/features/settings/danmaku_page.dart';
 import 'package:pure_live/features/settings/settings_page.dart';
@@ -66,6 +67,12 @@ final Map<String, PageBuilder> pageRoutes = {
   RoutePath.kSettingsHotAreas: (route) => HotAreasPage(route: route),
   RoutePath.kVersionHistory: (route) => AboutPage(route: route),
   RoutePath.kToolbox: (route) => ToolboxPage(route: route),
+  RoutePath.kReplayArchives: (route) {
+    final args = route.arguments;
+    return args is HuyaArchiveArguments
+        ? ReplayCatalogPage(room: args.room, beforePlay: args.beforePlay, onRetire: args.onRetire)
+        : const ReplayCatalogPage();
+  },
   RoutePath.kDouyuVod: (route) => DouyuVodCatalogPage(route: route),
   RoutePath.kHuyaArchives: (route) {
     final args = route.arguments;

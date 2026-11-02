@@ -1,0 +1,186 @@
+import 'package:flutter/material.dart';
+import 'package:live_ui/live_ui.dart';
+import 'package:pure_live/i18n/i18n.dart';
+
+/// Rates supported by the native on-demand engine, in reading order.
+const archiveRates = <double>[0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4];
+
+/// Compact speed label, retaining the normal-speed decimal.
+String archiveRateLabel(double rate) =>
+    '${rate == rate.roundToDouble() ? rate.toStringAsFixed(1) : rate.toStringAsFixed(2).replaceFirst(RegExp(r'0$'), '')}×';
+
+/// Custom edits remain drafts until a value is explicitly returned.
+class ArchiveRateDialog extends StatefulWidget {
+  /// Opens with the actual controller rate.
+  const new({required this.rate, super.key});
+
+  /// Current playback rate.
+  final double rate;
+  @override
+  State<ArchiveRateDialog> createState() => _ArchiveRateDialogState();
+}
+
+class _ArchiveRateDialogState extends State<ArchiveRateDialog> {
+  late final _input = TextEditingController(text: widget.rate.toStringAsFixed(2));
+  late bool _fine = !archiveRates.contains(widget.rate);
+  double? get _value {
+    final n = double.tryParse(_input.text.trim());
+    return n != null && n.isFinite && n >= 0.25 && n <= 4 && (n * 20 - (n * 20).round()).abs() < 0.000001 ? n : null;
+  }
+
+  void _step(int direction) {
+    final next = (((_value ?? widget.rate) * 20).round() + direction).clamp(5, 80) / 20;
+    setState(() => _input.text = next.toStringAsFixed(2));
+  }
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final available = size.height - MediaQuery.viewInsetsOf(context).vertical - 48;
+    final columns = size.width > size.height ? 6 : 4;
+    final header = Padding(
+      padding: const EdgeInsets.only(left: 20, right: 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(i18n('archive_rate_title'), style: Theme.of(context).textTheme.titleLarge)),
+          IconButton(tooltip: i18n('close'), onPressed: () => Navigator.pop(context), icon: const Icon(AppIcons.close)),
+        ],
+      ),
+    );
+    final body = Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(i18n('archive_rate_current', args: {'rate': archiveRateLabel(widget.rate)})),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, box) => FocusTraversalGroup(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final rate in archiveRates)
+                    SizedBox(
+                      width: (box.maxWidth - (columns - 1) * 8) / columns,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        child: Semantics(
+                          selected: rate == widget.rate,
+                          child: OutlinedButton(
+                            key: ValueKey('archive-rate-$rate'),
+                            style: rate == widget.rate
+                                ? OutlinedButton.styleFrom(
+                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  )
+                                : null,
+                            onPressed: () => Navigator.pop(context, rate),
+                            child: Text(archiveRateLabel(rate)),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            key: const ValueKey('archive-rate-fine'),
+            onPressed: () => setState(() => _fine = !_fine),
+            child: Text('${i18n('archive_rate_fine')}  ${archiveRateLabel(_value ?? widget.rate)}'),
+          ),
+          if (_fine) ...[
+            Row(
+              children: [
+                IconButton(tooltip: i18n('archive_rate_slower'), onPressed: () => _step(-1), icon: const Text('−')),
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey('archive-rate-input'),
+                    controller: _input,
+                    autofocus: !archiveRates.contains(widget.rate),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      labelText: i18n('archive_rate_value'),
+                      errorText: _value == null ? i18n('archive_rate_invalid') : null,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (_) {
+                      if (_value != null) Navigator.pop(context, _value);
+                    },
+                  ),
+                ),
+                IconButton(
+                  tooltip: i18n('archive_rate_faster'),
+                  onPressed: () => _step(1),
+                  icon: const Icon(AppIcons.add),
+                ),
+              ],
+            ),
+            Slider(
+              key: const ValueKey('archive-rate-slider'),
+              min: 0.25,
+              max: 4,
+              divisions: 75,
+              value: _value ?? widget.rate,
+              onChanged: (v) => setState(() => _input.text = ((v * 20).round() / 20).toStringAsFixed(2)),
+            ),
+            Text(i18n('archive_rate_hint')),
+          ],
+        ],
+      ),
+    );
+    final footer = Padding(
+      padding: const EdgeInsets.all(12),
+      child: Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          OutlinedButton(
+            key: const ValueKey('archive-rate-reset'),
+            onPressed: () => Navigator.pop<double>(context, 1),
+            child: Text(i18n('archive_rate_reset')),
+          ),
+          FilledButton(
+            key: const ValueKey('archive-rate-apply'),
+            onPressed: _fine
+                ? (_value == null ? null : () => Navigator.pop(context, _value))
+                : () => Navigator.pop(context),
+            child: Text(i18n(_fine ? 'apply' : 'done')),
+          ),
+        ],
+      ),
+    );
+    // A landscape IME can leave less space than the header and footer need.
+    // Let the whole panel scroll then; ordinary viewports keep actions fixed.
+    final panel = available < 280
+        ? SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [header, body, const Divider(height: 1), footer]),
+          )
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              header,
+              Flexible(child: SingleChildScrollView(child: body)),
+              const Divider(height: 1),
+              footer,
+            ],
+          );
+    return Dialog(
+      insetPadding: const EdgeInsets.all(12),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 560, maxHeight: available.clamp(1, double.infinity)),
+        child: panel,
+      ),
+    );
+  }
+}
