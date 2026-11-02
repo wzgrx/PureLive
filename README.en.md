@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>Download 5.5.0</b></a>
-  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.5.0.md">Release notes (Chinese)</a>
+  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>Download 5.6.1</b></a>
+  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.6.1.md">Release notes (Chinese)</a>
   &nbsp;·&nbsp; <a href="#features">Features</a>
   &nbsp;·&nbsp; <a href="#supported-platforms">Platforms</a>
   &nbsp;·&nbsp; <a href="#building-from-source">Build</a>
@@ -37,6 +37,8 @@ Pure Live (纯粹直播) is a third-party live-stream aggregator. It brings Chin
 5.4.24 delivers all nine requests together: anonymous live updates and schedules, linked displays, paired LAN controls, landscape gestures, room gain, Douyu VOD, Android audio coexistence, TV titles and two-refresh recovery. It also fixes native player queue isolation and projection room/fullscreen lifecycles. Original-device intermittent reports remain open.
 
 5.4.26 integrates reviewed draft designs: desktop minimize/restore state, rail scrolling, favorite-area logos, TV settings, and wallpaper resource handoff. The 47 original draft files are preserved; original-device reports were open then and are now deferred and closed under the user decision.
+
+5.6.1 adds compact landscape-fullscreen playback status and an opt-in line-details setting, disabled by default. It integrates custom backgrounds, Huya archives and medals, TV navigation, Kuaishou links and browser screen-connection fixes. Ten same-source installers are verified; unresolved original-device and account reports remain tracked.
 
 5.5.0 adds a configurable playback HUD, app navigation and focused text input over LAN, consent-based screen viewing/mirroring, and browser PNG/video export. It fixes the followed-area entry, TV focus, six desktop settings layouts and startup window policy; improves cooperative Windows uninstall and room-scoped public Douyu recovery; and adds an opt-in Bilibili Raw candidate mode. #131 and #135 await original-scenario confirmation; the three deferred device reports remain deferred.
 
@@ -438,7 +440,7 @@ Plans and progress: [docs/PLAN.md](docs/PLAN.md); UI design: [docs/specs/UI.md](
 
 ## Roadmap
 
-| Client | 5.5.0 (now) | Later |
+| Client | 5.6.1 (now) | Later |
 |---|---|---|
 | **Android phones and tablets** | Stable: liquid-glass bottom bar, damped and spring motion, official sign-in for eight platforms, 15 interface languages | Keep up with platform changes |
 | **Android TV** | Stable: Live, Video (Bilibili VOD) and Music modes, wallpapers, TV-style settings, type on your phone via QR code | Verify and tune on more TVs |
