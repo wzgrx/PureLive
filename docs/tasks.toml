@@ -7949,9 +7949,11 @@ note = "十包及匿名摘要验证通过；两库更新和分支issue收尾逐�
 id = "Z07.4"
 title = "稳定性维护与功能冻结方针"
 type = "文档"
-status = "开发中"
+status = "完成"
 size = "中"
 tier = 1
 from = "用户2026-11-02明确暂停功能需求与开发、直播回放停维、新功能自带符合Opus 5.5 high以上模型要求的完整PR"
-branch = "ai/Z07.4-stability-policy"
-next = "审查维护方针、模板和任务冻结，完整门禁后合并并回复关闭相关issue"
+date = "2026-11-02"
+commit = "fea49bb60c0b1f7da2a27965645adaa7a8b61a8a"
+note = "功能冻结、回放停维、PR模型和UI代码要求已落实；仅治理文档，完整门禁和远端回读在推送合并时逐项核对。"
+
