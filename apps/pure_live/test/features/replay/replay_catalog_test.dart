@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -116,6 +117,27 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);
   });
+
+  testWidgets('querying another presenter does not retain the original room name', (tester) async {
+    final (_, source) = await page(tester, platform: SiteIds.huya);
+    expect(find.text('测试主播'), findsOneWidget);
+    source.lists['456:1'] = Completer<HuyaArchiveList>()
+      ..complete(
+        const HuyaArchiveList(
+          videos: [HuyaArchiveVideo(id: '100000003', title: '另一位主播的回放', authorId: '456', authorName: '另一位主播')],
+          hasMore: false,
+        ),
+      );
+    await tester.enterText(find.byKey(const ValueKey('replay-room-input')), 'https://www.huya.com/video/u/456');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await settle(tester);
+    expect(find.text('测试主播'), findsNothing);
+    expect(find.text('另一位主播的回放'), findsOneWidget);
+    expect(source.calls.last, 'list:456:1');
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
   testWidgets('standalone entry names platforms correctly and rejects foreign links without catalog requests', (
     tester,
   ) async {

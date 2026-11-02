@@ -276,7 +276,13 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
     final resume = _entries.where((e) => (_positions[e.id] ?? Duration.zero) > Duration.zero).firstOrNull;
     return Scaffold(
       key: const ValueKey('replay-catalog-page'),
-      appBar: AppBar(title: Text(widget.room?.nick.isNotEmpty == true ? widget.room!.nick : i18n('replay_title'))),
+      appBar: AppBar(
+        title: Text(
+          widget.room?.nick.isNotEmpty == true && _input.text.trim() == widget.room?.roomId
+              ? widget.room!.nick
+              : i18n('replay_title'),
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
