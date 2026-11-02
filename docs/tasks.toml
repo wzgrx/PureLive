@@ -7695,232 +7695,250 @@ note = "本轮范围已交付；同源包、受控证据与摘要完成，原设
 id = "V02.78"
 title = "电视导航全面复核与冷启动焦点"
 type = "界面"
-status = "开发中"
+status = "待真机"
 size = "大"
 tier = 1
 from = "GitHub #141、#142及全部电视反馈复核"
 stages = ["全量复核与失败反证", "共享焦点边界和入场修复", "遥控矩阵与原生验证"]
-done = 0
-branch = "ai/V02.78"
-next = "先证实焦点图和异步入场反证，再做共享实现"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "A17.29"
 title = "电视焦点区域与异步入场"
 type = "界面"
-status = "开发中"
+status = "待真机"
 size = "大"
 tier = 1
 from = "GitHub #141、#142及全部电视反馈复核"
 stages = ["全量复核与失败反证", "共享焦点边界和入场修复", "遥控矩阵与原生验证"]
-done = 0
-branch = "ai/V02.78"
-next = "先证实焦点图和异步入场反证，再做共享实现"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "Y01.40"
 title = "5.6.0新增反馈与需求统一发布"
 type = "发布"
-status = "开发中"
+status = "完成"
 size = "大"
 tier = 1
 from = "用户要求新增issues全部处理后再发布；PR #144/#149"
 stages = ["发布源码与完整门禁", "同源十包和原生验证", "公开下载与新旧更新源", "反馈PR和分支收尾"]
-done = 0
-branch = "ai/V02.78"
-next = "冻结5.6.0/5133完整范围，完整门禁后先验证原生关键路径，再构建同源十包"
+done = 4
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.0暂停后由5.6.1整合交付；旧标签附件保留，未同步5.6.0更新JSON。"
 
 [[task]]
 id = "V02.79"
 title = "斗鱼重复醒目留言复核"
 type = "平台"
-status = "开发中"
+status = "待真机"
 size = "中"
 tier = 1
 from = "GitHub #145"
 stages = ["报文有效性反证", "校验与有效交易回归", "发布和原场景确认"]
-done = 0
-branch = "ai/V02.78"
-next = "随5.6.0重新执行完整门禁和同源构建；原场景未确认不关闭"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "D01.35"
 title = "斗鱼语音付费留言有效性"
 type = "平台"
-status = "开发中"
+status = "待真机"
 size = "中"
 tier = 1
 from = "GitHub #145"
 stages = ["报文有效性反证", "校验与有效交易回归", "发布和原场景确认"]
-done = 0
-branch = "ai/V02.78"
-next = "随5.6.0重新执行完整门禁和同源构建；原场景未确认不关闭"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "N02.3"
 title = "局域网遥控请求关闭与拒绝响应"
 type = "工程"
-status = "开发中"
+status = "待真机"
 size = "中"
 tier = 1
 from = "5.5.1完整门禁响应头关闭失败"
 stages = ["拆分超量请求反证", "有界拒绝与关闭契约", "完整发布与原生HTTP验证"]
-done = 0
-branch = "ai/V02.78"
-next = "保持安全断言，重新完整门禁和同源构建"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "V02.80"
 title = "新增反馈统一复核与交付"
 type = "工程"
-status = "开发中"
+status = "待真机"
 size = "大"
 tier = 1
 from = "#126 #128 #143 #145 #146 #147 #148；用户要求全部处理后统一发布"
 stages = ["根因和方案", "实现与反证回归", "原生验证与统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "按任务书实现全部本轮范围，完整门禁和同源验证后统一发布"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "D01.36"
 title = "虎牙粉丝牌与B站原生徽章颜色"
 type = "平台"
-status = "开发中"
+status = "待真机"
 size = "大"
 tier = 1
 from = "#146 #147"
 stages = ["根因和方案", "实现与反证回归", "原生验证与统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "按任务书实现全部本轮范围，完整门禁和同源验证后统一发布"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "A07.37"
 title = "时间和网速独立样式"
 type = "界面"
-status = "开发中"
+status = "待真机"
 size = "大"
 tier = 1
 from = "#128新增回复"
 stages = ["根因和方案", "实现与反证回归", "原生验证与统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "按任务书实现全部本轮范围，完整门禁和同源验证后统一发布"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "A11.11"
 title = "手机和桌面自定义背景"
 type = "界面"
-status = "开发中"
+status = "待真机"
 size = "大"
 tier = 1
 from = "#143"
 stages = ["根因和方案", "实现与反证回归", "原生验证与统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "按任务书实现全部本轮范围，完整门禁和同源验证后统一发布"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "N02.4"
 title = "投屏提示与默认浏览器兼容"
 type = "功能"
-status = "开发中"
+status = "待真机"
 size = "大"
 tier = 1
 from = "#126新增回复"
 stages = ["根因和方案", "实现与反证回归", "原生验证与统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "按任务书实现全部本轮范围，完整门禁和同源验证后统一发布"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "C03.3"
 title = "虎牙历史直播回放"
 type = "功能"
-status = "开发中"
+status = "待真机"
 size = "大"
 tier = 1
 from = "#148"
 stages = ["根因和方案", "实现与反证回归", "原生验证与统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "按任务书实现全部本轮范围，完整门禁和同源验证后统一发布"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "V02.81"
 title = "快手搜索和官方短链"
 type = "平台"
-status = "开发中"
+status = "待真机"
 size = "中"
 tier = 1
 from = "新issue #150；官方匿名浏览器与同域HTTP对照"
 stages = ["官方链路与匿名搜索复现", "短链和登录状态修复", "回归与统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "完整门禁和受控原生验证；不将平台匿名搜索限制写成已绕过"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "V02.82"
 title = "线路编码与Raw标注"
 type = "功能"
-status = "开发中"
+status = "待真机"
 size = "中"
 tier = 1
 from = "https://github.com/wzgrx/PureLive/issues/152"
 stages = ["保留真实线路元数据", "统一入口与有界实测编码", "回归和统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "在本次发布前完成全部线路入口，新的冻结提交重新执行完整门禁"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "A07.38"
 title = "统一线路元数据呈现"
 type = "界面"
-status = "开发中"
+status = "待真机"
 size = "中"
 tier = 1
 from = "https://github.com/wzgrx/PureLive/issues/152"
 stages = ["保留真实线路元数据", "统一入口与有界实测编码", "回归和统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "在本次发布前完成全部线路入口，新的冻结提交重新执行完整门禁"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "O05.4"
 title = "旧安卓全屏系统栏恢复"
 type = "功能"
-status = "开发中"
+status = "待真机"
 size = "中"
 tier = 1
 from = "5.6.0发布原生验收，接#148共享回放播放器"
 stages = ["共享兼容恢复与晚返回保护", "旧安卓原生复验和统一发布"]
-done = 0
-branch = "ai/V02.78"
-next = "受影响分析与回归通过后构建原生测试包，实际核对再执行最终完整门禁与十包重建"
+done = 2
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "A07.39"
 title = "播放信息与线路显示选项"
 type = "界面"
-status = "开发中"
+status = "待真机"
 size = "中"
 tier = 1
 from = "用户暂停发布并要求竖屏隐藏、横屏紧凑HUD与默认关闭线路详情"
 stages = ["默认值与共享呈现", "全入口和布局回归", "预览和完整门禁"]
-done = 0
-branch = "ai/A07.39-hud-line-options"
-next = "按明确需求实现与验证，不发布或同步更新文件"
+done = 3
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "5.6.1交付同源包、完整门禁及分层证据；原设备、账号和报文场景另验，见verify.md。"
 
 [[task]]
 id = "Y01.41"
 title = "5.6.1播放界面优化发布"
 type = "发布"
-status = "开发中"
+status = "完成"
 size = "大"
 tier = 1
 from = "用户明确恢复发布、合并PR与分支并关闭已验证issue"
 stages = ["源码完整门禁", "同源构建与分层验收", "发布与双更新源", "issue与分支收尾"]
-done = 0
-branch = "ai/A07.39-hud-line-options"
-next = "冻结5.6.1+5134并执行完整门禁"
+done = 4
+date = "2026-11-02"
+commit = "7cf3ec6f56f97a86004ca7d686545b35c2fd67df"
+note = "十包及匿名摘要验证通过；两库更新和分支issue收尾逐项核对。"
