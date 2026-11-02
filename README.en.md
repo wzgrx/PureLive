@@ -36,43 +36,67 @@ New features require a complete contributor-owned PR. Both UI design and impleme
 
 Pure Live (纯粹直播) is a third-party live-stream aggregator. It brings Chinese platforms such as Bilibili, Douyu, Huya, Douyin and Kuaishou together with international ones such as Twitch, YouTube and SOOP, plus the IPTV channels you import yourself. Follows, danmaku, recording and multiview all live in one place, so you don't need a separate app for every platform.
 
-**5.0 was the first release for every platform.** Since 4.0 the network layer, platform adapters, danmaku, playback, recording, storage and every screen have been rewritten (features are based on 3.x, playback is mpv only). 5.0 ships **Android phones and tablets, Android TV, Windows and Linux** from one codebase and one design. You can install over 3.x and 4.x and keep your follows, settings and history. 5.1 added video (Bilibili VOD), music, wallpapers and TV-style settings to the TV interface, and per-streamer live alerts. 5.2 was about smoothness: no more stutter the first time you open a platform or a room, damped overscroll on every list and pager, spring page transitions, and a liquid-glass bottom bar on the home screen. 5.3 adds official sign-in for Douyu, Huya, Douyin, Kuaishou, YY, NetEase CC, Twitch and SOOP: the platform's own sign-in page opens in the app and the login is saved automatically. 5.4 adds Traditional Chinese and twelve more interface languages (Japanese, Korean, Spanish, French, German, Portuguese, Russian, Italian, Vietnamese, Thai, Indonesian and Turkish) and a volume boost. 5.4.1 fixes the Linux build not starting and is the first 5.x release for macOS, iOS and iPadOS (built on GitHub's macOS runners, not signed by Apple). 5.4.2 rebuilds the mini window: the same window inside the app and over other apps, movable anywhere, tucked into a side, resized steplessly; the Mac gets its own title bar, menu bar and menu bar icon. 5.4.3 lets iPhones and iPads share rooms in from other apps, keeps playing in the background and on the lock screen with Now Playing, and lists the iPad's ⌘ shortcuts when you hold ⌘. 5.4.4 fixes live alerts that could be missed when the background check ran. 5.4.5 reworks the feel of the glass bottom bar: a pill at rest that turns into a glass lens when pressed or dragged, with spring motion throughout; tablets can keep the bottom bar too. 5.4.6 lets Popular → Network switch between the built-in list and your own imported IPTV playlists. 5.4.7 lets a TV remote reach the buttons of every dialog, brings the glass bottom bar down to the iPhone's home indicator with an optional compact bar, and marks followed rooms with a small heart in browse lists.
+**5.0 was the first release for every platform.** Since 4.0 the network layer, platform adapters, danmaku, playback, recording, storage and every screen have been rewritten (features are based on 3.x, playback is mpv only). 5.0 ships **Android phones and tablets, Android TV, Windows and Linux** from one codebase and one design. You can install over 3.x and 4.x and keep your follows, settings and history.
 
-5.4.8 adds current-room Super Chat history and fixes TV focus, links without a scheme and automatic-recording toggles. 5.4.9 adds multiview mute, TV preferred-platform selection and a fullscreen Super Chat entry, with iPad volume/brightness gestures and screen-wake recovery fixes. Verification on the reported physical devices remains pending; see the release notes.
+5.1 added video (Bilibili VOD), music, wallpapers and TV-style settings to the TV interface, and per-streamer live alerts.
 
-5.4.24 delivers all nine requests together: anonymous live updates and schedules, linked displays, paired LAN controls, landscape gestures, room gain, Douyu VOD, Android audio coexistence, TV titles and two-refresh recovery. It also fixes native player queue isolation and projection room/fullscreen lifecycles. Original-device intermittent reports remain open.
+5.2 was about smoothness: no more stutter the first time you open a platform or a room, damped overscroll on every list and pager, spring page transitions, and a liquid-glass bottom bar on the home screen.
 
-5.4.26 integrates reviewed draft designs: desktop minimize/restore state, rail scrolling, favorite-area logos, TV settings, and wallpaper resource handoff. The 47 original draft files are preserved; original-device reports were open then and are now deferred and closed under the user decision.
+5.3 adds official sign-in for Douyu, Huya, Douyin, Kuaishou, YY, NetEase CC, Twitch and SOOP: the platform's own sign-in page opens in the app and the login is saved automatically.
 
-5.6.1 adds compact landscape-fullscreen playback status and an opt-in line-details setting, disabled by default. It integrates custom backgrounds, Huya archives and medals, TV navigation, Kuaishou links and browser screen-connection fixes. Ten same-source installers are verified; unresolved original-device and account reports remain tracked.
+5.4 adds Traditional Chinese and twelve more interface languages (Japanese, Korean, Spanish, French, German, Portuguese, Russian, Italian, Vietnamese, Thai, Indonesian and Turkish) and a volume boost.
 
-5.5.0 adds a configurable playback HUD, app navigation and focused text input over LAN, consent-based screen viewing/mirroring, and browser PNG/video export. It fixes the followed-area entry, TV focus, six desktop settings layouts and startup window policy; improves cooperative Windows uninstall and room-scoped public Douyu recovery; and adds an opt-in Bilibili Raw candidate mode. #131 and #135 await original-scenario confirmation; the three deferred device reports remain deferred.
+5.4.1 fixes the Linux build not starting and is the first 5.x release for macOS, iOS and iPadOS (built on GitHub's macOS runners, not signed by Apple).
 
-5.4.25 isolates timed-out player creation and unfinished stops, fixes the Windows startup restoration race, and adds fixed-phase native diagnostics without media addresses. Original Huawei/Sony/Honor and GTX760 reports remain open for device confirmation.
+5.4.2 rebuilds the mini window: the same window inside the app and over other apps, movable anywhere, tucked into a side, resized steplessly; the Mac gets its own title bar, menu bar and menu bar icon.
 
-5.4.21 adds phone QR input to TV link playback, prevents horizontal swipes from changing brightness or volume, and keeps home jump buttons clear of the glass navigation bar. Douyu VIP counts remain separate from real viewer counts and rankings and are cleared when the broadcast ends.
+5.4.3 lets iPhones and iPads share rooms in from other apps, keeps playing in the background and on the lock screen with Now Playing, and lists the iPad's ⌘ shortcuts when you hold ⌘.
 
-5.4.20 adds opt-in simultaneous multiview audio with independent volumes and probes available Weibo stream qualities. It removes the persistent EPG selection outline and enlarges TV room-list and anchor text. Additional diagnostics support investigation of cross-platform playback stalls on older Android devices; affected-device reports remain open.
+5.4.4 fixes live alerts that could be missed when the background check ran.
 
-5.4.19 adds opt-in automatic switching among followed live rooms and recording controls in multiview. It fixes IPTV initialization, TV statistics/focus/backup menus, category browsing and iOS back navigation. Danmaku size now reaches 60; Douyu VIP-count notifications have a separate switch. Windows middle-click toggles system fullscreen. Update packages include exact sizes and SHA-256 checks.
+5.4.5 reworks the feel of the glass bottom bar: a pill at rest that turns into a glass lens when pressed or dragged, with spring motion throughout; tablets can keep the bottom bar too.
 
-5.4.18 fixes Super Chat event deduplication and unread badges, storage errors incorrectly triggering recording retries, settings navigation and TV focus. It adds platform icons, navigation display options and Windows middle-click fullscreen, and updates the stable toolchains. Reports still needing affected-device verification remain open.
+5.4.6 lets Popular → Network switch between the built-in list and your own imported IPTV playlists.
 
-5.4.17 keeps desktop playback running when obscured, adds an opt-in pause-on-minimize setting, and supports right-click in-window fullscreen and mouse Back navigation. Danmaku, controls, and dialogs keep their priority; Back on the home page does not exit.
+5.4.7 lets a TV remote reach the buttons of every dialog, brings the glass bottom bar down to the iPhone's home indicator with an optional compact bar, and marks followed rooms with a small heart in browse lists.
 
-5.4.16 routes TV log export through the existing phone QR view, keeps five standalone settings pages in the wide content pane, and adds automatic desktop grid capacity and six card sizes. Manual pagination and the phone default layout are preserved.
+5.4.8 adds current-room Super Chat history and fixes TV focus, links without a scheme and automatic-recording toggles.
 
-5.4.15 adds optional foreground WebDAV backup and fixes clipped TV menu focus borders, directional focus on inactive proxy fields, first-load IPTV guide refresh and RTP MPEG-TS playback. Existing focus zoom, navigation and fullscreen behaviour are preserved. Fixed-stage iPhone gesture diagnostics help the reports that still need affected-device checks.
+5.4.9 adds multiview mute, TV preferred-platform selection and a fullscreen Super Chat entry, with iPad volume/brightness gestures and screen-wake recovery fixes. Verification on the reported physical devices remains pending; see the release notes.
 
-5.4.14 puts room search, follows and history directly below the volume controls in immersive and fullscreen multi-view. Switching targets the selected cell and preserves the other streams and display mode. Short windows with large text can scroll. Two live streams were verified on Windows; reports awaiting affected-device checks remain open.
-
-5.4.13 repairs remote navigation in the TV update dialog and aligns settings focus frames. It also preserves gestures pending native reads and temporarily mitigates observed Mac rendering failures. Wallpaper retries now display loading immediately. Wallhaven connectivity on the reported TV, Huawei Smart Screen playback and affected Douyu accounts remain under investigation.
-
-5.4.12 restores the TV favorites Back levels: cards return to the last filter before the sidebar, preserving platform, state and tag selections, including offline rows and empty lists. Huawei Smart Screen playback and affected Douyu signed-in accounts remain under investigation.
+5.4.10 fixes the landscape sidebar, TV settings focus frames and custom Douyin room links, enables KICK on Windows, and adds Douyu chat levels, fan medals and notices with identity-cache and diagnostic corrections. Playback failures on affected signed-in Douyu accounts remain under investigation.
 
 5.4.11 adds a vertical four-view layout with playback-session, audio-selection and layout persistence, plus safe terminal playback diagnostics. Huawei Smart Screen playback and affected Douyu signed-in accounts remain under investigation.
 
-5.4.10 fixes the landscape sidebar, TV settings focus frames and custom Douyin room links, enables KICK on Windows, and adds Douyu chat levels, fan medals and notices with identity-cache and diagnostic corrections. Playback failures on affected signed-in Douyu accounts remain under investigation.
+5.4.12 restores the TV favorites Back levels: cards return to the last filter before the sidebar, preserving platform, state and tag selections, including offline rows and empty lists. Huawei Smart Screen playback and affected Douyu signed-in accounts remain under investigation.
+
+5.4.13 repairs remote navigation in the TV update dialog and aligns settings focus frames. It also preserves gestures pending native reads and temporarily mitigates observed Mac rendering failures. Wallpaper retries now display loading immediately. Wallhaven connectivity on the reported TV, Huawei Smart Screen playback and affected Douyu accounts remain under investigation.
+
+5.4.14 puts room search, follows and history directly below the volume controls in immersive and fullscreen multi-view. Switching targets the selected cell and preserves the other streams and display mode. Short windows with large text can scroll. Two live streams were verified on Windows; reports awaiting affected-device checks remain open.
+
+5.4.15 adds optional foreground WebDAV backup and fixes clipped TV menu focus borders, directional focus on inactive proxy fields, first-load IPTV guide refresh and RTP MPEG-TS playback. Existing focus zoom, navigation and fullscreen behaviour are preserved. Fixed-stage iPhone gesture diagnostics help the reports that still need affected-device checks.
+
+5.4.16 routes TV log export through the existing phone QR view, keeps five standalone settings pages in the wide content pane, and adds automatic desktop grid capacity and six card sizes. Manual pagination and the phone default layout are preserved.
+
+5.4.17 keeps desktop playback running when obscured, adds an opt-in pause-on-minimize setting, and supports right-click in-window fullscreen and mouse Back navigation. Danmaku, controls, and dialogs keep their priority; Back on the home page does not exit.
+
+5.4.18 fixes Super Chat event deduplication and unread badges, storage errors incorrectly triggering recording retries, settings navigation and TV focus. It adds platform icons, navigation display options and Windows middle-click fullscreen, and updates the stable toolchains. Reports still needing affected-device verification remain open.
+
+5.4.19 adds opt-in automatic switching among followed live rooms and recording controls in multiview. It fixes IPTV initialization, TV statistics/focus/backup menus, category browsing and iOS back navigation. Danmaku size now reaches 60; Douyu VIP-count notifications have a separate switch. Windows middle-click toggles system fullscreen. Update packages include exact sizes and SHA-256 checks.
+
+5.4.20 adds opt-in simultaneous multiview audio with independent volumes and probes available Weibo stream qualities. It removes the persistent EPG selection outline and enlarges TV room-list and anchor text. Additional diagnostics support investigation of cross-platform playback stalls on older Android devices; affected-device reports remain open.
+
+5.4.21 adds phone QR input to TV link playback, prevents horizontal swipes from changing brightness or volume, and keeps home jump buttons clear of the glass navigation bar. Douyu VIP counts remain separate from real viewer counts and rankings and are cleared when the broadcast ends.
+
+5.4.24 delivers all nine requests together: anonymous live updates and schedules, linked displays, paired LAN controls, landscape gestures, room gain, Douyu VOD, Android audio coexistence, TV titles and two-refresh recovery. It also fixes native player queue isolation and projection room/fullscreen lifecycles. Original-device intermittent reports remain open.
+
+5.4.25 isolates timed-out player creation and unfinished stops, fixes the Windows startup restoration race, and adds fixed-phase native diagnostics without media addresses. Original Huawei/Sony/Honor and GTX760 reports remain open for device confirmation.
+
+5.4.26 integrates reviewed draft designs: desktop minimize/restore state, rail scrolling, favorite-area logos, TV settings, and wallpaper resource handoff. The 47 original draft files are preserved; original-device reports were open then and are now deferred and closed under the user decision.
+
+5.5.0 adds a configurable playback HUD, app navigation and focused text input over LAN, consent-based screen viewing/mirroring, and browser PNG/video export. It fixes the followed-area entry, TV focus, six desktop settings layouts and startup window policy; improves cooperative Windows uninstall and room-scoped public Douyu recovery; and adds an opt-in Bilibili Raw candidate mode. #131 and #135 await original-scenario confirmation; the three deferred device reports remain deferred.
+
+5.6.1 adds compact landscape-fullscreen playback status and an opt-in line-details setting, disabled by default. It integrates custom backgrounds, Huya archives and medals, TV navigation, Kuaishou links and browser screen-connection fixes. Ten same-source installers are verified; unresolved original-device and account reports remain tracked.
 
 > The app's interface comes in 15 languages: Simplified and Traditional Chinese, English, Japanese, Korean, Spanish, French, German, Portuguese, Russian, Italian, Vietnamese, Thai, Indonesian and Turkish (switch in Settings → Appearance; until you pick one it follows the system). The foreign languages were machine-assisted and not yet reviewed by native speakers; corrections are welcome. Release notes and in-depth docs are written in Chinese.
 
