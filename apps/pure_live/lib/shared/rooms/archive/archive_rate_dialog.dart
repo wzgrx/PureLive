@@ -43,7 +43,9 @@ class _ArchiveRateDialogState extends State<ArchiveRateDialog> {
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final available = size.height - MediaQuery.viewInsetsOf(context).vertical - 48;
-    final columns = size.width > size.height ? 6 : 4;
+    final preferredColumns = size.width > size.height ? 6 : 4;
+    final labelStyle = DefaultTextStyle.of(context).style.merge(context.textStyles.t14);
+    final scheme = Theme.of(context).colorScheme;
     final header = Padding(
       padding: const EdgeInsets.only(left: 20, right: 4),
       child: Row(
@@ -61,34 +63,49 @@ class _ArchiveRateDialogState extends State<ArchiveRateDialog> {
           Text(i18n('archive_rate_current', args: {'rate': archiveRateLabel(widget.rate)})),
           const SizedBox(height: 16),
           LayoutBuilder(
-            builder: (context, box) => FocusTraversalGroup(
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final rate in archiveRates)
-                    SizedBox(
-                      width: (box.maxWidth - (columns - 1) * 8) / columns,
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 48),
-                        child: Semantics(
-                          selected: rate == widget.rate,
-                          child: OutlinedButton(
-                            key: ValueKey('archive-rate-$rate'),
-                            style: rate == widget.rate
-                                ? OutlinedButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                  )
-                                : null,
-                            onPressed: () => Navigator.pop(context, rate),
-                            child: Text(archiveRateLabel(rate)),
+            builder: (context, box) {
+              var widest = 0.0;
+              for (final rate in archiveRates) {
+                final painter = TextPainter(
+                  text: TextSpan(text: archiveRateLabel(rate), style: labelStyle),
+                  textDirection: Directionality.of(context),
+                  textScaler: MediaQuery.textScalerOf(context),
+                  locale: Localizations.maybeLocaleOf(context),
+                )..layout();
+                if (painter.width > widest) widest = painter.width;
+                painter.dispose();
+              }
+              final columns = ((box.maxWidth + 8) / (widest + 16 + 8)).floor().clamp(1, preferredColumns);
+              return FocusTraversalGroup(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final rate in archiveRates)
+                      SizedBox(
+                        width: (box.maxWidth - (columns - 1) * 8) / columns,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 48),
+                          child: Semantics(
+                            selected: rate == widget.rate,
+                            child: OutlinedButton(
+                              key: ValueKey('archive-rate-$rate'),
+                              style: OutlinedButton.styleFrom(
+                                textStyle: labelStyle,
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                                backgroundColor: rate == widget.rate ? scheme.primaryContainer : null,
+                                foregroundColor: rate == widget.rate ? scheme.onPrimaryContainer : null,
+                              ),
+                              onPressed: () => Navigator.pop(context, rate),
+                              child: Text(archiveRateLabel(rate)),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-            ),
+                  ],
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
           TextButton(

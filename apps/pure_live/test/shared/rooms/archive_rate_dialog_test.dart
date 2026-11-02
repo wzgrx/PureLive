@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
@@ -48,10 +49,18 @@ Future<ValueNotifier<double?>> page(
 
 void main() {
   for (final size in [const Size(360, 640), const Size(393, 852), const Size(740, 360), const Size(1280, 800)]) {
-    for (final scale in [1.0, 1.5]) {
+    for (final scale in [1.0, 1.5, 2.0]) {
       testWidgets('12 presets and custom footer fit $size at $scale type', (tester) async {
         await page(tester, size: size, scale: scale);
         expect(find.byType(OutlinedButton), findsNWidgets(13));
+        for (final rate in archiveRates) {
+          final paragraph = tester.renderObject<RenderParagraph>(find.text(archiveRateLabel(rate)));
+          expect(
+            paragraph.size.height,
+            closeTo(paragraph.getDryLayout(const BoxConstraints()).height, 0.1),
+            reason: 'the complete speed label stays on one line',
+          );
+        }
         await tester.ensureVisible(find.byKey(const ValueKey('archive-rate-fine')));
         await tester.tap(find.byKey(const ValueKey('archive-rate-fine')));
         await tester.pumpAndSettle();
