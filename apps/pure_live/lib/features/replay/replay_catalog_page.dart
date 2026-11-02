@@ -15,6 +15,7 @@ import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/rooms/archive/archive_player_page.dart';
 import 'package:pure_live/shared/rooms/archive/archive_time.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
+import 'package:pure_live/tv/widgets/tv_focusable.dart';
 
 /// Platforms with an implemented, official creator archive contract.
 const replayPlatforms = <String>[SiteIds.huya, SiteIds.douyu, SiteIds.bilibili];
@@ -435,6 +436,8 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
                   ),
                 for (final entry in _entries) ...[
                   _ArchiveRow(
+                    tv: tv,
+                    autofocus: tv && identical(entry, _entries.first),
                     entry: entry,
                     position: _positions[entry.id],
                     onTap: _opening ? null : () => unawaited(_play(entry)),
@@ -474,17 +477,25 @@ class _Entry {
 }
 
 class _ArchiveRow extends StatelessWidget {
-  const new({required this.entry, required this.position, required this.onTap});
+  const new({
+    required this.entry,
+    required this.position,
+    required this.onTap,
+    this.tv = false,
+    this.autofocus = false,
+  });
   final _Entry entry;
   final Duration? position;
   final VoidCallback? onTap;
+  final bool tv;
+  final bool autofocus;
   @override
   Widget build(BuildContext context) {
     final date = entry.date;
     final scheme = Theme.of(context).colorScheme;
-    return InkWell(
-      key: ValueKey('replay-recording-${entry.id}'),
-      onTap: onTap,
+    final row = InkWell(
+      key: tv ? null : ValueKey('replay-recording-${entry.id}'),
+      onTap: tv ? null : onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
@@ -539,5 +550,14 @@ class _ArchiveRow extends StatelessWidget {
         ),
       ),
     );
+    return tv
+        ? TvFocusable(
+            key: ValueKey('replay-recording-${entry.id}'),
+            autofocus: autofocus,
+            zoom: false,
+            onTap: onTap,
+            builder: (_, _) => row,
+          )
+        : row;
   }
 }

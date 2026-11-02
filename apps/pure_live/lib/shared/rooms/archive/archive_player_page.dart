@@ -231,7 +231,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
     }
   }
 
-  KeyEventResult _key(FocusNode _, KeyEvent event) {
+  KeyEventResult _key(FocusNode node, KeyEvent event) {
     if (event is KeyUpEvent) return KeyEventResult.ignored;
     final key = event.logicalKey;
     if (key == LogicalKeyboardKey.escape && _fullscreen) {
@@ -246,6 +246,15 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
     if (!_controls && {LogicalKeyboardKey.arrowLeft, LogicalKeyboardKey.arrowRight}.contains(key)) {
       final step = Duration(seconds: key == LogicalKeyboardKey.arrowLeft ? -10 : 10);
       unawaited(_controller.seek(_controller.position + step));
+      return KeyEventResult.handled;
+    }
+    if (_controls &&
+        node.hasPrimaryFocus &&
+        event is KeyDownEvent &&
+        {LogicalKeyboardKey.enter, LogicalKeyboardKey.select}.contains(key)) {
+      unawaited(_controller.session.togglePlayPause());
+      _showControls();
+      _play.requestFocus();
       return KeyEventResult.handled;
     }
     if (!_controls &&

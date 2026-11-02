@@ -2,15 +2,21 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_net/live_net.dart';
+import 'package:live_player/live_player.dart';
+import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/features/replay/replay_catalog_page.dart';
+import 'package:pure_live/tv/tv_app.dart';
+import 'package:pure_live/tv/widgets/tv_dialogs.dart';
+import 'package:pure_live/tv/widgets/tv_focusable.dart';
 
 import '../../support.dart';
 import '../douyu_vod/vod_support.dart';
@@ -30,6 +36,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
   Size size = const Size(393, 852),
   double scale = 1,
   bool standalone = false,
+  bool tv = false,
 }) async {
   tester.view
     ..physicalSize = size
@@ -38,6 +45,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
   final services = (await tester.runAsync(testServices))!;
   addTearDown(() => tester.runAsync(services.close));
   final strings = (await tester.runAsync(loadStrings))!;
+  if (tv) await tester.runAsync(() => services.store.settings.set(Settings.uiMode, 'tv'));
   final engine = FakeEngine();
   final huya = FakeHuyaArchive();
   await tester.pumpWidget(
@@ -56,7 +64,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
           theme: const LiveTheme().dark,
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
-            child: child!,
+            child: tv ? TvAppFrame(child: child!) : child!,
           ),
           home: ReplayCatalogPage(
             room: standalone ? null : LiveRoom(platform: platform, roomId: '998', nick: '测试主播'),
@@ -114,6 +122,38 @@ void main() {
     await settle(tester);
     expect(engine.disposed, isTrue);
     expect(find.byKey(const ValueKey('replay-catalog-page')), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
+  testWidgets('TV replay rows have the standard visible focus target and OK opens on-demand playback', (tester) async {
+    final (engine, _) = await page(tester, platform: SiteIds.huya, size: const Size(1280, 720), tv: true);
+    expect(find.byType(TvInputField), findsOneWidget);
+    final row = find.byKey(ValueKey('replay-recording-${firstArchive.id}'));
+    expect(tester.widget(row), isA<TvFocusable>());
+    bool focused() =>
+        FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<TvFocusable>()?.key ==
+        ValueKey('replay-recording-${firstArchive.id}');
+    for (var i = 0; i < 8 && !focused(); i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+    }
+    expect(focused(), isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    expect(engine.opens, hasLength(1));
+    expect(engine.opens.single.onDemand, isTrue);
+    var pauses = 0;
+    engine.onPause = () async => pauses++;
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    expect(pauses, 1, reason: 'OK on the initial video surface pauses without an extra focus move');
+    final playback = tester.widget<LiveVideoView>(find.byType(LiveVideoView).last).session;
+    expect(playback.state.status, PlaybackStatus.paused);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    expect(playback.state.status, PlaybackStatus.playing);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);
   });
