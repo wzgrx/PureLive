@@ -60,18 +60,18 @@ void main() {
       'size': double.nan,
       'color': -1,
     });
-    expect(config.mode, 'controls');
-    expect(config.corner, 'topRight');
-    expect(config.size, 18);
+    expect(config.mode, 'fullscreen');
+    expect(config.corner, 'topLeft');
+    expect(config.size, 11);
     expect(config.color, 0xffffffff);
     expect(PlaybackHudConfig.fromJson(const {'size': 400}).size, 48);
-    expect(PlaybackHudConfig.fromJson(const {'size': 0}).size, 12);
+    expect(PlaybackHudConfig.fromJson(const {'size': 0}).size, 11);
   });
 
   test('always remains visible without controls; disabling both fields or the layer hides it', () {
     expect(const PlaybackHudConfig(mode: 'always').visible(controls: false), isTrue);
-    expect(const PlaybackHudConfig().visible(controls: false), isFalse);
-    expect(const PlaybackHudConfig().visible(controls: true), isTrue);
+    expect(const PlaybackHudConfig().visible(controls: false, fullscreen: false), isFalse);
+    expect(const PlaybackHudConfig(mode: 'controls').visible(controls: true), isTrue);
     expect(const PlaybackHudConfig(mode: 'off').visible(controls: true), isFalse);
     expect(const PlaybackHudConfig(mode: 'always', clock: false).visible(controls: false), isFalse);
   });
@@ -123,7 +123,7 @@ void main() {
                     mode: 'always',
                     speed: true,
                     separate: true,
-                    clockStyle: const PlaybackHudStyle(corner: 'topLeft', color: 0xffff9900),
+                    clockStyle: const PlaybackHudStyle(size: 18, color: 0xffff9900),
                     speedStyle: PlaybackHudStyle(
                       corner: sameCorner ? 'topLeft' : 'bottomRight',
                       size: 28,

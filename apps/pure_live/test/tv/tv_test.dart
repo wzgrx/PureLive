@@ -1875,7 +1875,7 @@ void main() {
       expect(find.byKey(const ValueKey('tv-settings-playback-hud')), findsOneWidget);
 
       await _press(tester, LogicalKeyboardKey.select);
-      expect(find.byType(TvOptionRow), findsNWidgets(3));
+      expect(find.byType(TvOptionRow), findsNWidgets(4));
       expect(
         FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<TvOptionRow>()?.key,
         const ValueKey('tv-choice-1'),
@@ -1899,7 +1899,7 @@ void main() {
       );
       await _press(tester, LogicalKeyboardKey.arrowRight);
       await _settle(tester);
-      expect(services.store.settings.get(Settings.playbackHud)['size'], 19);
+      expect(services.store.settings.get(Settings.playbackHud)['size'], 12);
     } finally {
       await _close(tester, services);
     }
@@ -1918,10 +1918,20 @@ void main() {
         await _press(tester, LogicalKeyboardKey.arrowDown);
       }
       await _press(tester, LogicalKeyboardKey.select);
-      for (var i = 0; i < 3; i++) {
+      for (
+        var i = 0;
+        i < 20 &&
+            FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<SettingsSliderRow>()?.title !=
+                '手机端默认音量';
+        i++
+      ) {
         await _press(tester, LogicalKeyboardKey.arrowDown);
       }
       await tester.pump(const Duration(seconds: 1));
+      expect(
+        FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<SettingsSliderRow>()?.title,
+        '手机端默认音量',
+      );
       final row = find.byWidgetPredicate((widget) => widget is SettingsSliderRow && widget.title == '手机端默认音量');
       final viewport = find
           .descendant(of: find.byKey(const ValueKey('tv-settings-page-video')), matching: find.byType(Scrollable))

@@ -270,6 +270,7 @@ const Map<String, Object> newInV4 = {
   'customBackground': <String, Object?>{}, // A11.11: no custom page background by default.
   'screenCaptureHint': 'full', // N02.4: keep the existing visible capture banner.
   'playbackHud': <String, Object?>{}, // A07.36: shared clock/rate display defaults.
+  'playbackLineDetails': false, // A07.39: upgrades keep the concise line names.
   'rememberWindowGeometry': true, // A16.8: explicit last-window versus fixed-size startup.
   'allowAudioMixing': false, // V01.19: opt-in media coexistence.
   'roomVolumeGains': <String, Object?>{}, // V01.17: independent signed room gain overrides.

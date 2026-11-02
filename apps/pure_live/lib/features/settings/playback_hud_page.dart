@@ -128,9 +128,9 @@ class _PlaybackHudPageState extends ConsumerState<PlaybackHudPage> {
               key: const ValueKey('playback-hud-size'),
               title: i18n('playback_hud_size'),
               value: _size ?? appearance.size,
-              min: 12,
+              min: 11,
               max: 48,
-              divisions: 36,
+              divisions: 37,
               label: '${(_size ?? appearance.size).round()}',
               onChanged: (value) => setState(() => _size = value),
               onChangeEnd: (value) => unawaited(

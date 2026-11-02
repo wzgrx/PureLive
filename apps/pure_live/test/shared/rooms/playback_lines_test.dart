@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_media/live_media.dart';
 import 'package:live_player/live_player.dart';
+import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:pure_live/app/services.dart';
 import 'package:pure_live/shared/rooms/playback_lines.dart';
 import 'package:pure_live/shared/rooms/playback_telemetry.dart';
 
@@ -32,6 +35,50 @@ PlaybackRequest request(List<LivePlayLine> lines) => PlaybackRequest(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(loadStrings);
+
+  testWidgets('old settings default to concise names; opt-in updates labels and opting out stops reads', (
+    tester,
+  ) async {
+    final services = (await tester.runAsync(testServices))!;
+    final engine = _StatsEngine();
+    final session = PlaybackSession(engine: () async => engine, opener: MediaOpener());
+    await session.open(request([rawOne, official]));
+    engine.inner.emit(const EngineVideoSize(1920, 1080));
+    expect(services.store.settings.get(Settings.playbackLineDetails), isFalse);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appServicesProvider.overrideWithValue(services)],
+        child: MaterialApp(
+          home: Scaffold(
+            body: PlaybackLineBuilder(
+              session: session,
+              builder: (_, state, lines) =>
+                  Text('${lines.name(state.lineIndex)}|${lines.origins.where((v) => v.isNotEmpty).join(',')}'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('线路1|'), findsOneWidget);
+    expect(engine.reads, 0);
+    await tester.runAsync(() => services.store.settings.set(Settings.playbackLineDetails, true));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.textContaining('H.264, raw'), findsOneWidget);
+    expect(find.textContaining('cdn-one.example.test'), findsOneWidget);
+    expect(engine.reads, greaterThan(0));
+    await tester.runAsync(() => services.store.settings.set(Settings.playbackLineDetails, false));
+    await tester.pump();
+    final reads = engine.reads;
+    await tester.pump(const Duration(seconds: 5));
+    expect(find.text('线路1|'), findsOneWidget);
+    expect(engine.reads, reads);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await session.dispose();
+    await tester.runAsync(services.close);
+  });
 
   test('declared codecs are canonical; Raw transcode hints are never treated as original evidence', () {
     expect(playbackLineName(0, line: official), '线路1（H.265）');
@@ -95,6 +142,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: PlaybackLineBuilder(
+            detailed: true,
             session: session,
             builder: (_, state, lines) => Text(lines.name(state.lineIndex), key: const ValueKey('current-line')),
           ),

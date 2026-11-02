@@ -74,6 +74,7 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
   int? _quality;
   List<String>? _urls;
   List<LivePlayLine>? _lineInfo;
+  PlaybackLineChoices? _lineChoices;
   late int _line;
   String? _error;
   bool _busy = false;
@@ -175,16 +176,21 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
   String _lineName(int index) {
     final metadata = _lineInfo;
     final line = metadata != null && index < metadata.length ? metadata[index] : null;
-    return _playingQuality(_quality)
-        ? PlaybackLinePresentation.of(_room.session, telemetry: _room.telemetry).choiceName(index, line)
-        : playbackLineName(index, line: line);
+    return (_lineChoices ?? PlaybackLineChoices(_room.session, detailed: false)).choiceName(
+      index,
+      line,
+      playingQuality: _playingQuality(_quality),
+    );
   }
 
   @override
   Widget build(BuildContext context) => PlaybackLineBuilder(
     session: _room.session,
     telemetry: _room.telemetry,
-    builder: (context, _, _) => _contents(context),
+    builder: (context, _, lines) {
+      _lineChoices = lines;
+      return _contents(context);
+    },
   );
 
   Widget _contents(BuildContext context) {
@@ -271,6 +277,17 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
     final urls = _urls ?? const <String>[];
     // The line that plays, when this is the quality that plays.
     final playing = _playingQuality(_quality) ? _room.session.state.lineIndex : null;
+    String? description(int index, String url) {
+      final origin = playbackLineOrigin(
+        _lineInfo != null && index < _lineInfo!.length ? _lineInfo![index] : LivePlayLine(url),
+      );
+      final parts = [
+        if (index == playing) i18n('now_playing'),
+        if ((_lineChoices?.detailed ?? false) && origin.isNotEmpty) origin,
+      ];
+      return parts.isEmpty ? null : parts.join(' · ');
+    }
+
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
@@ -284,7 +301,7 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
           DialogOptionRow(
             key: ValueKey('stream-line-$index'),
             label: _lineName(index),
-            description: index == playing ? '${i18n('now_playing')} · $url' : url,
+            description: description(index, url),
             descriptionMaxLines: 1,
             selected: index == playing,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),

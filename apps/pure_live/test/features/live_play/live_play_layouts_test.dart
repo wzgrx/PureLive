@@ -199,7 +199,7 @@ void main() {
       await _tap(tester, 'live-play-fullscreen');
       final top = _key('live-play-top-bar');
       // Change 2 adds record and the menu (no FFmpeg in tests: no record);
-      // The shared HUD owns the clock independently of both control bars.
+      // Visible controls host the compact clock next to the battery.
       // Picture-in-picture waits for a device that offers it.
       expect(_order(tester, top, _topKeys), [
         'live-play-back',
@@ -215,7 +215,11 @@ void main() {
       expect(tester.widget(_key('live-play-switch-room')), isA<VideoIconButton>());
       expect(_in('live-play-menu', find.byIcon(AppIcons.roomMenu)), findsOneWidget);
       expect(tester.widget<Text>(_key('live-play-clock')).data, matches(RegExp(r'^\d\d:\d\d$')));
-      expect(_in('live-play-top-bar', _key('live-play-clock')), findsNothing, reason: 'HUD positioning is independent');
+      expect(
+        _in('live-play-top-bar', _key('live-play-clock')),
+        findsOneWidget,
+        reason: 'compact fullscreen status shares the battery row',
+      );
 
       final bottom = _key('live-play-bottom-bar');
       expect(_order(tester, bottom, _bottomKeys), [
@@ -246,6 +250,16 @@ void main() {
       expect(lock.dy, closeTo(393 / 2, 1));
       expect(lock.dx, greaterThan(852 - 80));
       expect(tester.getSize(_key('live-play-lock')).width, 50);
+      final clockPosition = tester.getTopLeft(_key('live-play-clock'));
+      await tester.pump(const Duration(seconds: 6));
+      await tester.pump();
+      expect(
+        _key('live-play-clock'),
+        findsOneWidget,
+        reason: 'hiding controls must not duplicate or remove the fullscreen clock',
+      );
+      expect(tester.getTopLeft(_key('live-play-clock')).dx, closeTo(clockPosition.dx, 1));
+      expect(tester.getTopLeft(_key('live-play-clock')).dy, closeTo(clockPosition.dy, 1));
       await _close(tester, room);
     });
 

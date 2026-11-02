@@ -5,11 +5,11 @@ import 'package:flutter/widgets.dart';
 final class PlaybackHudConfig {
   /// Creates display preferences without changing playback itself.
   const new({
-    this.mode = 'controls',
+    this.mode = 'fullscreen',
     this.clock = true,
     this.speed = false,
-    this.corner = 'topRight',
-    this.size = 18,
+    this.corner = 'topLeft',
+    this.size = 11,
     this.color = 0xffffffff,
     this.font = 'app',
     this.separate = false,
@@ -34,11 +34,11 @@ final class PlaybackHudConfig {
     }
 
     return .new(
-      mode: choice('mode', modes, 'controls'),
+      mode: choice('mode', modes, 'fullscreen'),
       clock: value['clock'] != false,
       speed: value['speed'] == true,
-      corner: choice('corner', corners.keys.toSet(), 'topRight'),
-      size: rawSize is num && rawSize.isFinite ? rawSize.toDouble().clamp(12, 48) : 18,
+      corner: choice('corner', corners.keys.toSet(), 'topLeft'),
+      size: rawSize is num && rawSize.isFinite ? rawSize.toDouble().clamp(11, 48) : 11,
       color: rawColor is int && rawColor >= 0 && rawColor <= 0xffffffff ? rawColor : 0xffffffff,
       font: choice('font', fonts, 'app'),
       separate: value['separate'] == true,
@@ -85,7 +85,10 @@ final class PlaybackHudConfig {
       !separate ? combinedStyle : (field == 'clock' ? clockStyle : speedStyle) ?? combinedStyle;
 
   /// Supported visibility modes.
-  static const Set<String> modes = {'off', 'controls', 'always'};
+  static const Set<String> modes = {'off', 'fullscreen', 'controls', 'always'};
+
+  /// Default status information fits alongside the fullscreen battery.
+  bool get compactHeader => !separate && corner == 'topLeft' && size <= 18;
 
   /// Positions use the same geometry in every layout.
   static const Map<String, Alignment> corners = {
@@ -99,7 +102,8 @@ final class PlaybackHudConfig {
   static const Set<String> fonts = {'app', 'system', 'mono'};
 
   /// Whether any information should currently be drawn.
-  bool visible({required bool controls}) => (clock || speed) && (mode == 'always' || (mode == 'controls' && controls));
+  bool visible({required bool controls, bool fullscreen = true}) =>
+      (clock || speed) && (mode == 'always' || mode == 'controls' && controls || mode == 'fullscreen' && fullscreen);
 
   /// Stable values for settings backup and persistence.
   Map<String, Object?> toJson() => {
@@ -120,7 +124,7 @@ final class PlaybackHudConfig {
 @immutable
 final class PlaybackHudStyle {
   /// Creates one item's appearance.
-  const new({this.corner = 'topRight', this.size = 18, this.color = 0xffffffff, this.font = 'app'});
+  const new({this.corner = 'topLeft', this.size = 11, this.color = 0xffffffff, this.font = 'app'});
 
   /// Validates nested imported values through the existing shared rules.
   factory fromJson(Map<String, Object?> value) {
@@ -135,7 +139,7 @@ final class PlaybackHudStyle {
   /// Safe corner.
   final String corner;
 
-  /// Logical font size, 12 to 48.
+  /// Logical font size, 11 to 48.
   final double size;
 
   /// ARGB text colour.

@@ -500,6 +500,11 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
     if (controller == null) return;
     final state = controller.session.state;
     if (state.lineCount < 2) return;
+    final lines = PlaybackLineChoices(
+      controller.session,
+      detailed: ref.read(storeProvider).settings.get(Settings.playbackLineDetails),
+      telemetry: controller.telemetry,
+    );
     _hideControls?.cancel();
     final picked = await showTvChoice<int>(
       context,
@@ -507,14 +512,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       current: state.lineIndex,
       options: [
         for (var index = 0; index < state.lineCount; index++)
-          TvChoice(
-            value: index,
-            label: PlaybackLinePresentation.of(controller.session, telemetry: controller.telemetry).name(index),
-            description: PlaybackLinePresentation.of(
-              controller.session,
-              telemetry: controller.telemetry,
-            ).origins[index],
-          ),
+          TvChoice(value: index, label: lines.name(index), description: lines.detailed ? lines.origins[index] : null),
       ],
     );
     if (picked != null && picked != state.lineIndex) unawaited(controller.selectLine(picked));
@@ -605,6 +603,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
                     PlaybackHud(
                       telemetry: controller.telemetry,
                       controls: _controls,
+                      fullscreen: true,
                       clearance: EdgeInsets.only(top: _banner ? 110 : 12, bottom: _controls ? 170 : 52),
                     ),
                     if (_banner && !_controls && !_panel && !_settings && !_superChatPanel)

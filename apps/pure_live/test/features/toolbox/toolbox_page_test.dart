@@ -292,10 +292,10 @@ void main() {
     expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
     await tester.tap(find.text('高清'));
     await _settle(tester);
-    // The line's address is one line.
-    final address = tester.widget<Text>(find.text('https://line1.example/高清.flv'));
-    expect(address.maxLines, 1);
-    expect(address.overflow, TextOverflow.ellipsis);
+    // The upgrade/default policy is the concise line list, with no URL text.
+    expect(find.text('线路1'), findsOneWidget);
+    expect(find.text('线路2'), findsOneWidget);
+    expect(find.text('https://line1.example/高清.flv'), findsNothing);
     // Cancelling the choice ends the action and the busy line.
     await tester.tap(find.byKey(const ValueKey('toolbox-choice-cancel')));
     await _settle(tester);
