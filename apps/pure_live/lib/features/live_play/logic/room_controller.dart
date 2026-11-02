@@ -74,7 +74,7 @@ enum ChatConnection {
 
 /// What the chat list says above its lines about Bilibili's names (task
 /// B06 c1): the server masked every name (`观***`) for a connection that
-/// was not logged in; since 2026-10 guests get full names, so the hint
+/// was not logged in; some guest connections now get full names, so the hint
 /// stands on the names that arrive, not on the login alone.
 enum ChatNameHint {
   /// Nothing to say: not Bilibili, no danmaku, or full names.
@@ -402,7 +402,7 @@ class LiveRoomController extends ChangeNotifier {
   static const int maskedChatsForExpiredLogin = 3;
 
   /// What the chat list says about Bilibili's names (B06 c1): nothing while
-  /// the names come in full (guests get them since 2026-10); once this
+  /// the names come in full, including anonymous connections; once this
   /// connection got [maskedChatsForExpiredLogin] masked names and no full
   /// one, [ChatNameHint.guest] without a login and
   /// [ChatNameHint.loginExpired] with one.

@@ -373,6 +373,7 @@ void main() {
 
     // "在哔哩哔哩打开" closes the panel and opens the page.
     await _tap(tester, _videoMenu());
+    await tester.ensureVisible(_key('room-menu-external'));
     await tester.tap(_key('room-menu-external'));
     await tester.pump();
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));

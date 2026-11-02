@@ -375,9 +375,9 @@ class RoomMenuButton extends ConsumerWidget {
         var retired = false;
         try {
           if (wasPlaying) await session.pause();
-          if (!context.mounted) return;
+          if (!navigator.mounted) return;
           retired = await openReplayArchives(
-            context,
+            navigator.context,
             room: room,
             beforePlay: () async {
               if (stopped || controller.isDisposed || controller.room.identityKey != identity) return;

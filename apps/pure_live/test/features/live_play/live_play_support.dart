@@ -241,8 +241,12 @@ final class FakeEngine implements PlayerEngine, VolumeGainControl, PlaybackRate 
   @override
   Future<void> play() async {}
 
+  Future<void> Function()? onPause;
+
   @override
-  Future<void> pause() async {}
+  Future<void> pause() async {
+    await onPause?.call();
+  }
 
   @override
   Future<void> stop() async {}

@@ -825,6 +825,7 @@ void main() {
       await _tap(tester, 'live-play-fullscreen');
       await _tap(tester, 'live-play-menu');
       expect(_menuEntries(), [
+        'replayArchive',
         'timer',
         'volume',
         'streamLink',
@@ -844,6 +845,7 @@ void main() {
       await _tap(tester, 'live-play-fullscreen');
       await _tap(tester, 'live-play-menu');
       expect(_menuEntries(), [
+        'replayArchive',
         'timer',
         'volume',
         'videoFit',
