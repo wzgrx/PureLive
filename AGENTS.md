@@ -1,5 +1,7 @@
 # 仓库说明
 
+**当前优先事项（D-088，2026-11-02）：只修 bug 和稳定性，暂停功能需求和主动功能开发；直播回放停止维护与更新。先读 [当前维护方针](MAINTENANCE.md)，旧任务书不能据此继续加功能。新功能须由需求方提交完成的PR，UI设计和代码均须使用Opus 5.5 high或更高规格模型并提供声明，后续由维护者审核。**
+
 纯粹直播（Pure Live）4.x：在 3.x（`v3.2.11`）的代码上重构的第三方直播聚合应用。4.0.0（Android）已发布。
 
 **文档入口：[docs/README.md](docs/README.md)。** 进度看 [docs/STATUS.md](docs/STATUS.md)，做法看 [docs/PROCESS.md](docs/PROCESS.md)，决定看 [docs/DECISIONS.md](docs/DECISIONS.md)。全部任务登记在 [docs/tasks.toml](docs/tasks.toml)，分成 20 组（字母 A～Z，界面设计 A 排第一）。

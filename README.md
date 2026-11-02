@@ -28,6 +28,12 @@
 
 ---
 
+## 当前维护方向（2026-11-02）
+
+暂停功能需求和主动功能开发，后续集中修复bug与稳定性。**直播回放功能停止维护和更新**，现有代码、入口与数据保留；相关需求及回放专项故障按停维处理。
+
+需要新功能请自行完成UI设计和代码后提交PR，二者均须使用 **Opus 5.5 high或更高规格模型**，附模型声明、截图、测试与验证材料，再等待维护者后续审核。详见 [维护方针](MAINTENANCE.md) 和 [贡献规范](CONTRIBUTING.md)。
+
 纯粹直播是一个第三方直播聚合应用：把哔哩哔哩、斗鱼、虎牙、抖音、快手等国内平台，和 Twitch、YouTube、SOOP 等海外平台的直播放进同一个应用里看，再加上你自己导入的网络电视（IPTV）频道。关注、弹幕、录制、多画面都在一处完成，不需要为每个平台各装一个 App。
 
 **5.0 是第一个全平台版本。** 从 4.0 起，网络层、平台适配、弹幕、播放、录制、存储和每一个界面都重新写过（功能以 3.x 为基础，播放内核统一为 mpv）；5.0 同时发布 **Android 手机和平板、Android 电视、Windows、Linux**，四个平台用同一套代码和界面设计。可以直接覆盖安装 3.x 和 4.x，原来的关注、设置和历史都会保留。
@@ -462,19 +468,21 @@ docs/                   开发计划、模块记录、界面设计和功能清�
 
 ## 路线图
 
+旧功能路线按 [D-088 / 维护方针](MAINTENANCE.md) 暂停。下表保留已交付范围，后续仅处理bug、稳定性和已有功能验证，不承诺新增功能。
+
 | 客户端 | 5.6.1（现在） | 以后 |
 |---|---|---|
 | **Android 手机和平板** | 正式版：液态玻璃底栏、阻尼和弹簧动效，八个平台的官方登录，15 种界面语言 | 持续修平台变化 |
 | **Android 电视** | 正式版：直播、视频（哔哩哔哩点播）、音乐三个模式，壁纸，电视样式的设置目录，扫码用手机输入 | 在更多电视真机上验证和调整 |
 | **Windows** | 正式版：自绘标题栏、托盘、关闭时的选择、开机启动、桌面小窗、在新窗口打开直播间、官方登录、KICK 播放和聊天 | 持续长时间播放与安装版覆盖验收 |
-| **Linux** | 正式版：和 Windows 同一套桌面外壳 | 应用内网页登录 |
-| **macOS** | 测试版：Mac 的标题栏、菜单栏和快捷键，关窗口不退出，菜单栏图标；在 GitHub 的苹果构建机上构建，没有在真机上用过 | 录制 |
-| **iOS、iPadOS** | 测试版：界面同 Android，iPad 接键盘有 ⌘ 快捷键和快捷键列表，从别的应用分享进来，后台和锁屏播放；未签名 IPA 和 TrollStore 包，只在模拟器上打开过 | 台前调度、系统画中画，录制 |
+| **Linux** | 正式版：和 Windows 同一套桌面外壳 | bug与稳定性；新增网页登录暂停 |
+| **macOS** | 测试版：Mac 的标题栏、菜单栏和快捷键，关窗口不退出，菜单栏图标；在 GitHub 的苹果构建机上构建，没有在真机上用过 | bug、稳定性与验证 |
+| **iOS、iPadOS** | 测试版：界面同 Android，iPad 接键盘有 ⌘ 快捷键和快捷键列表，从别的应用分享进来，后台和锁屏播放；未签名 IPA 和 TrollStore 包，只在模拟器上打开过 | bug、稳定性与验证；新增功能暂停 |
 
 ## 反馈和参与
 
-- 遇到问题或有建议，请到 [Issues](https://github.com/wzgrx/PureLive/issues/new/choose) 选一个表单提交：[问题反馈](https://github.com/wzgrx/PureLive/issues/new?template=1-bug.yml)、[直播平台失效](https://github.com/wzgrx/PureLive/issues/new?template=2-platform.yml)、[功能需求](https://github.com/wzgrx/PureLive/issues/new?template=3-feature.yml)、[翻译和文字](https://github.com/wzgrx/PureLive/issues/new?template=4-translation.yml)。版本、设备、复现步骤是必填的；播放、闪退和平台问题请附“设置 → 日志管理”里导出的日志（先把记录等级调到“调试”）。
-- 提交以后会经过哪些步骤（待分类、需要补充信息、已复现、已计划、已修复待发布）、多久有回复、哪些不受理、功能需求怎么决定，见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 维护范围内遇到bug，请到 [Issues](https://github.com/wzgrx/PureLive/issues/new/choose) 选一个表单提交：[问题反馈](https://github.com/wzgrx/PureLive/issues/new?template=1-bug.yml)、[直播平台失效](https://github.com/wzgrx/PureLive/issues/new?template=2-platform.yml)、[翻译和文字](https://github.com/wzgrx/PureLive/issues/new?template=4-translation.yml)。版本、设备、复现步骤是必填的；播放、闪退和平台问题请附“设置 → 日志管理”里导出的日志（先把记录等级调到“调试”）。
+- 提交以后会经过哪些步骤（待分类、需要补充信息、已复现、已计划、已修复待发布）、多久有回复、哪些不受理、功能冻结与PR要求，见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 - 安全问题（例如可能泄露账号或 Cookie 的漏洞）请不要公开提 Issue，见 [SECURITY.md](SECURITY.md)，用 GitHub 的 [Security Advisory](https://github.com/wzgrx/PureLive/security/advisories/new) 私密提交，修好之前只有维护者能看到。
 - 欢迎提交 Pull Request，要求见 [CONTRIBUTING.md](CONTRIBUTING.md) 第 6 节。改动请先跑通门禁；代码规范是 very_good_analysis、行宽 120，公开接口写文档注释。
 

@@ -1,6 +1,9 @@
 # 不接受空白 issue：所有反馈都走下面的表单，见 CONTRIBUTING.md。
 blank_issues_enabled: false
 contact_links:
+  - name: 新功能请自带完成的 PR / Feature contributions
+    url: https://github.com/wzgrx/PureLive/blob/master/MAINTENANCE.md
+    about: 功能需求和主动开发暂停；UI与代码须使用Opus 5.5 high或更高规格模型，完成后提交PR供审核。直播回放已停止维护。
   - name: 下载最新版本 / Latest release
     url: https://github.com/wzgrx/PureLive/releases/latest
     about: 提交前先更新到最新版本，很多问题已经修好了。Please update first.

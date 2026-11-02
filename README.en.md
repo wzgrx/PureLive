@@ -28,6 +28,12 @@
 
 ---
 
+## Maintenance status (2026-11-02)
+
+Feature requests and maintainer-led feature development are paused. Maintenance focuses on bug fixes and stability. **Historical live-stream replay is no longer maintained or updated**; existing code and data remain.
+
+New features require a complete contributor-owned PR. Both UI design and implementation must use **Opus 5.5 at high reasoning effort or a higher-specification model**, with a model declaration, screenshots and test evidence, followed by maintainer review. See [maintenance policy](MAINTENANCE.md) and [contribution guide](CONTRIBUTING.md).
+
 Pure Live (纯粹直播) is a third-party live-stream aggregator. It brings Chinese platforms such as Bilibili, Douyu, Huya, Douyin and Kuaishou together with international ones such as Twitch, YouTube and SOOP, plus the IPTV channels you import yourself. Follows, danmaku, recording and multiview all live in one place, so you don't need a separate app for every platform.
 
 **5.0 was the first release for every platform.** Since 4.0 the network layer, platform adapters, danmaku, playback, recording, storage and every screen have been rewritten (features are based on 3.x, playback is mpv only). 5.0 ships **Android phones and tablets, Android TV, Windows and Linux** from one codebase and one design. You can install over 3.x and 4.x and keep your follows, settings and history. 5.1 added video (Bilibili VOD), music, wallpapers and TV-style settings to the TV interface, and per-streamer live alerts. 5.2 was about smoothness: no more stutter the first time you open a platform or a room, damped overscroll on every list and pager, spring page transitions, and a liquid-glass bottom bar on the home screen. 5.3 adds official sign-in for Douyu, Huya, Douyin, Kuaishou, YY, NetEase CC, Twitch and SOOP: the platform's own sign-in page opens in the app and the login is saved automatically. 5.4 adds Traditional Chinese and twelve more interface languages (Japanese, Korean, Spanish, French, German, Portuguese, Russian, Italian, Vietnamese, Thai, Indonesian and Turkish) and a volume boost. 5.4.1 fixes the Linux build not starting and is the first 5.x release for macOS, iOS and iPadOS (built on GitHub's macOS runners, not signed by Apple). 5.4.2 rebuilds the mini window: the same window inside the app and over other apps, movable anywhere, tucked into a side, resized steplessly; the Mac gets its own title bar, menu bar and menu bar icon. 5.4.3 lets iPhones and iPads share rooms in from other apps, keeps playing in the background and on the lock screen with Now Playing, and lists the iPad's ⌘ shortcuts when you hold ⌘. 5.4.4 fixes live alerts that could be missed when the background check ran. 5.4.5 reworks the feel of the glass bottom bar: a pill at rest that turns into a glass lens when pressed or dragged, with spring motion throughout; tablets can keep the bottom bar too. 5.4.6 lets Popular → Network switch between the built-in list and your own imported IPTV playlists. 5.4.7 lets a TV remote reach the buttons of every dialog, brings the glass bottom bar down to the iPhone's home indicator with an optional compact bar, and marks followed rooms with a small heart in browse lists.
@@ -440,19 +446,21 @@ Plans and progress: [docs/PLAN.md](docs/PLAN.md); UI design: [docs/specs/UI.md](
 
 ## Roadmap
 
+The earlier feature roadmap is frozen under [D-088 / maintenance policy](MAINTENANCE.md). The table records shipped scope; future work is limited to bugs, stability and verification.
+
 | Client | 5.6.1 (now) | Later |
 |---|---|---|
 | **Android phones and tablets** | Stable: liquid-glass bottom bar, damped and spring motion, official sign-in for eight platforms, 15 interface languages | Keep up with platform changes |
 | **Android TV** | Stable: Live, Video (Bilibili VOD) and Music modes, wallpapers, TV-style settings, type on your phone via QR code | Verify and tune on more TVs |
 | **Windows** | Stable: custom title bar, tray, close behaviour, launch at startup, desktop floating window, rooms in new windows, official sign-in, KICK playback and chat | Sustained playback and installer upgrade verification |
-| **Linux** | Stable: the same desktop shell as Windows | In-app web sign-in |
-| **macOS** | Beta: the Mac's title bar, menu bar and shortcuts, closing the window without quitting, menu bar icon; built on GitHub's macOS runners, not yet used on a real Mac | Recording |
-| **iOS, iPadOS** | Beta: the Android interface, ⌘ shortcuts and their list on an iPad keyboard, sharing in from other apps, background and lock-screen playback; unsigned IPA and TrollStore IPA, only opened in the simulator | Stage Manager, system picture-in-picture, recording |
+| **Linux** | Stable: the same desktop shell as Windows | Bug fixes and stability; new sign-in work paused |
+| **macOS** | Beta: the Mac's title bar, menu bar and shortcuts, closing the window without quitting, menu bar icon; built on GitHub's macOS runners, not yet used on a real Mac | Bug fixes, stability and verification |
+| **iOS, iPadOS** | Beta: the Android interface, ⌘ shortcuts and their list on an iPad keyboard, sharing in from other apps, background and lock-screen playback; unsigned IPA and TrollStore IPA, only opened in the simulator | Bug fixes, stability and verification; new features paused |
 
 ## Feedback and contributing
 
-- Report problems and ideas through one of the [issue forms](https://github.com/wzgrx/PureLive/issues/new/choose): bug report, platform broken, feature request, or translation (English is fine). Version, device and steps to reproduce are required; for playback, crash and platform problems attach the log exported from Settings → Log Management (set the level to Debug first).
-- What happens after you submit (labels, response times, what is out of scope, how feature requests are decided) is in [CONTRIBUTING.md](CONTRIBUTING.md) (Chinese).
+- Report in-scope bugs through one of the [issue forms](https://github.com/wzgrx/PureLive/issues/new/choose): bug report, platform broken, or translation (English is fine). Version, device and steps to reproduce are required; for playback, crash and platform problems attach the log exported from Settings → Log Management (set the level to Debug first).
+- What happens after you submit (labels, response times, bug scope and the feature freeze) is in [CONTRIBUTING.md](CONTRIBUTING.md) (Chinese).
 - Security issues (e.g. anything that could leak accounts or cookies): please don't open a public issue; see [SECURITY.md](SECURITY.md) and report privately via a GitHub [Security Advisory](https://github.com/wzgrx/PureLive/security/advisories/new), visible only to maintainers until fixed.
 - Pull requests are welcome; see section 6 of [CONTRIBUTING.md](CONTRIBUTING.md). Please make the gate pass first; code style is very_good_analysis, 120-character lines, and doc comments on public APIs.
 

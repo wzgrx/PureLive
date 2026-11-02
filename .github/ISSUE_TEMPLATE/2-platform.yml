@@ -6,6 +6,10 @@ body:
   - type: markdown
     attributes:
       value: |
+        当前只维护已有功能的bug和稳定性；直播回放已停止维护和更新，相关需求与回放专项故障会说明后关闭。新功能请按[维护方针](https://github.com/wzgrx/PureLive/blob/master/MAINTENANCE.md)自行完成PR。
+  - type: markdown
+    attributes:
+      value: |
         平台的接口时常变化，这类问题修得最快的前提是：**直播间链接**、**应用里的提示原文**和**日志**。带红色星号的都必须填写；信息不全会标“需要补充信息”，14 天没有补充会关闭。
 
         - 一个 issue 只写一个平台。
