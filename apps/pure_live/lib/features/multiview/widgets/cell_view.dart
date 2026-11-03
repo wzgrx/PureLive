@@ -29,6 +29,7 @@ class MultiviewCellView extends StatelessWidget {
     this.showVideo = true,
     this.keepScreenOn = true,
     this.nameInset = 0,
+    this.showCornerMarks = true,
     this.danmaku,
     this.footer,
     super.key,
@@ -74,6 +75,10 @@ class MultiviewCellView extends StatelessWidget {
   /// Moves the corner marks right, past a button over the cell's corner
   /// (the fullscreen exit on a screen without black sides).
   final double nameInset;
+
+  /// The main immersive cell hides its identity with the playback controls.
+  /// Small cells and non-playing placeholders retain their identification.
+  final bool showCornerMarks;
 
   /// The flying danmaku over the video.
   final Widget? danmaku;
@@ -127,18 +132,21 @@ class MultiviewCellView extends StatelessWidget {
                       onRetry: onRetry,
                       onPlayCarousel: onPlayCarousel,
                     ),
-                  Positioned(
-                    top: 6,
-                    left: 6 + nameInset,
-                    right: 6,
-                    child: _CornerMarks(
-                      position: position,
-                      room: cell.stage == CellStage.empty ? null : cell.room,
-                      audible: audible,
-                      mixAudio: mixAudio,
-                      compact: constraints.maxWidth - nameInset - 12 < 160 * MediaQuery.textScalerOf(context).scale(1),
+                  if (showCornerMarks)
+                    Positioned(
+                      key: ValueKey('multiview-corner-marks-$position'),
+                      top: 6,
+                      left: 6 + nameInset,
+                      right: 6,
+                      child: _CornerMarks(
+                        position: position,
+                        room: cell.stage == CellStage.empty ? null : cell.room,
+                        audible: audible,
+                        mixAudio: mixAudio,
+                        compact:
+                            constraints.maxWidth - nameInset - 12 < 160 * MediaQuery.textScalerOf(context).scale(1),
+                      ),
                     ),
-                  ),
                   if (saver && video)
                     Positioned(
                       right: 6,

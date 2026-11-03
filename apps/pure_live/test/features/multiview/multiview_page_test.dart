@@ -1066,6 +1066,64 @@ void main() {
     await _close(tester, services);
   });
 
+  for (final size in [const Size(926, 428), const Size(393, 852), const Size(1280, 800)]) {
+    for (final mode in ['immersive', 'fullscreen']) {
+      testWidgets('issue178 $size $mode keeps main chrome synchronized without replacing sessions', (tester) async {
+        debugDefaultTargetPlatformOverride = size.width > 1000 ? TargetPlatform.windows : TargetPlatform.iOS;
+        try {
+          final (services, _) = await _pump(tester, size);
+          await _pick(tester, '1');
+          await _pick(tester, '2');
+          await _pick(tester, '3');
+          await tester.tap(_key('multiview-layout-focus'));
+          await _wait(tester);
+          final sessions = [
+            for (final n in [1, 2, 3]) _cellView(tester, n).cell.session,
+          ];
+          await tester.tap(_key('multiview-$mode'));
+          await _wait(tester);
+          final main = _key('multiview-cell-3');
+          final element = tester.element(main);
+          void expectHidden() {
+            expect(_key('multiview-control-bar'), findsNothing);
+            expect(_key('multiview-$mode-exit'), findsNothing);
+            expect(_key('multiview-bare-mute-all'), findsNothing);
+            expect(_key('multiview-bare-mix-audio'), findsNothing);
+            expect(_key('multiview-corner-marks-3'), findsNothing);
+            expect(_key('multiview-corner-marks-1'), findsOneWidget);
+            expect(_key('multiview-corner-marks-2'), findsOneWidget);
+          }
+
+          expectHidden();
+          await captureQaFrame(tester, 'issue178-${size.width.toInt()}-$mode-hidden');
+          await tester.tap(main);
+          await _wait(tester);
+          expect(_key('multiview-control-bar'), findsOneWidget);
+          expect(_key('multiview-$mode-exit'), findsOneWidget);
+          expect(_key('multiview-bare-mute-all'), findsOneWidget);
+          expect(_key('multiview-bare-mix-audio'), findsOneWidget);
+          expect(_key('multiview-corner-marks-3'), findsOneWidget);
+          await captureQaFrame(tester, 'issue178-${size.width.toInt()}-$mode-shown');
+          await tester.tap(main);
+          await _wait(tester);
+          expectHidden();
+          expect(tester.element(main), same(element));
+          for (var i = 0; i < sessions.length; i++) {
+            expect(_cellView(tester, i + 1).cell.session, same(sessions[i]));
+          }
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+          await _wait(tester);
+          expect(_key('multiview-$mode'), findsOneWidget);
+          expect(_key('multiview-corner-marks-3'), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          await _close(tester, services);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+    }
+  }
+
   testWidgets('wide: icons on the layouts, a 360 column; 1+3 grows; the large cell bar in fullscreen', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     final processors = MultiviewPage.processors;
