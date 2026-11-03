@@ -106,10 +106,18 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ExitCode: Integer;
   ApplicationPath: String;
+  VersionMS, VersionLS: Cardinal;
 begin
   Result := '';
   ApplicationPath := ExpandConstant('{app}\{#AppExeName}');
   if not FileExists(ApplicationPath) then
+    exit;
+  { Builds before 5.5.0 do not understand the helper flag. Do not start such
+    a client as a supposed helper: retain Inno's existing close/retry flow. }
+  if not GetVersionNumbers(ApplicationPath, VersionMS, VersionLS) then
+    exit;
+  if ((VersionMS shr 16) < 5) or
+     (((VersionMS shr 16) = 5) and ((VersionMS and $FFFF) < 5)) then
     exit;
   { Use the existing path-scoped graceful handshake before replacing payload.
     It works with 5.6.1 even when its normal close action hides to the tray. }
