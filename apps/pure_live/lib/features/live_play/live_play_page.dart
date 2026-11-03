@@ -1501,22 +1501,26 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   /// The strip, a divider and the chat with the details over it; with
   /// [composerCollapsed] the local composer is a star on the chat list
   /// (the portrait room's panel, A07.17 c3).
-  Widget _chatColumn(LiveRoomController controller, {bool composerCollapsed = false}) => Column(
-    children: [
-      _infoBar(controller),
-      const Divider(height: 1),
-      Expanded(
-        child: _withDetails(
-          controller,
-          ChatPanel(
-            controller: controller,
-            detailsOpen: _details,
-            memory: _memory,
-            composerCollapsed: composerCollapsed,
+  Widget _chatColumn(LiveRoomController controller, {bool composerCollapsed = false}) => ListenableSelector<bool>(
+    listenable: controller,
+    selector: () => controller.isArchive,
+    builder: (context, _, _) => Column(
+      children: [
+        _infoBar(controller),
+        const Divider(height: 1),
+        Expanded(
+          child: _withDetails(
+            controller,
+            ChatPanel(
+              controller: controller,
+              detailsOpen: _details,
+              memory: _memory,
+              composerCollapsed: composerCollapsed,
+            ),
           ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 
   Widget _buildInline(BuildContext context, LiveRoomController controller, _LayoutSettings settings) => LayoutBuilder(
@@ -1732,9 +1736,13 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
               width: phoneLandscapeChatWidth,
               child: _withDetails(
                 controller,
-                controller.isArchive
-                    ? RoomReplayLibrary(controller: controller)
-                    : ChatList(controller: controller, memory: _memory),
+                ListenableSelector<bool>(
+                  listenable: controller,
+                  selector: () => controller.isArchive,
+                  builder: (context, archive, _) => archive
+                      ? RoomReplayLibrary(controller: controller)
+                      : ChatList(controller: controller, memory: _memory),
+                ),
               ),
             ),
           ),

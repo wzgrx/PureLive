@@ -120,6 +120,8 @@ void main() {
     expect(controller.session, same(session));
     expect(engine.opens.last.onDemand, isFalse);
     expect(engine.rates.last, 1);
+    expect(find.byKey(const ValueKey('room-replay-entry')), findsOneWidget);
+    expect(find.byKey(const ValueKey('archive-rate')), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);

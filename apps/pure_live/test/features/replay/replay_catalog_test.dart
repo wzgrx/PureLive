@@ -40,6 +40,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
   bool standalone = false,
   bool tv = false,
   PlaybackSession Function()? playbackFactory,
+  FakeBiliReplay? biliSource,
 }) async {
   tester.view
     ..physicalSize = size
@@ -58,7 +59,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
         replayIdentityProvider.overrideWithValue(ReplayIdentityApi(_IdentityHttp())),
         huyaArchiveProvider.overrideWithValue(huya),
         douyuVodProvider.overrideWithValue(FakeVodSource(testSigner())),
-        bilibiliReplayProvider.overrideWithValue(FakeBiliReplay()),
+        bilibiliReplayProvider.overrideWithValue(biliSource ?? FakeBiliReplay()),
         playbackSessionFactoryProvider.overrideWithValue(({config}) => playbackFactory?.call() ?? fakeSession(engine)),
       ],
       child: LiveUiScope(
@@ -81,6 +82,21 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
 }
 
 void main() {
+  testWidgets('late recording metadata enables actions and fills parts without another user action', (tester) async {
+    final source = FakeBiliReplay()..pending = Completer<VodArchive>();
+    await page(tester, platform: SiteIds.bilibili, biliSource: source);
+    await tester.tap(find.byKey(ValueKey('replay-recording-${archive.bvid}')));
+    await settle(tester);
+    expect(tester.widget<TextButton>(find.byKey(const ValueKey('archive-rate'))).onPressed, isNull);
+    source.pending!.complete(archive);
+    await settle(tester);
+    expect(tester.widget<TextButton>(find.byKey(const ValueKey('archive-rate'))).onPressed, isNotNull);
+    expect(find.byKey(ValueKey('archive-part-${archive.bvid}:100')), findsOneWidget);
+    expect(find.byKey(ValueKey('archive-part-${archive.bvid}:200')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
   for (final platform in replayPlatforms) {
     for (final layout in [const Size(360, 800), const Size(740, 360), const Size(1280, 800)]) {
       testWidgets('$platform archive layout $layout is bounded at 150 percent type', (tester) async {

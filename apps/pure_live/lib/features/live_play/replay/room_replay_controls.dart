@@ -43,8 +43,28 @@ class RoomReplayTransport extends StatefulWidget {
 class _RoomReplayTransportState extends State<RoomReplayTransport> {
   double? _scrub;
   bool _dragging = false;
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(RoomReplayTransport oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.controller, widget.controller)) {
+      oldWidget.controller.removeListener(_changed);
+      widget.controller.addListener(_changed);
+    }
+  }
+
   @override
   void dispose() {
+    widget.controller.removeListener(_changed);
     if (_dragging) scheduleMicrotask(() => widget.onHolding(false));
     super.dispose();
   }
@@ -156,7 +176,10 @@ class RoomReplayActions extends StatelessWidget {
   /// White text on the picture.
   final bool onVideo;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: controller, builder: (context, _) => _content(context));
+
+  Widget _content(BuildContext context) {
     final archive = controller.archive;
     final style = onVideo ? context.textStyles.t12.copyWith(color: OnVideoColors.foreground) : context.textStyles.t12;
     return SingleChildScrollView(
@@ -195,8 +218,13 @@ class RoomReplayInfo extends StatelessWidget {
   /// Existing room owner.
   final LiveRoomController controller;
   @override
-  Widget build(BuildContext context) {
-    final recording = controller.archiveSelection!.recording;
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: controller, builder: (context, _) => _content(context));
+
+  Widget _content(BuildContext context) {
+    final selection = controller.archiveSelection;
+    if (selection == null) return const SizedBox.shrink();
+    final recording = selection.recording;
     final date = recording.date;
     if (MediaQuery.sizeOf(context).height < 360) {
       return SingleChildScrollView(
@@ -269,7 +297,10 @@ class RoomReplayLibrary extends StatelessWidget {
   /// Preserves the original local-danmaku composer beneath the list.
   final bool withComposer;
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: controller, builder: (context, _) => _content(context));
+
+  Widget _content(BuildContext context) {
     final archive = controller.archive;
     final selection = controller.archiveSelection;
     if (selection == null) return const SizedBox.shrink();
