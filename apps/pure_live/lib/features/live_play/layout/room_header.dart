@@ -90,18 +90,26 @@ class _RoomHeaderState extends ConsumerState<RoomHeader> {
             ),
             // Rebuilt when the room changes identity, not for every chat
             // message; a tap reads the room as it is then.
-            ListenableSelector<String>(
-              listenable: controller,
-              selector: () => controller.room.identityKey,
-              builder: (context, _, _) =>
-                  FollowButton(room: controller.room, latest: () => controller.room, compact: compact),
-            ),
+            if (!controller.isArchive || controller.archiveSelection?.room != null)
+              ListenableSelector<String>(
+                listenable: controller,
+                selector: () => controller.room.identityKey,
+                builder: (context, _, _) => FollowButton(
+                  room: controller.archiveSelection?.room ?? controller.room,
+                  latest: () => controller.archiveSelection?.room ?? controller.room,
+                  compact: compact,
+                ),
+              ),
             if (!iptv)
               ListenableSelector<String>(
                 listenable: controller,
                 selector: () => controller.room.identityKey,
-                builder: (context, _, _) =>
-                    RecordButton(room: controller.room, latest: () => controller.room, compact: compact),
+                builder: (context, _, _) => RecordButton(
+                  room: controller.room,
+                  latest: () => controller.room,
+                  compact: compact,
+                  enabled: !controller.isArchive,
+                ),
               ),
             RoomMenuButton(controller: controller),
             const SizedBox(width: 4),

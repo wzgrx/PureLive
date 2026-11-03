@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
+import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:live_vod/live_vod.dart';
@@ -69,8 +70,8 @@ void main() {
       await page(tester, FakeHuyaArchive(), size: const Size(393, 852));
       await tester.tap(find.byKey(ValueKey('huya-archive-${firstArchive.id}')));
       await settle(tester);
-      expect(find.byKey(const ValueKey('vod-fullscreen')).hitTestable(), findsOneWidget);
-      for (final key in ['archive-rate', 'vod-fullscreen']) {
+      expect(find.byKey(const ValueKey('live-play-fullscreen')).hitTestable(), findsOneWidget);
+      for (final key in ['archive-rate', 'live-play-fullscreen']) {
         final rect = tester.getRect(find.byKey(ValueKey(key)));
         expect(rect.left, greaterThanOrEqualTo(0));
         expect(rect.right, lessThanOrEqualTo(393));
@@ -148,7 +149,8 @@ void main() {
     expect(find.byKey(const ValueKey('vod-danmaku-settings')), findsNothing);
     tester.state<NavigatorState>(find.byType(Navigator).first).pop();
     await settle(tester);
-    expect(engine.disposed, isTrue);
+    expect(engine.stops, greaterThan(0));
+    expect(find.byType(LiveVideoView), findsNothing);
     expect(find.byKey(const ValueKey('huya-archive-page')), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());

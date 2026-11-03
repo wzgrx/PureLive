@@ -344,7 +344,7 @@ class _MiniPlayerSurfaceState extends State<MiniPlayerSurface> {
 
   void _togglePlay() {
     if (!_hovered) _reveal();
-    unawaited(_room.session.togglePlayPause());
+    unawaited(_room.togglePlayback());
   }
 
   @override

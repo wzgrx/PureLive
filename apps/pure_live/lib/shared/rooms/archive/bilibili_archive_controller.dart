@@ -43,7 +43,13 @@ final class BilibiliArchiveQuality implements ArchiveQuality {
 /// Reuses the public VOD media path including DASH external audio and local login.
 final class BilibiliArchiveController extends ArchivePlaybackController {
   /// Owns only its playback session, not API/account stores.
-  new({required this.source, required this.session, required this.progress, this.initialVolume = 1}) {
+  new({
+    required this.source,
+    required this.session,
+    required this.progress,
+    this.ownsSession = true,
+    this.initialVolume = 1,
+  }) {
     _states = session.states.listen(_changed);
   }
 
@@ -57,6 +63,9 @@ final class BilibiliArchiveController extends ArchivePlaybackController {
 
   /// Shared playback volume preference.
   final double initialVolume;
+
+  /// False when the live-room runtime owns the shared native session.
+  final bool ownsSession;
   @override
   BilibiliArchivePart? video;
   @override
@@ -73,6 +82,8 @@ final class BilibiliArchiveController extends ArchivePlaybackController {
   Duration get position => _pending ?? session.state.position;
   VodArchive? _archive;
   ExternalAudio? _audio;
+  @override
+  bool get requiresExternalAudio => _audio != null;
   StreamSubscription<PlaybackState>? _states;
   Duration? _pending;
   Duration _lastSaved = Duration.zero;
@@ -288,7 +299,7 @@ final class BilibiliArchiveController extends ArchivePlaybackController {
     _disposed = true;
     _generation++;
     unawaited(_states?.cancel());
-    _retirement = Future.wait<void>([session.dispose(), saved]).then((_) {});
+    _retirement = Future.wait<void>([if (ownsSession) session.dispose(), saved]).then((_) {});
     unawaited(_retirement);
     super.dispose();
   }

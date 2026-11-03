@@ -401,15 +401,17 @@ class PlayerTopBar extends ConsumerWidget {
     icon: const Icon(AppIcons.back),
   );
 
-  Widget _follow() => ListenableSelector<String>(
-    listenable: actions.controller,
-    selector: () => actions.controller.room.identityKey,
-    builder: (context, _, _) => FollowButton(
-      room: actions.controller.room,
-      latest: () => actions.controller.room,
-      place: FollowButtonPlace.video,
-    ),
-  );
+  Widget _follow() => actions.controller.isArchive && actions.controller.archiveSelection?.room == null
+      ? const SizedBox.shrink()
+      : ListenableSelector<String>(
+          listenable: actions.controller,
+          selector: () => actions.controller.room.identityKey,
+          builder: (context, _, _) => FollowButton(
+            room: actions.controller.archiveSelection?.room ?? actions.controller.room,
+            latest: () => actions.controller.archiveSelection?.room ?? actions.controller.room,
+            place: FollowButtonPlace.video,
+          ),
+        );
 
   /// Record and the room menu, as in the room's app bar (U.2c change 2);
   /// the landscape bar has room for the recording's [time] (U.2a2 c8). The
@@ -424,8 +426,13 @@ class PlayerTopBar extends ConsumerWidget {
         ListenableSelector<String>(
           listenable: controller,
           selector: () => controller.room.identityKey,
-          builder: (context, _, _) =>
-              RecordButton(room: controller.room, latest: () => controller.room, onVideo: true, showTime: time),
+          builder: (context, _, _) => RecordButton(
+            room: controller.room,
+            latest: () => controller.room,
+            onVideo: true,
+            showTime: time,
+            enabled: !controller.isArchive,
+          ),
         ),
       RoomMenuButton(controller: controller, onVideo: true, onBars: onBars, onMenu: actions.onMenu),
     ];
@@ -685,14 +692,16 @@ class PlayerBottomBar extends ConsumerWidget {
       stream: controller.session.states,
       initialData: controller.session.state,
       builder: (context, snapshot) {
-        final paused = snapshot.data?.status == PlaybackStatus.paused;
+        final paused =
+            snapshot.data?.status == PlaybackStatus.paused ||
+            controller.isArchive && snapshot.data?.status == PlaybackStatus.completed;
         return VideoIconButton(
           key: const ValueKey('live-play-pause'),
           tooltip: i18n(paused ? 'live_play_play' : 'live_play_pause'),
           iconSize: 28,
           onPressed: () {
             actions.onInteract();
-            unawaited(controller.session.togglePlayPause());
+            unawaited(controller.togglePlayback());
           },
           icon: Icon(paused ? AppIcons.play : AppIcons.pause),
         );

@@ -142,3 +142,47 @@ class ArchiveRecordingTile extends StatelessWidget {
         : InkWell(onTap: onTap, borderRadius: BorderRadius.circular(8), child: content);
   }
 }
+
+/// A catalog choice, containing public metadata only.
+@immutable
+final class ArchiveSelection {
+  /// The creator room is optional for standalone official-video catalogs.
+  const new({required this.recording, this.recordings = const [], this.room});
+
+  /// Selected recording.
+  final ArchiveRecording recording;
+
+  /// Other loaded recordings by this creator.
+  final List<ArchiveRecording> recordings;
+
+  /// Verified invoking live room, when available.
+  final LiveRoom? room;
+
+  /// Identity used only in memory when the catalog has no live-room id.
+  LiveRoom get presenter =>
+      room ??
+      LiveRoom(
+        platform: recording.platform,
+        roomId: 'archive-${recording.id}',
+        nick: recording.author,
+        title: recording.title,
+        cover: recording.cover,
+        avatar: recording.video is VodArchive ? (recording.video as VodArchive).owner.face : '',
+      );
+}
+
+/// Opens the existing room page directly in replay mode.
+@immutable
+final class ArchiveRoomArguments {
+  /// Callbacks remain in memory and never enter platform links or storage.
+  const new({required this.selection, this.onRetire, this.onProgress});
+
+  /// Initial archive and presenter metadata.
+  final ArchiveSelection selection;
+
+  /// Completes only after the owning runtime actually releases playback.
+  final ValueChanged<Future<void>>? onRetire;
+
+  /// A catalog may refresh a known part label without tree-locked setState.
+  final void Function(String id, int? part, Duration position)? onProgress;
+}

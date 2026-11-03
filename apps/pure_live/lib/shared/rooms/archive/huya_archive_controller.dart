@@ -77,6 +77,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     required this.session,
     required this.video,
     required this.progress,
+    this.ownsSession = true,
     this.initialVolume = 1,
   }) {
     _states = session.states.listen(_changed);
@@ -94,6 +95,9 @@ final class HuyaArchiveController extends ArchivePlaybackController {
 
   /// Initial preference shared with normal playback.
   final double initialVolume;
+
+  /// False when the live-room runtime owns the shared native session.
+  final bool ownsSession;
   @override
   List<HuyaArchiveQuality> qualities = const [];
   @override
@@ -295,7 +299,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     _generation++;
     _cancel?.cancel();
     unawaited(_states?.cancel());
-    _retirement = Future.wait<void>([session.dispose(), saved]).then((_) {});
+    _retirement = Future.wait<void>([if (ownsSession) session.dispose(), saved]).then((_) {});
     unawaited(_retirement);
     super.dispose();
   }

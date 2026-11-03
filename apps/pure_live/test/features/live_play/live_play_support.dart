@@ -249,7 +249,12 @@ final class FakeEngine implements PlayerEngine, VolumeGainControl, PlaybackRate 
   }
 
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async {
+    stops++;
+  }
+
+  /// Native stops, including replay/live handoff.
+  int stops = 0;
 
   @override
   Future<void> seek(Duration position) async {}

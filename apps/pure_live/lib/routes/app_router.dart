@@ -70,7 +70,12 @@ final Map<String, PageBuilder> pageRoutes = {
   RoutePath.kReplayArchives: (route) {
     final args = route.arguments;
     return args is HuyaArchiveArguments
-        ? ReplayCatalogPage(room: args.room, beforePlay: args.beforePlay, onRetire: args.onRetire)
+        ? ReplayCatalogPage(
+            room: args.room,
+            beforePlay: args.beforePlay,
+            onRetire: args.onRetire,
+            pickOnly: args.pickOnly,
+          )
         : const ReplayCatalogPage();
   },
   RoutePath.kDouyuVod: (route) => DouyuVodCatalogPage(route: route),

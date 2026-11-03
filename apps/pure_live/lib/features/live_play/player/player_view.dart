@@ -32,6 +32,7 @@ import 'package:pure_live/features/live_play/player/player_status.dart';
 import 'package:pure_live/features/live_play/player/portrait_diagnostics.dart';
 import 'package:pure_live/features/live_play/player/recording_badge.dart';
 import 'package:pure_live/features/live_play/player/room_swipe.dart';
+import 'package:pure_live/features/live_play/replay/room_replay_controls.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/display_mode.dart';
 import 'package:pure_live/shared/danmaku/danmaku_overlay.dart';
@@ -1052,6 +1053,18 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
                             ),
                           ),
                         if (!_locked && controls) Positioned(left: 0, right: 0, bottom: 0, child: bottomBar),
+                        if (!_locked && controls && _room.isArchive)
+                          Positioned(
+                            left: padding.left,
+                            right: padding.right,
+                            bottom: padding.bottom + (portraitRows ? portraitRowHeight * 2 + 12 : controlBarHeight),
+                            child: RoomReplayTransport(
+                              controller: _room,
+                              immersive: arrangement != ControlsArrangement.inline || widget.pickersInBar,
+                              onInteract: _touch,
+                              onHolding: _onMenu,
+                            ),
+                          ),
                         if (!_locked && widget.edge != null)
                           Positioned(right: 0, top: 0, bottom: 0, child: Center(child: widget.edge)),
                         // B-4: while locked the unlock button stays whatever

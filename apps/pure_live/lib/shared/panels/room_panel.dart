@@ -9,6 +9,12 @@ export 'package:pure_live/shared/panels/side_panel.dart';
 /// 统一规则): recording, the danmaku settings, switching rooms (U.2m), the
 /// room menu's settings and a long-pressed danmaku (U.2n). One at a time.
 enum RoomPanelKind {
+  /// Shared replay speed editor.
+  archiveRate,
+
+  /// Replay segments and creator recordings.
+  archiveCatalog,
+
   /// The record panel (the bar's record button, the "● 录制中" mark).
   record,
 

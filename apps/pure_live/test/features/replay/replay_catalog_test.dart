@@ -116,7 +116,7 @@ void main() {
     expect(engine.opens, hasLength(1));
     expect(engine.opens.first.onDemand, isTrue);
     expect(find.byKey(const ValueKey('archive-rate')), findsOneWidget);
-    expect(tester.getRect(find.byKey(const ValueKey('vod-fullscreen'))).right, 381);
+    expect(tester.getRect(find.byKey(const ValueKey('live-play-fullscreen'))).right, lessThanOrEqualTo(393));
     await tester.tap(find.byKey(const ValueKey('archive-rate')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('archive-rate-1.75')));
@@ -124,7 +124,8 @@ void main() {
     expect(engine.rates.last, 1.75);
     Navigator.of(tester.element(find.byKey(const ValueKey('archive-rate')))).pop();
     await settle(tester);
-    expect(engine.disposed, isTrue);
+    expect(engine.stops, greaterThan(0));
+    expect(find.byType(LiveVideoView), findsNothing);
     expect(find.byKey(const ValueKey('replay-catalog-page')), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);
@@ -191,44 +192,34 @@ void main() {
       await tester.tap(find.byKey(ValueKey('replay-recording-${archive.bvid}')));
       await settle(tester);
       expect(find.byType(ArchivePlayerPage), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const ValueKey('archive-rate')));
       await tester.tap(find.byKey(const ValueKey('archive-rate')));
       await settle(tester);
-      expect(find.byKey(const ValueKey('archive-settings-panel')), findsOneWidget);
+      expect(find.byKey(const ValueKey('archive-rate-editor')), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await settle(tester);
-      expect(find.byKey(const ValueKey('archive-settings-panel')), findsNothing);
+      expect(find.byKey(const ValueKey('archive-rate-editor')), findsNothing);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await settle(tester);
     });
   }
 
-  testWidgets('landscape controls hide, keyboard restores them and panel leaves video size unchanged', (tester) async {
-    final (engine, _) = await page(tester, platform: SiteIds.bilibili, size: const Size(740, 360));
+  testWidgets('original fullscreen keeps the replay output and closes rate before leaving', (tester) async {
+    final (engine, _) = await page(tester, platform: SiteIds.bilibili);
     await tester.tap(find.byKey(ValueKey('replay-recording-${archive.bvid}')));
     await settle(tester);
-    final stage = tester.getRect(find.byType(LiveVideoView).last);
-    await tester.pump(const Duration(seconds: 4));
-    expect(find.byKey(const ValueKey('archive-rate')), findsNothing);
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-    await tester.pump();
-    expect(find.byKey(const ValueKey('archive-rate')), findsOneWidget);
+    final session = tester.widget<LiveVideoView>(find.byType(LiveVideoView).last).session;
+    await tester.tap(find.byKey(const ValueKey('live-play-fullscreen')));
+    await settle(tester);
     await tester.tap(find.byKey(const ValueKey('archive-rate')));
     await settle(tester);
-    expect(tester.getRect(find.byType(LiveVideoView).last), stage);
+    expect(tester.widget<LiveVideoView>(find.byType(LiveVideoView).last).session, same(session));
     expect(engine.opens, hasLength(1));
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await settle(tester);
+    expect(find.byKey(const ValueKey('archive-rate-editor')), findsNothing);
     expect(find.byType(ArchivePlayerPage), findsOneWidget);
-    expect(find.byKey(const ValueKey('archive-settings-panel')), findsNothing);
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-    await tester.pump();
-    expect(tester.getRect(find.byType(LiveVideoView).last).width, lessThan(740));
-    tester.view.physicalSize = const Size(393, 852);
-    await tester.pump();
-    tester.view.physicalSize = const Size(740, 360);
-    await tester.pump();
-    expect(tester.getRect(find.byType(LiveVideoView).last).width, 740);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);
@@ -257,15 +248,13 @@ void main() {
     await settle(tester);
   });
 
-  testWidgets('switching a recording waits for native retirement before creating its replacement', (tester) async {
-    final retired = Completer<void>();
+  testWidgets('switching a recording keeps the original native session', (tester) async {
     final engines = <FakeEngine>[];
     await page(
       tester,
       platform: SiteIds.huya,
       playbackFactory: () {
         final engine = FakeEngine();
-        if (engines.isEmpty) engine.onDispose = () => retired.future;
         engines.add(engine);
         return fakeSession(engine);
       },
@@ -279,11 +268,9 @@ void main() {
     await tester.tap(target);
     await settle(tester);
     expect(engines, hasLength(1));
-    expect(engines.first.disposed, isTrue);
-    retired.complete();
-    await settle(tester);
-    expect(engines, hasLength(2));
-    expect(engines.last.opens, hasLength(1));
+    expect(engines.single.disposed, isFalse);
+    expect(engines.single.opens, hasLength(2));
+    expect(engines.single.opens.every((m) => m.onDemand), isTrue);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);

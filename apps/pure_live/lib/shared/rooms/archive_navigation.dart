@@ -3,12 +3,16 @@ import 'package:live_core/live_core.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_path.dart';
+import 'package:pure_live/shared/rooms/archive/archive_recording.dart';
 
 /// In-memory ownership callbacks for the application's registered archive route.
 @immutable
 final class HuyaArchiveArguments {
   /// Keeps media ownership local; this object is never serialized or persisted.
-  const new({this.room, this.beforePlay, this.onRetire});
+  const new({this.room, this.beforePlay, this.onRetire, this.pickOnly = false});
+
+  /// Returns metadata to the existing room without creating a second player.
+  final bool pickOnly;
 
   /// Optional presenter identity already known by the invoking page.
   final LiveRoom? room;
@@ -67,3 +71,10 @@ Future<bool> _openArchives(
     return false;
   }
 }
+
+/// Picks a recording for the invoking live room's existing playback session.
+Future<ArchiveSelection?> pickReplayArchive(BuildContext context, LiveRoom? room) =>
+    AppNavigator.toNamed<ArchiveSelection>(
+      RoutePath.kReplayArchives,
+      arguments: HuyaArchiveArguments(room: room, pickOnly: true),
+    );
