@@ -151,6 +151,7 @@ Future<void> _pumpLine(
   ThemeData? theme,
   double width = 360,
   double textScale = 1,
+  String platform = '',
 }) async {
   await tester.pumpWidget(
     LiveUiScope(
@@ -168,8 +169,8 @@ Future<void> _pumpLine(
             child: SizedBox(
               width: width,
               child: sizing == null
-                  ? ChatLineView(line: line, style: style)
-                  : ChatLineView(line: line, style: style, sizing: sizing),
+                  ? ChatLineView(line: line, style: style, platform: platform)
+                  : ChatLineView(line: line, style: style, sizing: sizing, platform: platform),
             ),
           ),
         ),
@@ -291,6 +292,54 @@ void main() {
       expect((chip.border! as Border).top.color, const Color(0xffffdc14));
       expect(chip.text, '测试牌 33');
       expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('Huya levels receive distinct readable fallback colours and native colours take priority (#156)', (
+    tester,
+  ) async {
+    for (final theme in _themes.values) {
+      final backgrounds = <Color>{};
+      for (final level in [1, 12, 27, 38]) {
+        final line = ChatLine.chat(
+          LiveMessage(
+            type: LiveMessageType.chat,
+            userName: 'Viewer',
+            message: 'Chat',
+            color: LiveMessageColor.white,
+            fansName: 'Medal',
+            fansLevel: '$level',
+          ),
+        );
+        await _pumpLine(tester, line, theme: theme, platform: SiteIds.huya, width: 280, textScale: 2);
+        final chip = tester.widget<ChatChip>(find.byKey(const ValueKey('live-play-chat-fans')));
+        backgrounds.add(chip.background);
+        final background = Color.alphaBlend(chip.background, theme.colorScheme.surface);
+        expect(contrastRatio(chip.style!.color!, background), greaterThanOrEqualTo(chatNameContrast - .01));
+        expect(tester.takeException(), isNull);
+      }
+      expect(backgrounds, hasLength(4));
+      const native = LiveFanBadgeColors(start: LiveMessageColor(30, 80, 160));
+      await _pumpLine(
+        tester,
+        ChatLine.chat(
+          const LiveMessage(
+            type: LiveMessageType.chat,
+            userName: 'Viewer',
+            message: 'Chat',
+            color: LiveMessageColor.white,
+            fansName: 'Native',
+            fansLevel: '27',
+            fansColors: native,
+          ),
+        ),
+        theme: theme,
+        platform: SiteIds.huya,
+      );
+      expect(
+        tester.widget<ChatChip>(find.byKey(const ValueKey('live-play-chat-fans'))).background,
+        const Color(0xff1e50a0),
+      );
     }
   });
 

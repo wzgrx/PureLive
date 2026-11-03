@@ -674,7 +674,7 @@ class NativePlayer extends PlatformPlayer {
       await _command([
         'seek',
         (duration.inMilliseconds / 1000).toStringAsFixed(4),
-        'absolute',
+        'absolute+exact',
       ]);
 
       // It is self explanatory that PlayerState.completed & PlayerStream.completed must enter the false state if seek is called. Typically after EOF.

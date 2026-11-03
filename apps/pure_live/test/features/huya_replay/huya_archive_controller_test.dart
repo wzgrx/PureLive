@@ -11,6 +11,59 @@ import 'huya_archive_support.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  testWidgets('an unacknowledged seek refreshes once and preserves paused playback, volume and rate (#163)', (
+    tester,
+  ) async {
+    final engine = FakeEngine();
+    final source = FakeHuyaArchive();
+    final controller = HuyaArchiveController(
+      source: source,
+      session: fakeSession(engine),
+      video: firstArchive,
+      progress: HuyaArchiveProgress(read: () async => null, write: (_) async {}),
+      seekTimeout: const Duration(seconds: 1),
+    );
+    await controller.open(firstArchive.id);
+    await controller.setRate(1.75);
+    await controller.session.setVolume(.27);
+    await controller.session.pause();
+    await controller.seek(const Duration(seconds: 90));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump();
+    expect(engine.opens, hasLength(2));
+    expect(engine.opens.last.start, const Duration(seconds: 90));
+    expect(engine.opens.last.uri.toString(), contains('revision=2'));
+    expect(controller.session.state.status, PlaybackStatus.paused);
+    expect(controller.session.state.volume, .27);
+    expect(engine.rates.last, 1.75);
+    engine.emit(const EnginePosition(Duration(seconds: 90)));
+    await tester.pump();
+    expect(controller.error, isNull);
+    expect(controller.position, const Duration(seconds: 90));
+    expect(controller.busy, isFalse);
+    controller.dispose();
+    await controller.retirement;
+  });
+
+  test('an unconfirmed seek target is not persisted as watched progress', () async {
+    String? saved;
+    final engine = FakeEngine();
+    final progress = HuyaArchiveProgress(read: () async => saved, write: (s) async => saved = s);
+    final controller = HuyaArchiveController(
+      source: FakeHuyaArchive(),
+      session: fakeSession(engine),
+      video: firstArchive,
+      progress: progress,
+    );
+    await controller.open(firstArchive.id);
+    engine.emit(const EnginePosition(Duration(seconds: 50)));
+    await pumpEventQueue();
+    await controller.seek(const Duration(seconds: 900));
+    await controller.record();
+    expect(await progress.position(firstArchive.id), const Duration(seconds: 50));
+    controller.dispose();
+    await controller.retirement;
+  });
   test('official archive playback resumes, seeks, refreshes qualities and preserves pause/volume', () async {
     var stored = '{}';
     final progress = HuyaArchiveProgress(read: () async => stored, write: (value) async => stored = value);

@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        当前只维护已有功能的bug和稳定性；直播回放已停止维护和更新，相关需求与回放专项故障会说明后关闭。新功能请按[维护方针](https://github.com/wzgrx/PureLive/blob/master/MAINTENANCE.md)自行完成PR。
+        欢迎反馈已有功能与公开回放的bug。新功能请使用功能需求表单，无需先提交PR；详见[维护方针](https://github.com/wzgrx/PureLive/blob/master/MAINTENANCE.md)。
   - type: markdown
     attributes:
       value: |

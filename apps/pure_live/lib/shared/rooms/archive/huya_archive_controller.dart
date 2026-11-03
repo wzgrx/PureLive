@@ -78,6 +78,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     required this.video,
     required this.progress,
     this.ownsSession = true,
+    this.seekTimeout = const Duration(seconds: 10),
     this.initialVolume = 1,
   }) {
     _states = session.states.listen(_changed);
@@ -98,6 +99,10 @@ final class HuyaArchiveController extends ArchivePlaybackController {
 
   /// False when the live-room runtime owns the shared native session.
   final bool ownsSession;
+
+  /// Bounded direct seek and one fresh-URL recovery acknowledgement window.
+  final Duration seekTimeout;
+  Duration? _failedSeekTarget;
   @override
   List<HuyaArchiveQuality> qualities = const [];
   @override
@@ -133,6 +138,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     await record().catchError((Object _) {});
     if (_disposed) return;
     _seekDeadline?.cancel();
+    _failedSeekTarget = null;
     final generation = ++_generation;
     _cancel?.cancel();
     final cancel = _cancel = CancelToken();
@@ -241,7 +247,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
 
   @override
   Future<void> seek(Duration at) async {
-    if (_disposed || !_ready) return;
+    if (_disposed || !_ready || busy) return;
     final duration = session.state.duration > Duration.zero ? session.state.duration : video.duration;
     final bounded = at < Duration.zero
         ? Duration.zero
@@ -249,23 +255,70 @@ final class HuyaArchiveController extends ArchivePlaybackController {
         ? duration
         : at;
     _pending = bounded;
-    notifyListeners();
+    _failedSeekTarget = null;
+    error = null;
     final serial = ++_seekSerial;
     final generation = _generation;
     _seekDeadline?.cancel();
     bool current() => _current(generation) && serial == _seekSerial;
-    _seekDeadline = Timer(const Duration(seconds: 10), () {
-      if (!current() || _pending == null) return;
-      _pending = null;
-      error = TimeoutException('Archive seek was not acknowledged');
-      notifyListeners();
-    });
+    void recover() {
+      if (current() && _pending != null) unawaited(_recoverSeek(bounded, generation, serial));
+    }
+
+    _seekDeadline = Timer(seekTimeout, recover);
+    notifyListeners();
     try {
-      await session.seek(bounded).timeout(const Duration(seconds: 10));
+      await session.seek(bounded).timeout(seekTimeout);
+    } on Object {
+      if (current() && _pending != null) {
+        _seekDeadline?.cancel();
+        await _recoverSeek(bounded, generation, serial);
+      }
+    }
+  }
+
+  Future<void> _recoverSeek(Duration at, int generation, int serial) async {
+    bool current() => _current(generation) && serial == _seekSerial;
+    if (!current() || busy) return;
+    final paused = session.state.status == PlaybackStatus.paused;
+    final volume = session.state.volume;
+    final audioOnly = session.state.audioOnly;
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      final plan = await _refresh(generation);
+      if (!current()) return;
+      await session.open(
+        PlaybackRequest(
+          site: SiteIds.huya,
+          plan: PlaybackPlan(sources: plan.sources, onDemand: true, start: at, appliedQualityData: qualityId),
+          volume: volume,
+          audioOnly: audioOnly,
+          refresh: () => _refresh(generation),
+        ),
+      );
+      if (!current()) return;
+      await restoreRate();
+      if (paused) await session.pause();
+      if (!current()) return;
+      if (_pending != null) {
+        _seekDeadline = Timer(seekTimeout, () {
+          if (!current() || _pending == null) return;
+          _pending = null;
+          _failedSeekTarget = at;
+          error = TimeoutException('Archive seek recovery was not acknowledged');
+          notifyListeners();
+        });
+      }
     } on Object catch (failure) {
       if (current()) {
         _pending = null;
         error = failure;
+      }
+    } finally {
+      if (current()) {
+        busy = false;
         notifyListeners();
       }
     }
@@ -273,8 +326,21 @@ final class HuyaArchiveController extends ArchivePlaybackController {
 
   void _changed(PlaybackState state) {
     if (_disposed) return;
-    if (_pending != null && (state.position - _pending!).inMilliseconds.abs() < 1000) _pending = null;
-    if (_ready && ((position - _lastSaved).inSeconds.abs() >= 5 || state.status == PlaybackStatus.completed)) {
+    final tolerance = Duration(milliseconds: 1000 + (rate * 1000).round());
+    if (_pending != null && (state.position - _pending!).abs() <= tolerance) {
+      _pending = null;
+      _seekDeadline?.cancel();
+      error = null;
+    }
+    if (_failedSeekTarget != null &&
+        error is TimeoutException &&
+        (state.position - _failedSeekTarget!).abs() <= tolerance) {
+      _failedSeekTarget = null;
+      error = null;
+    }
+    if (_ready &&
+        _pending == null &&
+        ((position - _lastSaved).inSeconds.abs() >= 5 || state.status == PlaybackStatus.completed)) {
       _lastSaved = position;
       unawaited(record().catchError((Object _) {}));
     }
@@ -284,6 +350,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
   @override
   Future<void> record() async {
     if (!_ready ||
+        _pending != null ||
         {PlaybackStatus.idle, PlaybackStatus.opening, PlaybackStatus.stopped}.contains(session.state.status)) {
       return;
     }

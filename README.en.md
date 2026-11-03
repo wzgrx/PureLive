@@ -30,9 +30,7 @@
 
 ## Maintenance status (2026-11-02)
 
-Feature requests and maintainer-led feature development are paused. Maintenance focuses on bug fixes and stability. **Historical live-stream replay is no longer maintained or updated**; existing code and data remain.
-
-New features require a complete contributor-owned PR. Both UI design and implementation must use **Opus 5.5 at high reasoning effort or a higher-specification model**, with a model declaration, screenshots and test evidence, followed by maintainer review. See [maintenance policy](MAINTENANCE.md) and [contribution guide](CONTRIBUTING.md).
+Feature requests and maintainer-led development are open again. You can request a feature without providing a PR. Public replay support is maintained using the existing room UI and mini-window system. Bugs and stability remain priorities; requests are evaluated for feasibility and validation. See the [maintenance policy](MAINTENANCE.md) and [contribution guide](CONTRIBUTING.md).
 
 Pure Live (纯粹直播) is a third-party live-stream aggregator. It brings Chinese platforms such as Bilibili, Douyu, Huya, Douyin and Kuaishou together with international ones such as Twitch, YouTube and SOOP, plus the IPTV channels you import yourself. Follows, danmaku, recording and multiview all live in one place, so you don't need a separate app for every platform.
 
@@ -470,16 +468,16 @@ Plans and progress: [docs/PLAN.md](docs/PLAN.md); UI design: [docs/specs/UI.md](
 
 ## Roadmap
 
-The earlier feature roadmap is frozen under [D-088 / maintenance policy](MAINTENANCE.md). The table records shipped scope; future work is limited to bugs, stability and verification.
+Feature requests and development are open under [D-092 / maintenance policy](MAINTENANCE.md). The table records shipped scope; further work depends on feasibility and validation.
 
 | Client | 5.6.1 (now) | Later |
 |---|---|---|
 | **Android phones and tablets** | Stable: liquid-glass bottom bar, damped and spring motion, official sign-in for eight platforms, 15 interface languages | Keep up with platform changes |
 | **Android TV** | Stable: Live, Video (Bilibili VOD) and Music modes, wallpapers, TV-style settings, type on your phone via QR code | Verify and tune on more TVs |
 | **Windows** | Stable: custom title bar, tray, close behaviour, launch at startup, desktop floating window, rooms in new windows, official sign-in, KICK playback and chat | Sustained playback and installer upgrade verification |
-| **Linux** | Stable: the same desktop shell as Windows | Bug fixes and stability; new sign-in work paused |
+| **Linux** | Stable: the same desktop shell as Windows | Bug fixes and stability; sign-in requests subject to validation |
 | **macOS** | Beta: the Mac's title bar, menu bar and shortcuts, closing the window without quitting, menu bar icon; built on GitHub's macOS runners, not yet used on a real Mac | Bug fixes, stability and verification |
-| **iOS, iPadOS** | Beta: the Android interface, ⌘ shortcuts and their list on an iPad keyboard, sharing in from other apps, background and lock-screen playback; unsigned IPA and TrollStore IPA, only opened in the simulator | Bug fixes, stability and verification; new features paused |
+| **iOS, iPadOS** | Beta: the Android interface, ⌘ shortcuts and their list on an iPad keyboard, sharing in from other apps, background and lock-screen playback; unsigned IPA and TrollStore IPA, only opened in the simulator | Bug fixes, stability and verification; feature requests subject to validation |
 
 ## Feedback and contributing
 

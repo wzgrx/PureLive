@@ -1,0 +1,30 @@
+name: 功能需求 / Feature request
+description: 请求新增功能或优化现有体验，无需先提供PR。
+title: "[需求] "
+labels: ["enhancement", "待分类"]
+body:
+  - type: markdown
+    attributes:
+      value: 欢迎提交功能需求。先搜索已有及已关闭issue，一条需求聚焦一个主题；是否采纳及排期取决于可行性和验证。
+  - type: input
+    id: platform
+    attributes:
+      label: 涉及的平台和当前版本
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: 使用场景与要解决的问题
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 希望的操作和效果
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: 参考、替代方案和截图

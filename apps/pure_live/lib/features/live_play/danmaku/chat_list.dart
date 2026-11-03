@@ -872,14 +872,16 @@ class ChatLineView extends StatelessWidget {
     if (fans.isEmpty) return const [];
     final level = message.fansLevel.trim();
     final scheme = theme.colorScheme;
-    final douyuColor = platform == SiteIds.douyu
+    final tierColor = platform == SiteIds.douyu
         ? douyuFanBadgeColor(int.tryParse(level) ?? 0, dark: theme.brightness == Brightness.dark)
+        : platform == SiteIds.huya
+        ? huyaFanBadgeColor(int.tryParse(level) ?? 0, dark: theme.brightness == Brightness.dark)
         : null;
     Color native(LiveMessageColor color) => Color.fromARGB(255, color.r, color.g, color.b);
     final colors = message.fansColors;
     final nativeStart = colors == null ? null : native(colors.start);
     final nativeEnd = colors?.end == null ? nativeStart : native(colors!.end!);
-    final chipBackground = nativeStart ?? douyuColor?.withValues(alpha: 0.16) ?? scheme.primary;
+    final chipBackground = nativeStart ?? tierColor?.withValues(alpha: 0.16) ?? scheme.primary;
     final lightest = nativeStart == null
         ? 0.0
         : [nativeStart.computeLuminance(), nativeEnd!.computeLuminance()].reduce((a, b) => a > b ? a : b);
@@ -888,9 +890,9 @@ class ChatLineView extends StatelessWidget {
         : [nativeStart.computeLuminance(), nativeEnd!.computeLuminance()].reduce((a, b) => a < b ? a : b);
     final chipInk = nativeStart != null
         ? ((darkest + 0.05) / 0.05 >= 1.05 / (lightest + 0.05) ? OnVideoColors.ground : OnVideoColors.foreground)
-        : douyuColor == null
+        : tierColor == null
         ? scheme.onPrimary
-        : _readableOn(douyuColor, Color.alphaBlend(chipBackground, background));
+        : _readableOn(tierColor, Color.alphaBlend(chipBackground, background));
     return [
       chatInline(
         ChatChip(

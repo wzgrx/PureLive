@@ -849,6 +849,12 @@ void main() {
     expect(find.descendant(of: row, matching: find.textContaining('热门频道')), findsOneWidget);
     expect(find.byKey(const ValueKey('iptv-in-use-$hotId')), findsOneWidget);
     expect(find.text('热门显示中'), findsOneWidget);
+    final card = find.byKey(const ValueKey('iptv-card-$hotId'));
+    expect(card, findsOneWidget);
+    final decoration =
+        tester.widget<DecoratedBox>(find.descendant(of: card, matching: find.byType(DecoratedBox)).first).decoration
+            as BoxDecoration;
+    expect(decoration.border, isNull, reason: 'The current source tag must not paint a persistent selection box');
 
     await _tap(tester, row);
     expect(find.textContaining('在热门 → 网络顶上也能直接切换'), findsOneWidget);
