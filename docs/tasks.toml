@@ -7985,3 +7985,17 @@ done = 3
 note = "PR合并目标状态；冻结源码与模拟器验收见verify.md，原设备/账号边界保留，不声明匿名全名全景恢复。"
 date = "2026-11-03"
 commit = "6a15c6a6eb65098c72a224410f3778a39ecaee40"
+
+[[task]]
+id = "A15.4"
+title = "回放第五版竖横屏与测试预览"
+type = "界面"
+status = "待真机"
+size = "大"
+tier = 1
+from = "用户确认第五版回放原型并要求构建发布测试版本"
+branch = "ai/A15.4-replay-v5"
+date = "2026-11-03"
+next = "第五版Android预览交付；物理手机、电视遥控器及听音仍待验。"
+note = "最终all/14完整门禁、双ABI构建、签名/安装哈希和B站隔离模拟器通过；仅v4dev预览，稳定通道保持5.6.1。"
+commit = "7f074ebe25a3698a45e78cefb4eb33a827ca43a0"

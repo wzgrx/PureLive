@@ -263,10 +263,14 @@ final class FakeEngine implements PlayerEngine, VolumeGainControl, PlaybackRate 
   /// Whether the session released it.
   bool disposed = false;
 
+  /// Optional delayed native cleanup for ownership tests.
+  Future<void> Function()? onDispose;
+
   @override
-  Future<void> dispose() {
+  Future<void> dispose() async {
     disposed = true;
-    return _events.close();
+    await _events.close();
+    await onDispose?.call();
   }
 }
 

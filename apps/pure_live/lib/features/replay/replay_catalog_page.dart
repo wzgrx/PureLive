@@ -13,9 +13,9 @@ import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/rooms/archive/archive_player_page.dart';
+import 'package:pure_live/shared/rooms/archive/archive_recording.dart';
 import 'package:pure_live/shared/rooms/archive/archive_time.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
-import 'package:pure_live/tv/widgets/tv_focusable.dart';
 
 /// Platforms with an implemented, official creator archive contract.
 const replayPlatforms = <String>[SiteIds.huya, SiteIds.douyu, SiteIds.bilibili];
@@ -46,13 +46,16 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
   int _page = 0;
   bool _busy = false;
   bool _opening = false;
+  Future<void> _retirement = Future.value();
   bool _more = false;
   Object? _error;
   CancelToken? _cancel;
-  List<_Entry> _entries = const [];
+  List<ArchiveRecording> _entries = const [];
   List<ReplayCollection> _collections = const [];
   ReplayCollection? _collection;
   Map<String, Duration> _positions = const {};
+  final Map<String, int> _partNumbers = {};
+  String? _dateFilter;
   @override
   void initState() {
     super.initState();
@@ -88,6 +91,7 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
       _positions = const {};
       _collections = const [];
       _collection = null;
+      _dateFilter = null;
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
     try {
@@ -106,7 +110,7 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
           final video = detail.video;
           _author = video.authorId;
           _entries = [
-            _Entry(
+            ArchiveRecording(
               video,
               title: video.title,
               cover: video.cover,
@@ -183,20 +187,20 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
       _error = null;
     });
     try {
-      List<_Entry> next;
+      List<ArchiveRecording> next;
       bool more;
       if (_platform == SiteIds.huya) {
         final result = await ref.read(huyaArchiveProvider).list(_author, page: page, cancel: cancel);
         next = [
           for (final v in result.videos)
-            _Entry(v, title: v.title, cover: v.cover, date: DateTime.tryParse(v.date), duration: v.duration),
+            ArchiveRecording(v, title: v.title, cover: v.cover, date: DateTime.tryParse(v.date), duration: v.duration),
         ];
         more = result.hasMore;
       } else if (_platform == SiteIds.douyu) {
         final result = await ref.read(douyuVodProvider).author(_author, page: page, cancel: cancel);
         next = [
           for (final v in result.videos)
-            _Entry(v, title: v.title, cover: v.cover, date: v.publishedAt?.toLocal(), duration: v.duration),
+            ArchiveRecording(v, title: v.title, cover: v.cover, date: v.publishedAt?.toLocal(), duration: v.duration),
         ];
         more = result.hasMore;
       } else {
@@ -205,7 +209,7 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
             .list(int.parse(_author), _collection!, page: page, cancel: cancel);
         next = [
           for (final v in result.items)
-            _Entry(v, title: v.title, cover: v.cover, date: v.publishedAt?.toLocal(), duration: v.duration),
+            ArchiveRecording(v, title: v.title, cover: v.cover, date: v.publishedAt?.toLocal(), duration: v.duration),
         ];
         more = result.hasMore;
       }
@@ -245,11 +249,12 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
     if (mounted && g == _generation) setState(() => _positions = positions);
   }
 
-  Future<void> _play(_Entry entry) async {
+  Future<void> _play(ArchiveRecording entry) async {
     if (_opening) return;
     setState(() => _opening = true);
     final g = _generation;
     try {
+      await _retirement;
       await widget.beforePlay?.call();
       if (!mounted || g != _generation) return;
       await Navigator.of(context).push<void>(
@@ -258,10 +263,21 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
             videoId: entry.id,
             archiveVideo: entry.video is HuyaArchiveVideo ? entry.video as HuyaArchiveVideo : null,
             bilibiliVideo: entry.video is VodArchive ? entry.video as VodArchive : null,
-            onRetire: widget.onRetire,
+            onRetire: (future) {
+              _retirement = future;
+              widget.onRetire?.call(future);
+            },
+            recordings: List.unmodifiable(_entries),
+            room: _input.text.trim() == widget.room?.roomId ? widget.room : null,
+            onProgress: (id, part, position) {
+              // The player can report its last segment from dispose while the
+              // widget tree is locked. The catalog refreshes after retirement.
+              if (part != null) _partNumbers[id] = part;
+            },
           ),
         ),
       );
+      await _retirement;
       if (mounted && g == _generation) await _readPositions(g);
     } on Object {
       if (mounted) AppNavigator.toast(i18n('replay_open_failed'));
@@ -270,19 +286,60 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
     }
   }
 
+  String _day(DateTime date) => '${date.year}-${date.month}-${date.day}';
+  Future<void> _other() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ReplayCatalogPage(
+          beforePlay: widget.beforePlay,
+          onRetire: (future) {
+            _retirement = future;
+            widget.onRetire?.call(future);
+          },
+        ),
+      ),
+    );
+    await _retirement;
+  }
+
+  String _resumeLabel(ArchiveRecording entry) {
+    final position = vodTime(_positions[entry.id] ?? Duration.zero);
+    final part = _partNumbers[entry.id];
+    return i18n(
+      part != null
+          ? 'archive_resume_part'
+          : entry.video is VodArchive
+          ? 'archive_part_resume_position'
+          : 'replay_position',
+      args: {'index': '${part ?? 1}', 'position': position},
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tv = UiMode.parse(watchSetting(ref, Settings.uiMode))
         .showsTv(television: ref.watch(televisionDeviceProvider));
     final resume = _entries.where((e) => (_positions[e.id] ?? Duration.zero) > Duration.zero).firstOrNull;
+    final dates = <String, DateTime>{
+      for (final entry in _entries)
+        if (entry.date != null) _day(entry.date!): entry.date!,
+    };
+    final visible = _dateFilter == null
+        ? _entries
+        : _entries.where((e) => e.date != null && _day(e.date!) == _dateFilter).toList();
     return Scaffold(
       key: const ValueKey('replay-catalog-page'),
       appBar: AppBar(
-        title: Text(
-          widget.room?.nick.isNotEmpty == true && _input.text.trim() == widget.room?.roomId
-              ? widget.room!.nick
-              : i18n('replay_title'),
-        ),
+        title: Text(widget.room?.nick.isNotEmpty == true ? widget.room!.nick : i18n('replay_title')),
+        actions: [
+          if (widget.room != null)
+            IconButton(
+              key: const ValueKey('replay-open-query'),
+              tooltip: i18n('archive_open_query'),
+              icon: const Icon(AppIcons.openLink),
+              onPressed: () => unawaited(_other()),
+            ),
+        ],
       ),
       body: SafeArea(
         child: Center(
@@ -291,17 +348,9 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
             child: ListView(
               key: const ValueKey('replay-catalog-list'),
               controller: _scroll,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
-                if (widget.room != null)
-                  Row(
-                    children: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: Text(i18n('replay_back_live'))),
-                      const SizedBox(width: 12),
-                      Text(i18n('replay_title'), style: Theme.of(context).textTheme.titleMedium),
-                    ],
-                  ),
-                if (widget.room == null)
+                if (widget.room == null) ...[
                   Wrap(
                     spacing: 8,
                     children: [
@@ -319,86 +368,139 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
                                     _platform = platform;
                                     _author = '';
                                     _entries = const [];
+                                    _positions = const {};
                                     _collections = const [];
                                     _collection = null;
                                     _page = 0;
                                     _more = false;
                                     _error = null;
+                                    _dateFilter = null;
                                     _input.clear();
                                   });
                                 },
                         ),
                     ],
                   ),
-                const SizedBox(height: 12),
-                if (tv)
-                  TvInputField(
-                    key: const ValueKey('replay-room-input'),
-                    text: _input.text,
-                    hint: i18n('replay_input'),
-                    title: i18n('replay_title'),
-                    icon: AppIcons.openLink,
-                    onSubmitted: (text) {
-                      _input.text = text;
-                      unawaited(_submit());
-                    },
-                  )
-                else
-                  TextField(
-                    key: const ValueKey('replay-room-input'),
-                    controller: _input,
-                    decoration: InputDecoration(
-                      labelText: i18n('replay_input'),
-                      helperText: i18n('replay_input_hint'),
-                      suffixIcon: IconButton(
-                        tooltip: i18n('replay_load'),
-                        onPressed: _busy ? null : () => unawaited(_submit()),
-                        icon: const Icon(AppIcons.forward),
-                      ),
-                    ),
-                    onSubmitted: (_) => unawaited(_submit()),
-                  ),
-                const SizedBox(height: 20),
-                if (_collections.length > 1)
-                  DropdownButtonFormField<String>(
-                    key: const ValueKey('replay-collection'),
-                    initialValue: _collection?.key,
-                    isExpanded: true,
-                    decoration: InputDecoration(labelText: i18n('replay_collection')),
-                    items: [
-                      for (final c in _collections)
-                        DropdownMenuItem(
-                          value: c.key,
-                          child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 12),
+                  if (tv)
+                    TvInputField(
+                      key: const ValueKey('replay-room-input'),
+                      text: _input.text,
+                      hint: i18n('replay_input'),
+                      title: i18n('replay_title'),
+                      icon: AppIcons.openLink,
+                      onSubmitted: (text) {
+                        _input.text = text;
+                        unawaited(_submit());
+                      },
+                    )
+                  else
+                    TextField(
+                      key: const ValueKey('replay-room-input'),
+                      controller: _input,
+                      decoration: InputDecoration(
+                        labelText: i18n('replay_input'),
+                        helperText: i18n('replay_input_hint'),
+                        suffixIcon: IconButton(
+                          tooltip: i18n('replay_load'),
+                          onPressed: _busy ? null : () => unawaited(_submit()),
+                          icon: const Icon(AppIcons.forward),
                         ),
-                    ],
-                    onChanged: _busy
-                        ? null
-                        : (key) {
-                            _generation++;
-                            _cancel?.cancel();
-                            _cancel = CancelToken();
-                            setState(() {
-                              _collection = _collections.firstWhere((c) => c.key == key);
-                              _entries = const [];
-                              _positions = const {};
-                              _page = 0;
-                              _more = false;
-                            });
-                            unawaited(_load());
-                          },
+                      ),
+                      onSubmitted: (_) => unawaited(_submit()),
+                    ),
+                  const SizedBox(height: 16),
+                ] else
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(i18n('replay_title'), style: context.textStyles.t14),
+                        Text(
+                          i18n('archive_recording_dates'),
+                          style: context.textStyles.t12.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_collections.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: DropdownButtonFormField<String>(
+                      key: const ValueKey('replay-collection'),
+                      initialValue: _collection?.key,
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: i18n('replay_collection')),
+                      items: [
+                        for (final c in _collections)
+                          DropdownMenuItem(
+                            value: c.key,
+                            child: Text(c.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                      ],
+                      onChanged: _busy
+                          ? null
+                          : (key) {
+                              _generation++;
+                              _cancel?.cancel();
+                              _cancel = CancelToken();
+                              setState(() {
+                                _collection = _collections.firstWhere((c) => c.key == key);
+                                _entries = const [];
+                                _positions = const {};
+                                _page = 0;
+                                _more = false;
+                                _dateFilter = null;
+                              });
+                              unawaited(_load());
+                            },
+                    ),
                   ),
                 if (resume != null)
-                  ListTile(
-                    key: const ValueKey('replay-resume'),
-                    leading: const Icon(AppIcons.play),
-                    title: Text(i18n('replay_continue')),
-                    subtitle: Text(
-                      '${resume.title}\n${vodTime(_positions[resume.id]!)}',
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      border: Border(left: BorderSide(width: 2, color: Theme.of(context).colorScheme.primary)),
                     ),
-                    onTap: _opening ? null : () => unawaited(_play(resume)),
+                    child: ListTile(
+                      key: const ValueKey('replay-resume'),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      title: Text(
+                        archiveDisplayTitle(resume.title, author: resume.author),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.t14,
+                      ),
+                      subtitle: Text(_resumeLabel(resume)),
+                      trailing: const Icon(AppIcons.play),
+                      onTap: _opening ? null : () => unawaited(_play(resume)),
+                    ),
+                  ),
+                if (dates.length > 1)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          ChoiceChip(
+                            label: Text(i18n('archive_all_dates')),
+                            selected: _dateFilter == null,
+                            onSelected: (_) => setState(() => _dateFilter = null),
+                          ),
+                          for (final item in dates.entries.take(6))
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: ChoiceChip(
+                                label: Text('${item.value.month}.${item.value.day}'),
+                                selected: _dateFilter == item.key,
+                                onSelected: (_) => setState(() => _dateFilter = item.key),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 if (_busy)
                   const Padding(
@@ -429,20 +531,20 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
                       ],
                     ),
                   ),
-                if (_entries.isEmpty && !_busy && _error == null)
+                if (visible.isEmpty && !_busy && _error == null)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 32),
                     child: Text(i18n(_author.isEmpty ? 'replay_enter' : 'replay_empty')),
                   ),
-                for (final entry in _entries) ...[
+                for (final entry in visible) ...[
                   _ArchiveRow(
-                    tv: tv,
-                    autofocus: tv && identical(entry, _entries.first),
                     entry: entry,
                     position: _positions[entry.id],
                     onTap: _opening ? null : () => unawaited(_play(entry)),
+                    tv: tv,
+                    autofocus: tv && identical(entry, visible.first),
                   ),
-                  const Divider(height: 24),
+                  const Divider(height: 12),
                 ],
                 if (_more)
                   Center(
@@ -461,21 +563,6 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
   }
 }
 
-class _Entry {
-  const new(this.video, {required this.title, required this.cover, required this.date, required this.duration});
-  final Object video;
-  final String title;
-  final String cover;
-  final DateTime? date;
-  final Duration duration;
-  String get id => switch (video) {
-    final HuyaArchiveVideo v => v.id,
-    final DouyuVodVideo v => v.id,
-    final VodArchive v => v.bvid,
-    _ => throw StateError('Unknown archive'),
-  };
-}
-
 class _ArchiveRow extends StatelessWidget {
   const new({
     required this.entry,
@@ -484,80 +571,18 @@ class _ArchiveRow extends StatelessWidget {
     this.tv = false,
     this.autofocus = false,
   });
-  final _Entry entry;
+  final ArchiveRecording entry;
   final Duration? position;
   final VoidCallback? onTap;
   final bool tv;
   final bool autofocus;
   @override
-  Widget build(BuildContext context) {
-    final date = entry.date;
-    final scheme = Theme.of(context).colorScheme;
-    final row = InkWell(
-      key: tv ? null : ValueKey('replay-recording-${entry.id}'),
-      onTap: tv ? null : onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (date != null)
-              SizedBox(
-                width: 60,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${date.month}/${date.day}',
-                      style: Theme.of(context).textTheme.titleLarge
-                          ?.copyWith(color: scheme.primary, fontWeight: FontWeight.w600),
-                    ),
-                    Text('${date.year}', style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-            if (entry.cover.isNotEmpty) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Image.network(
-                  entry.cover,
-                  width: 80,
-                  height: 50,
-                  cacheWidth: 240,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox(width: 80, height: 50, child: Icon(AppIcons.play)),
-                ),
-              ),
-              const SizedBox(width: 12),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(entry.title, maxLines: 3, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 8),
-                  Text(vodTime(entry.duration), style: Theme.of(context).textTheme.bodySmall),
-                  if (position != null && position! > Duration.zero)
-                    Text(
-                      i18n('replay_position', args: {'position': vodTime(position!)}),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.primary),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    return tv
-        ? TvFocusable(
-            key: ValueKey('replay-recording-${entry.id}'),
-            autofocus: autofocus,
-            zoom: false,
-            onTap: onTap,
-            builder: (_, _) => row,
-          )
-        : row;
-  }
+  Widget build(BuildContext context) => ArchiveRecordingTile(
+    key: ValueKey('replay-recording-${entry.id}'),
+    recording: entry,
+    position: position,
+    onTap: onTap,
+    tv: tv,
+    autofocus: autofocus,
+  );
 }
