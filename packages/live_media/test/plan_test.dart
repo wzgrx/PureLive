@@ -196,6 +196,31 @@ void main() {
       expect(engineProxyUrl(const FixedProxyPolicy(), 'douyu', Uri.parse('https://x.test')), '');
     });
 
+    test('controller-owned HTTP loopback lines bypass the site proxy and stay private', () async {
+      const policy = FixedProxyPolicy(global: HttpProxyRoute('proxy.test', 7897));
+      final opener = MediaOpener(proxy: policy);
+      addTearDown(opener.close);
+      for (final host in ['127.0.0.1', '127.2.3.4', '[::1]', 'localhost']) {
+        final uri = Uri.parse('http://$host:43210/private-entry/master.m3u8');
+        final input = await opener.open(LineSource(LivePlayLine(uri.toString())), site: 'huya', onDemand: true);
+        expect(input.uri, uri);
+        expect(input.proxyUrl, isEmpty, reason: '$host must reach the device relay');
+        expect(input.private, isTrue, reason: 'local capability URLs must not be logged');
+        expect(engineProxyUrl(policy, 'huya', uri), isEmpty);
+        await input.close();
+      }
+      for (final url in [
+        'https://127.0.0.1.example.test/a.m3u8',
+        'https://localhost.example.test/a.m3u8',
+        'https://127.0.0.1@cdn.test/a.m3u8',
+      ]) {
+        final input = await opener.open(LineSource(LivePlayLine(url)), site: 'huya');
+        expect(input.proxyUrl, 'http://proxy.test:7897');
+        expect(input.private, isFalse);
+        await input.close();
+      }
+    });
+
     test('a recipe without an opener is unsupported', () async {
       final opener = MediaOpener(relay: () => throw StateError('no relay needed'));
       await expectLater(

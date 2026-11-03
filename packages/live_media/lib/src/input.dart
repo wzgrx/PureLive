@@ -219,7 +219,7 @@ final class _DirectInput implements MediaInput {
   Map<String, String> get headers => line.headers;
 
   @override
-  bool get private => false;
+  bool get private => isLoopbackMediaUri(uri);
 
   @override
   bool get isUsable => !_closed;
