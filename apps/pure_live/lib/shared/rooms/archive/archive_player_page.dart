@@ -656,7 +656,7 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
                               height: 48,
                               child: Row(
                                 children: [
-                                  Flexible(
+                                  Expanded(
                                     child: Text(
                                       key: const ValueKey('archive-video-clock'),
                                       '${vodTime(Duration(milliseconds: position.round()))} / ${vodTime(duration)}',
@@ -664,7 +664,6 @@ class _ArchivePlayerPageState extends ConsumerState<ArchivePlayerPage> with Widg
                                       style: context.textStyles.t12.copyWith(color: OnVideoColors.foreground),
                                     ),
                                   ),
-                                  const Spacer(),
                                   if (immersive) ...[
                                     _videoText(
                                       archiveRateLabel(_controller.rate),

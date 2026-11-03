@@ -116,6 +116,7 @@ void main() {
     expect(engine.opens, hasLength(1));
     expect(engine.opens.first.onDemand, isTrue);
     expect(find.byKey(const ValueKey('archive-rate')), findsOneWidget);
+    expect(tester.getRect(find.byKey(const ValueKey('vod-fullscreen'))).right, 381);
     await tester.tap(find.byKey(const ValueKey('archive-rate')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('archive-rate-1.75')));
