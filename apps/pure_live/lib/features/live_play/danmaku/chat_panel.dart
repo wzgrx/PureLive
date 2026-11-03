@@ -8,6 +8,7 @@ import 'package:pure_live/features/live_play/danmaku/super_chats.dart';
 import 'package:pure_live/features/live_play/layout/room_view_memory.dart';
 import 'package:pure_live/features/live_play/local_interaction/local_composer.dart';
 import 'package:pure_live/features/live_play/logic/room_controller.dart';
+import 'package:pure_live/features/live_play/replay/room_replay_controls.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/danmaku/block_manager.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
@@ -47,11 +48,13 @@ class ChatPanel extends StatefulWidget {
   State<ChatPanel> createState() => _ChatPanelState();
 }
 
-class _ChatPanelState extends State<ChatPanel> with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(
-    length: 4,
+class _ChatPanelState extends State<ChatPanel> with TickerProviderStateMixin {
+  late bool _archiveMode = widget.controller.isArchive;
+  late TabController _tabs = _newTabs();
+  TabController _newTabs() => TabController(
+    length: _archiveMode ? 5 : 4,
     vsync: this,
-    initialIndex: (widget.memory?.chatTab ?? 0).clamp(0, 3),
+    initialIndex: (widget.memory?.chatTab ?? 0).clamp(0, _archiveMode ? 4 : 3),
     animationDuration: pureLiveTabTransitionDuration,
   )..addListener(_keepTab);
 
@@ -72,6 +75,12 @@ class _ChatPanelState extends State<ChatPanel> with SingleTickerProviderStateMix
   @override
   void didUpdateWidget(ChatPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (_archiveMode != widget.controller.isArchive) {
+      _tabs.dispose();
+      _archiveMode = widget.controller.isArchive;
+      widget.memory?.chatTab = 0;
+      _tabs = _newTabs();
+    }
     if (widget.detailsOpen && !oldWidget.detailsOpen) _unreadFrom = widget.controller.chat.added;
   }
 
@@ -91,14 +100,16 @@ class _ChatPanelState extends State<ChatPanel> with SingleTickerProviderStateMix
       TabBar(
         key: const ValueKey('live-play-tabs'),
         controller: _tabs,
-        tabAlignment: TabAlignment.fill,
+        isScrollable: _archiveMode,
+        tabAlignment: _archiveMode ? TabAlignment.start : TabAlignment.fill,
         labelPadding: const EdgeInsets.symmetric(horizontal: 4),
         onTap: (index) {
-          if (index == 0) _seen();
+          if (index == (_archiveMode ? 1 : 0)) _seen();
         },
         // B09 c9: the app's tab labels (U.1c c12: the badge, the keyboard
         // frame; a narrow column shrinks the tab instead of cutting it).
         tabs: [
+          if (_archiveMode) TabLabel(label: i18n('archive_tab_label')),
           ListenableSelector<int>(
             // The feed tells of new lines at most once a frame (B08).
             listenable: widget.controller.chat,
@@ -128,22 +139,30 @@ class _ChatPanelState extends State<ChatPanel> with SingleTickerProviderStateMix
           controller: _tabs,
           physics: const PureLivePageScrollPhysics(),
           children: [
+            if (_archiveMode) RoomReplayLibrary(controller: widget.controller, withComposer: true),
             // U.2k-a: the local danmaku composer under the list (while the
             // local interaction is on).
             LocalComposerBelow(
               collapsed: widget.composerCollapsed,
-              child: ChatList(
-                controller: widget.controller,
-                onTouched: _seen,
-                memory: widget.memory,
-                buttonInset: widget.composerCollapsed ? LocalComposerBelow.starInset : 0,
-              ),
+              child: _archiveMode && widget.controller.archive?.supportsDanmaku != true
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(i18n('archive_history_unavailable')),
+                      ),
+                    )
+                  : ChatList(
+                      controller: widget.controller,
+                      onTouched: _seen,
+                      memory: widget.memory,
+                      buttonInset: widget.composerCollapsed ? LocalComposerBelow.starInset : 0,
+                    ),
             ),
             // Rebuilt only when the super chats change; one clock inside
             // moves the times on (U.2e c6).
             SuperChatReadScope(
               controller: widget.controller,
-              visible: _tabs.index == 1 && !widget.detailsOpen,
+              visible: _tabs.index == (_archiveMode ? 2 : 1) && !widget.detailsOpen,
               child: ListenableSelector<List<LiveSuperChatMessage>>(
                 listenable: widget.controller,
                 selector: () => widget.controller.superChats,

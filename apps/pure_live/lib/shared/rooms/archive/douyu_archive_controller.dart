@@ -12,7 +12,13 @@ import 'package:pure_live/shared/rooms/archive_playback.dart';
 /// comment requests. The session retains its normal transport/recovery policy.
 final class DouyuVodController extends ArchivePlaybackController {
   /// Owns [session]; [source] and local [progress] remain app-owned.
-  new({required this.source, required this.session, required this.progress, this.initialVolume = 1}) {
+  new({
+    required this.source,
+    required this.session,
+    required this.progress,
+    this.ownsSession = true,
+    this.initialVolume = 1,
+  }) {
     _states = session.states.listen(_onState);
   }
 
@@ -31,6 +37,9 @@ final class DouyuVodController extends ArchivePlaybackController {
 
   /// Same initial volume as the app's playback preference.
   final double initialVolume;
+
+  /// False when the live-room runtime owns the shared native session.
+  final bool ownsSession;
 
   DouyuVodDetail? _detail;
   CancelToken? _cancel;
@@ -347,7 +356,7 @@ final class DouyuVodController extends ArchivePlaybackController {
     _cancel?.cancel();
     _timeline?.dispose();
     unawaited(_states?.cancel());
-    _retirement = Future.wait<void>([session.dispose(), saved]).then((_) {});
+    _retirement = Future.wait<void>([if (ownsSession) session.dispose(), saved]).then((_) {});
     unawaited(_retirement);
     unawaited(_messages.close());
     unawaited(_retractions.close());

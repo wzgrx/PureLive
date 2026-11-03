@@ -61,6 +61,9 @@ abstract class ArchivePlaybackController extends ChangeNotifier {
   /// Whether this source exposes a verified comment timeline.
   bool get supportsDanmaku => false;
 
+  /// A single external player URL would omit the separate DASH audio.
+  bool get requiresExternalAudio => false;
+
   /// Current comment visibility.
   bool get danmakuVisible => false;
 

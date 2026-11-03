@@ -20,6 +20,7 @@ import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/app/desktop/mini_window.dart';
 import 'package:pure_live/app/services.dart';
+import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/features/live_play/live_play_page.dart';
 import 'package:pure_live/features/live_play/logic/background_playback.dart';
 import 'package:pure_live/features/live_play/logic/mini_window.dart';
@@ -38,8 +39,10 @@ import 'package:pure_live/routes/route_observer.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/danmaku/danmaku_overlay.dart';
 import 'package:pure_live/shared/danmaku/emotes.dart';
+import 'package:pure_live/shared/rooms/archive/archive_recording.dart';
 
 import '../../support.dart';
+import '../replay/replay_test_support.dart' as replay;
 import 'live_play_support.dart';
 
 /// A platform whose detail can be held back ([hold]) to see the room load.
@@ -246,6 +249,50 @@ final class _FakeHost implements MiniWindowHost {
 }
 
 void main() {
+  testWidgets('replay floats and restores the original session with pause, position and rate', (tester) async {
+    final app = await _app(tester, overrides: [bilibiliReplayProvider.overrideWithValue(replay.FakeBiliReplay())]);
+    await _openRoom(tester);
+    final controller = FloatingRoomProbe.controllerOf(tester);
+    final session = controller.session;
+    final entering = controller.playArchive(
+      ArchiveSelection(
+        recording: const ArchiveRecording(
+          replay.archive,
+          title: 'Replay',
+          cover: '',
+          date: null,
+          duration: Duration(hours: 5),
+        ),
+        room: controller.room,
+      ),
+    );
+    await _settle(tester, rounds: 10);
+    await entering;
+    await _settle(tester);
+    await tester.runAsync(() async {
+      await controller.archive!.setRate(2);
+      app.engine.emit(const EnginePosition(Duration(seconds: 42)));
+      await controller.session.pause();
+    });
+    await _settle(tester);
+    expect(app.engines, hasLength(1));
+    expect(app.engine.opens, hasLength(2));
+    await _leaveRoom(tester, app);
+    expect(FloatingRoom.instance.runtime?.session, same(session));
+    expect(FloatingRoom.instance.runtime?.controller.archive?.rate, 2);
+    expect(session.state.status, PlaybackStatus.paused);
+    await _openRoom(tester);
+    final restored = FloatingRoomProbe.controllerOf(tester);
+    expect(restored, same(controller));
+    expect(restored.session, same(session));
+    expect(restored.archive?.rate, 2);
+    expect(restored.session.state.status, PlaybackStatus.paused);
+    expect(restored.session.state.position, const Duration(seconds: 42));
+    expect(app.engines, hasLength(1));
+    expect(app.engine.opens, hasLength(2));
+    expect(tester.takeException(), isNull);
+    await _close(tester, app);
+  });
   tearDown(() async {
     PictureInPicture.active.value = false;
     PictureInPicture.debugAndroid = null;

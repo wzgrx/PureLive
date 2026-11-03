@@ -369,42 +369,31 @@ class RoomMenuButton extends ConsumerWidget {
         _archiveVisits[controller] = true;
         final navigator = Navigator.of(context);
         final session = controller.session;
-        final identity = room.identityKey;
+        final identity = controller.room.identityKey;
         final wasPlaying = session.state.status == PlaybackStatus.playing;
-        var stopped = false;
-        var retired = false;
+        var selected = false;
         try {
           if (wasPlaying) await session.pause();
           if (!navigator.mounted) return;
-          retired = await openReplayArchives(
+          final choice = await pickReplayArchive(
             navigator.context,
-            room: room,
-            beforePlay: () async {
-              if (stopped || controller.isDisposed || controller.room.identityKey != identity) return;
-              await session.stop();
-              stopped = true;
-            },
+            controller.isArchive ? controller.archiveSelection!.room : room,
           );
+          if (choice != null && !controller.isDisposed && controller.room.identityKey == identity) {
+            selected = true;
+            await controller.playArchive(choice);
+          }
         } finally {
-          try {
-            final sameRoom =
-                navigator.mounted &&
-                !controller.isDisposed &&
-                identical(controller.session, session) &&
-                controller.room.identityKey == identity;
-            final foreground =
-                WidgetsBinding.instance.lifecycleState == null ||
-                WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
-            if (sameRoom && foreground) {
-              if (retired && stopped && session.state.status == PlaybackStatus.stopped) {
-                await controller.load();
-                if (!wasPlaying && !controller.isDisposed) await session.pause();
-              } else if (!stopped && wasPlaying && session.state.status == PlaybackStatus.paused) {
-                await session.resume();
-              }
-            }
-          } finally {
-            _archiveVisits[controller] = false;
+          _archiveVisits[controller] = false;
+          if (!selected &&
+              navigator.mounted &&
+              !controller.isDisposed &&
+              controller.room.identityKey == identity &&
+              wasPlaying &&
+              session.state.status == PlaybackStatus.paused &&
+              (WidgetsBinding.instance.lifecycleState == null ||
+                  WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed)) {
+            await session.resume();
           }
         }
       case RoomMenuEntry.videoFit:
@@ -429,6 +418,10 @@ class RoomMenuButton extends ConsumerWidget {
       case RoomMenuEntry.localInteraction:
         RoomPanelScope.maybeOf(context)?.open(RoomPanelKind.localInteraction);
       case RoomMenuEntry.newWindow:
+        if (controller.isArchive) {
+          AppNavigator.toast(i18n('archive_new_window_unavailable'));
+          return;
+        }
         // It says "新窗口启动失败，请重试" itself when the window does not start.
         await DesktopWindow.openNewWindow(room: room);
     }

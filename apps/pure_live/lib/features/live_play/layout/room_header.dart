@@ -74,40 +74,53 @@ class _RoomHeaderState extends ConsumerState<RoomHeader> {
     final recording = ref.watch(recordingProvider);
     final task = iptv || recording == null || !recording.available ? null : recording.taskFor(controller.room);
     final recordable = !iptv && (recording?.available ?? false);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final follow = _pillWidth(context, i18n('followed'));
-        final record = !recordable
-            ? 0.0
-            : autoRecordOn(task) && !task!.status.isActive
-            ? _pillWidth(context, i18n('live_play_auto_record'))
-            : kMinInteractiveDimension;
-        final compact = constraints.maxWidth - follow - record - kMinInteractiveDimension - 4 < roomHeaderTitleMinWidth;
-        return Row(
-          children: [
-            Expanded(
-              child: RoomTitle(controller: controller, onTap: widget.onDetails),
-            ),
-            // Rebuilt when the room changes identity, not for every chat
-            // message; a tap reads the room as it is then.
-            ListenableSelector<String>(
-              listenable: controller,
-              selector: () => controller.room.identityKey,
-              builder: (context, _, _) =>
-                  FollowButton(room: controller.room, latest: () => controller.room, compact: compact),
-            ),
-            if (!iptv)
-              ListenableSelector<String>(
-                listenable: controller,
-                selector: () => controller.room.identityKey,
-                builder: (context, _, _) =>
-                    RecordButton(room: controller.room, latest: () => controller.room, compact: compact),
+    return ListenableSelector<(bool, bool)>(
+      listenable: controller,
+      selector: () => (controller.isArchive, controller.archiveSelection?.room != null),
+      builder: (context, _, _) => LayoutBuilder(
+        builder: (context, constraints) {
+          final follow = _pillWidth(context, i18n('followed'));
+          final record = !recordable
+              ? 0.0
+              : autoRecordOn(task) && !task!.status.isActive
+              ? _pillWidth(context, i18n('live_play_auto_record'))
+              : kMinInteractiveDimension;
+          final compact =
+              constraints.maxWidth - follow - record - kMinInteractiveDimension - 4 < roomHeaderTitleMinWidth;
+          return Row(
+            children: [
+              Expanded(
+                child: RoomTitle(controller: controller, onTap: widget.onDetails),
               ),
-            RoomMenuButton(controller: controller),
-            const SizedBox(width: 4),
-          ],
-        );
-      },
+              // Rebuilt when the room changes identity, not for every chat
+              // message; a tap reads the room as it is then.
+              if (!controller.isArchive || controller.archiveSelection?.room != null)
+                ListenableSelector<String>(
+                  listenable: controller,
+                  selector: () => controller.room.identityKey,
+                  builder: (context, _, _) => FollowButton(
+                    room: controller.archiveSelection?.room ?? controller.room,
+                    latest: () => controller.archiveSelection?.room ?? controller.room,
+                    compact: compact,
+                  ),
+                ),
+              if (!iptv)
+                ListenableSelector<String>(
+                  listenable: controller,
+                  selector: () => controller.room.identityKey,
+                  builder: (context, _, _) => RecordButton(
+                    room: controller.room,
+                    latest: () => controller.room,
+                    compact: compact,
+                    enabled: !controller.isArchive,
+                  ),
+                ),
+              RoomMenuButton(controller: controller),
+              const SizedBox(width: 4),
+            ],
+          );
+        },
+      ),
     );
   }
 }

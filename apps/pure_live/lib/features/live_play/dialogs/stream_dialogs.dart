@@ -111,7 +111,18 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
     List<String>? urls;
     List<LivePlayLine>? metadata;
     try {
-      final resolution = await _room.site.resolvePlayUrls(detail: _room.room, quality: _room.qualities[index]);
+      final LivePlayUrlResolution resolution;
+      if (_room.isArchive) {
+        if (_room.archive?.requiresExternalAudio == true) {
+          throw StateError('Separate audio requires the owned player');
+        }
+        if (index != _room.qualityIndex) {
+          throw StateError('Select playback quality first');
+        }
+        resolution = LivePlayUrlResolution.lines(_room.session.plan?.lines ?? const []);
+      } else {
+        resolution = await _room.site.resolvePlayUrls(detail: _room.room, quality: _room.qualities[index]);
+      }
       if (resolution.inputRecipe != null) {
         // An owned source plays only inside the app (relay, session seat).
         error = i18n('toolbox_session_source');
@@ -122,7 +133,7 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
         metadata = resolution.lines;
       }
     } on Object {
-      error = i18n('toolbox_get_url_failed');
+      error = i18n(_room.archive?.requiresExternalAudio == true ? 'archive_separate_audio' : 'toolbox_get_url_failed');
     }
     if (!mounted || request != _request) return;
     setState(() {
@@ -256,18 +267,19 @@ class _RoomStreamPanelState extends State<RoomStreamPanel> {
         else ...[
           PanelGroupTitle(i18n('toolbox_select_quality')),
           for (final (index, quality) in qualities.indexed)
-            DialogOptionRow(
-              key: ValueKey('stream-quality-$index'),
-              label: platformQualityName(quality.quality),
-              description: _playingQuality(index) ? i18n('now_playing') : null,
-              selected: _playingQuality(index),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              trailing: _busy && _quality == index
-                  ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : null,
-              enabled: !_busy,
-              onTap: () => unawaited(_resolve(index)),
-            ),
+            if (!_room.isArchive || index == _room.qualityIndex)
+              DialogOptionRow(
+                key: ValueKey('stream-quality-$index'),
+                label: platformQualityName(quality.quality),
+                description: _playingQuality(index) ? i18n('now_playing') : null,
+                selected: _playingQuality(index),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                trailing: _busy && _quality == index
+                    ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : null,
+                enabled: !_busy,
+                onTap: () => unawaited(_resolve(index)),
+              ),
         ],
       ],
     );

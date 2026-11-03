@@ -15,6 +15,7 @@ import 'package:pure_live/app/commands.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/app/network.dart';
 import 'package:pure_live/app/services.dart';
+import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/features/live_play/buttons/room_menu_button.dart';
 import 'package:pure_live/features/live_play/buttons/room_menu_panel.dart';
 import 'package:pure_live/features/live_play/danmaku/chat_list.dart';
@@ -54,6 +55,7 @@ import 'package:pure_live/features/live_play/player/player_controls.dart';
 import 'package:pure_live/features/live_play/player/player_view.dart';
 import 'package:pure_live/features/live_play/player/room_swipe.dart';
 import 'package:pure_live/features/live_play/record/record_panel.dart';
+import 'package:pure_live/features/live_play/replay/room_replay_controls.dart';
 import 'package:pure_live/features/live_play/switch_room/room_switch_panel.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/overlay_window.dart';
@@ -66,6 +68,9 @@ import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/danmaku/emotes.dart';
 import 'package:pure_live/shared/remote/playback_remote.dart';
 import 'package:pure_live/shared/remote/playback_target.dart';
+import 'package:pure_live/shared/rooms/archive/archive_rate_dialog.dart';
+import 'package:pure_live/shared/rooms/archive/archive_recording.dart';
+import 'package:pure_live/shared/rooms/archive/bilibili_archive_controller.dart';
 import 'package:pure_live/shared/rooms/auto_room_switch.dart';
 
 /// The room's clock: the danmaku filter, the gift lines' limit and combo
@@ -232,6 +237,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     OverlayWindow.active.addListener(_overlayShown);
     _swipe = RoomSwipeController(onSwitch: _swipeTo, vsync: this);
     final (room, playlist) = switch (widget.route.arguments) {
+      ArchiveRoomArguments(:final selection) => (selection.presenter, const <LiveRoom>[]),
       LiveRoomArgs(:final room, :final playlist) => (room, playlist),
       final LiveRoom room => (room, const <LiveRoom>[]),
       _ => (null, const <LiveRoom>[]),
@@ -282,6 +288,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       siteOf: ref.read(sitesProvider).maybeOf,
       maySwitch: () =>
           mounted &&
+          !(_controller?.isArchive ?? false) &&
           _controller?.sleepDeadline == null &&
           !(_controller?.sleepTimerFinished ?? false) &&
           (ModalRoute.isCurrentOf(context) ?? true) &&
@@ -310,7 +317,15 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       final key = engineConfigKey(config);
       // The player the last room left, when it is configured the same way.
       final session = standby.take(config: key) ?? ref.read(playbackSessionFactoryProvider)(config: config);
-      runtime = _newRuntime(room, site, session: session, playerConfig: key);
+      runtime = _newRuntime(
+        room,
+        site,
+        session: session,
+        playerConfig: key,
+        initialArchive: widget.route.arguments is ArchiveRoomArguments
+            ? (widget.route.arguments! as ArchiveRoomArguments).selection
+            : null,
+      );
     }
     _attachRoom(runtime);
     final session = runtime.session;
@@ -342,6 +357,9 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       });
     }
     if (adopted == null) unawaited(controller.start());
+    if (widget.route.arguments case final ArchiveRoomArguments args) {
+      args.onRetire?.call(runtime.retirement);
+    }
     // F.1c (3.x `LivePlayBackScope`): Android hands every back to the room
     // while it is open, before Flutter could pop it.
     if (_platform.android) unawaited(RoomBackChannel.instance.hold(this, _nativeBack));
@@ -354,12 +372,25 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     required PlaybackSession session,
     required Object? playerConfig,
     bool initialAudioOnly = false,
+    ArchiveSelection? initialArchive,
   }) {
     final store = ref.read(storeProvider);
     final danmaku = ref.read(danmakuProvider);
+    final sites = ref.read(sitesProvider);
     final controller = LiveRoomController(
       room: room,
       site: site,
+      archiveSiteOf: sites.maybeOf,
+      initialArchive: initialArchive,
+      archiveFactory: roomArchiveFactory(
+        ref,
+        session,
+        firstVolume: initialArchive == null
+            ? null
+            : store.settings.get(Settings.globalVolumeMute)
+            ? 0
+            : store.settings.get(_platform.mobile ? Settings.defaultMobileVolume : Settings.defaultDesktopVolume),
+      ),
       session: session,
       danmaku: danmaku.connectionFor(site.id),
       danmakuSupported: danmaku.supports(site.id),
@@ -421,6 +452,9 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   /// floating window hands back, U.2j) and mini window (U.2j).
   void _attachRoom(RoomRuntime runtime, {bool automatic = false}) {
     _runtime = runtime;
+    if (widget.route.arguments case final ArchiveRoomArguments args) {
+      args.onRetire?.call(runtime.retirement);
+    }
     final controller = _controller = runtime.controller;
     _autoRoomSwitch?.setRoom(controller.room, automatic: automatic);
     controller.addListener(_syncAutoRoomSwitch);
@@ -646,6 +680,15 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       ..removeListener(_onPanel)
       ..dispose();
     final runtime = _runtime;
+    if (widget.route.arguments case final ArchiveRoomArguments args when runtime != null) {
+      final archive = runtime.controller.archive;
+      final video = archive?.video;
+      args.onProgress?.call(
+        runtime.controller.archiveSelection?.recording.id ?? args.selection.recording.id,
+        video is BilibiliArchivePart ? video.part.page : null,
+        archive?.position ?? Duration.zero,
+      );
+    }
     // Handed to the floating window as the page began to close (A07.25 M1).
     if (runtime != null && !_handedOver) {
       final floating = FloatingRoom.instance;
@@ -994,6 +1037,13 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   }
 
   KeyEventResult _roomShortcut(FocusNode node, KeyEvent event) {
+    if (event is KeyDownEvent &&
+        _controller?.isArchive == true &&
+        node.hasPrimaryFocus &&
+        {LogicalKeyboardKey.select, LogicalKeyboardKey.enter}.contains(event.logicalKey)) {
+      unawaited(_controller!.togglePlayback());
+      return KeyEventResult.handled;
+    }
     if (event is! KeyDownEvent || event.logicalKey != LogicalKeyboardKey.keyM) return KeyEventResult.ignored;
     if (ModalRoute.of(context)?.isCurrent != true) return KeyEventResult.ignored;
     final keyboard = HardwareKeyboard.instance;
@@ -1032,7 +1082,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
           const SingleActivator(LogicalKeyboardKey.f11, includeRepeats: false): () {
             if (!(_mini?.desktop ?? false)) _toggleSystemFullscreen();
           },
-          const SingleActivator(LogicalKeyboardKey.space): () => unawaited(controller.session.togglePlayPause()),
+          const SingleActivator(LogicalKeyboardKey.space): () => unawaited(controller.togglePlayback()),
           // 3.x `VideoKeyboard`: arrows change the room's volume, R reloads.
           const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
               unawaited(controller.setVolume(controller.volume + 0.05, save: true)),
@@ -1042,8 +1092,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
           // F.1d: a keyboard's media keys (3.x `VideoKeyboard`).
           const SingleActivator(LogicalKeyboardKey.mediaPlay): () => unawaited(controller.session.resume()),
           const SingleActivator(LogicalKeyboardKey.mediaPause): () => unawaited(controller.session.pause()),
-          const SingleActivator(LogicalKeyboardKey.mediaPlayPause): () =>
-              unawaited(controller.session.togglePlayPause()),
+          const SingleActivator(LogicalKeyboardKey.mediaPlayPause): () => unawaited(controller.togglePlayback()),
         },
         child: Focus(
           autofocus: true,
@@ -1111,6 +1160,28 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
 
   /// The open panel, or nothing.
   Widget _panelOf(LiveRoomController controller, {required bool portrait}) => switch (_panels.value) {
+    RoomPanelKind.archiveRate => Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: ArchiveRateDialog(
+        key: const ValueKey('archive-rate-editor'),
+        rate: controller.archive?.rate ?? 1,
+        embedded: true,
+        onClose: _panels.close,
+        onSelected: (rate) async {
+          final archive = controller.archive;
+          final ok = await archive?.setRate(rate) ?? false;
+          if (!mounted || !identical(archive, controller.archive)) return;
+          if (!ok) AppNavigator.toast(i18n('archive_rate_unavailable'));
+          _panels.close();
+        },
+      ),
+    ),
+    RoomPanelKind.archiveCatalog => RoomSidePanel(
+      title: i18n('archive_scenes'),
+      onClose: _panels.close,
+      dragToClose: portrait,
+      child: RoomReplayLibrary(controller: controller, onClose: _panels.close),
+    ),
     RoomPanelKind.record => RoomRecordPanel(
       key: const ValueKey('panel-record'),
       room: () => controller.room,
@@ -1395,8 +1466,9 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
         ),
       );
 
-  Widget _infoBar(LiveRoomController controller) =>
-      RoomInfoBar(controller: controller, detailsOpen: _details, onToggleDetails: _toggleDetails);
+  Widget _infoBar(LiveRoomController controller) => controller.isArchive
+      ? RoomReplayInfo(controller: controller)
+      : RoomInfoBar(controller: controller, detailsOpen: _details, onToggleDetails: _toggleDetails);
 
   /// The details over [below] (the chat), sliding in unless the system asks
   /// for less motion.
@@ -1432,26 +1504,40 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   /// The strip, a divider and the chat with the details over it; with
   /// [composerCollapsed] the local composer is a star on the chat list
   /// (the portrait room's panel, A07.17 c3).
-  Widget _chatColumn(LiveRoomController controller, {bool composerCollapsed = false}) => Column(
-    children: [
-      _infoBar(controller),
-      const Divider(height: 1),
-      Expanded(
-        child: _withDetails(
-          controller,
-          ChatPanel(
-            controller: controller,
-            detailsOpen: _details,
-            memory: _memory,
-            composerCollapsed: composerCollapsed,
+  Widget _chatColumn(LiveRoomController controller, {bool composerCollapsed = false}) => ListenableSelector<bool>(
+    listenable: controller,
+    selector: () => controller.isArchive,
+    builder: (context, _, _) => Column(
+      children: [
+        _infoBar(controller),
+        const Divider(height: 1),
+        Expanded(
+          child: _withDetails(
+            controller,
+            ChatPanel(
+              controller: controller,
+              detailsOpen: _details,
+              memory: _memory,
+              composerCollapsed: composerCollapsed,
+            ),
           ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 
   Widget _buildInline(BuildContext context, LiveRoomController controller, _LayoutSettings settings) => LayoutBuilder(
     builder: (context, page) {
+      if (controller.isArchive && page.maxHeight < 300 && page.maxWidth < 600 && page.maxWidth > page.maxHeight) {
+        return Scaffold(
+          body: SafeArea(
+            child: _withSidePanel(
+              controller,
+              _player(controller, settings, arrangement: ControlsArrangement.landscape, onBack: _back),
+            ),
+          ),
+        );
+      }
       final portrait = _portraitStream(settings);
       // Above the Scaffold, whose body no longer sees it (A07.18).
       final keyboard = MediaQuery.viewInsetsOf(context).bottom;
@@ -1651,7 +1737,16 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
             child: SizedBox(
               key: const ValueKey('live-play-landscape-chat'),
               width: phoneLandscapeChatWidth,
-              child: _withDetails(controller, ChatList(controller: controller, memory: _memory)),
+              child: _withDetails(
+                controller,
+                ListenableSelector<bool>(
+                  listenable: controller,
+                  selector: () => controller.isArchive,
+                  builder: (context, archive, _) => archive
+                      ? RoomReplayLibrary(controller: controller)
+                      : ChatList(controller: controller, memory: _memory),
+                ),
+              ),
             ),
           ),
         ],
@@ -1803,7 +1898,7 @@ final class _RoomMenu implements RoomCommands {
   final _LivePlayPageState _state;
 
   @override
-  Future<void> togglePlay() async => await _state._controller?.session.togglePlayPause();
+  Future<void> togglePlay() async => await _state._controller?.togglePlayback();
 
   @override
   Future<void> refresh() async => await _state._controller?.load();

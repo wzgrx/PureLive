@@ -1,8 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:live_player/live_player.dart';
 import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/services.dart';
+import 'package:pure_live/features/live_play/logic/room_runtime.dart';
+import 'package:pure_live/shared/rooms/archive/archive_recording.dart';
+import 'package:pure_live/shared/rooms/archive/bilibili_archive_controller.dart';
+import 'package:pure_live/shared/rooms/archive/douyu_archive_controller.dart';
 import 'package:pure_live/shared/rooms/archive/douyu_archive_progress.dart';
 import 'package:pure_live/shared/rooms/archive/huya_archive_controller.dart';
+import 'package:pure_live/shared/rooms/archive_playback.dart';
 
 /// The Bilibili video-on-demand plumbing (M14.0 `live_vod`): the app's HTTP
 /// client (same proxy and rate rules as the live platform, site id
@@ -70,3 +76,49 @@ final Provider<HuyaArchiveProgress> bilibiliReplayProgressProvider = Provider((r
     idPattern: r'^BV[0-9A-Za-z]{10}:[1-9][0-9]{0,18}$',
   );
 });
+
+/// Stops an existing floating decoder before a standalone catalog starts another.
+final beforeArchivePlaybackProvider = Provider<Future<void> Function()>((ref) => FloatingRoom.instance.close);
+
+/// Captures app-owned services before the creating page can enter a mini window.
+ArchivePlaybackController Function(ArchiveRecording) roomArchiveFactory(
+  WidgetRef ref,
+  PlaybackSession session, {
+  double? firstVolume,
+}) {
+  final huya = ref.read(huyaArchiveProvider);
+  final huyaProgress = ref.read(huyaArchiveProgressProvider);
+  final douyu = ref.read(douyuVodProvider);
+  final douyuProgress = ref.read(douyuVodProgressProvider);
+  final bili = ref.read(bilibiliReplayProvider);
+  final biliProgress = ref.read(bilibiliReplayProgressProvider);
+  var initial = firstVolume;
+  return (recording) {
+    final volume = initial ?? session.state.volume;
+    initial = null;
+    return switch (recording.video) {
+      final HuyaArchiveVideo video => HuyaArchiveController(
+        source: huya,
+        session: session,
+        video: video,
+        progress: huyaProgress,
+        initialVolume: volume,
+        ownsSession: false,
+      ),
+      VodArchive() => BilibiliArchiveController(
+        source: bili,
+        session: session,
+        progress: biliProgress,
+        initialVolume: volume,
+        ownsSession: false,
+      ),
+      _ => DouyuVodController(
+        source: douyu,
+        session: session,
+        progress: douyuProgress,
+        initialVolume: volume,
+        ownsSession: false,
+      ),
+    };
+  };
+}

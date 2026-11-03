@@ -79,6 +79,8 @@ void main() {
 
   testWidgets('on-video clocks and selected quality remain readable in the light app theme', (tester) async {
     await pumpPage(tester, player: true, size: const Size(740, 360));
+    await tester.tap(find.byKey(const ValueKey('live-play-fullscreen')));
+    await settle(tester);
     for (final target in [find.byKey(const ValueKey('archive-video-clock')), find.text('高清')]) {
       final paragraph = tester.renderObject<RenderParagraph>(
         find.descendant(of: target, matching: find.byType(RichText)).first,
@@ -114,19 +116,16 @@ void main() {
 
   testWidgets('small player controls fit, pause and restore without native video in unit tests', (tester) async {
     await pumpPage(tester, player: true, size: const Size(384, 256));
-    expect(find.byKey(const ValueKey('vod-play-pause')), findsOneWidget);
+    expect(find.byKey(const ValueKey('live-play-pause')), findsOneWidget);
     expect(find.text('高清'), findsOneWidget);
     expect(find.text('超清'), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('vod-play-pause')));
+    await tester.tap(find.byKey(const ValueKey('live-play-pause')));
     await settle(tester);
-    expect(find.byTooltip('播放'), findsOneWidget);
-    await tester.tap(find.byTooltip('更多'));
-    await settle(tester);
-    await tester.ensureVisible(find.byKey(const ValueKey('vod-danmaku-settings')));
-    await tester.tap(find.byKey(const ValueKey('vod-danmaku-settings')));
+    expect(find.byTooltip('播放'), findsWidgets);
+    await tester.tap(find.byTooltip('弹幕设置').first);
     await settle(tester);
     expect(find.byType(DanmakuSettingsContent), findsOneWidget);
-    await tester.tap(find.byTooltip('关闭'));
+    await tester.tap(find.byKey(const ValueKey('room-panel-close')));
     await settle(tester);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

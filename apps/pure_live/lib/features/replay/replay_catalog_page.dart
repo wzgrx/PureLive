@@ -23,7 +23,10 @@ const replayPlatforms = <String>[SiteIds.huya, SiteIds.douyu, SiteIds.bilibili];
 /// One date-led creator archive on phones, desktop and keyboard/remote clients.
 class ReplayCatalogPage extends ConsumerStatefulWidget {
   /// A live room supplies identity and decoder ownership, without signed URLs.
-  const new({this.room, this.beforePlay, this.onRetire, super.key});
+  const new({this.room, this.beforePlay, this.onRetire, this.pickOnly = false, super.key});
+
+  /// Picks metadata for the existing live room, preserving its native session.
+  final bool pickOnly;
 
   /// Initial public room.
   final LiveRoom? room;
@@ -251,9 +254,15 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
 
   Future<void> _play(ArchiveRecording entry) async {
     if (_opening) return;
+    if (widget.pickOnly) {
+      Navigator.of(context)
+          .pop(ArchiveSelection(recording: entry, recordings: List.unmodifiable(_entries), room: widget.room));
+      return;
+    }
     setState(() => _opening = true);
     final g = _generation;
     try {
+      await ref.read(beforeArchivePlaybackProvider)();
       await _retirement;
       await widget.beforePlay?.call();
       if (!mounted || g != _generation) return;
@@ -277,7 +286,6 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
           ),
         ),
       );
-      await _retirement;
       if (mounted && g == _generation) await _readPositions(g);
     } on Object {
       if (mounted) AppNavigator.toast(i18n('replay_open_failed'));
@@ -291,6 +299,7 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => ReplayCatalogPage(
+          pickOnly: widget.pickOnly,
           beforePlay: widget.beforePlay,
           onRetire: (future) {
             _retirement = future;

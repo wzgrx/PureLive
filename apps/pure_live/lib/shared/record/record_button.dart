@@ -25,6 +25,7 @@ class RecordButton extends ConsumerStatefulWidget {
   const new({
     required this.room,
     this.latest,
+    this.enabled = true,
     this.compact = false,
     this.onVideo = false,
     this.showTime = false,
@@ -34,6 +35,9 @@ class RecordButton extends ConsumerStatefulWidget {
 
   /// The room.
   final LiveRoom room;
+
+  /// False for playback that the live recorder cannot capture.
+  final bool enabled;
 
   /// The room as known at the tap (a new task takes its newest detail);
   /// [room] when null.
@@ -83,7 +87,13 @@ class _RecordButtonState extends ConsumerState<RecordButton> {
     super.dispose();
   }
 
-  void _pressed() => showRecordPanel(context, room: widget.latest ?? () => widget.room);
+  void _pressed() {
+    if (!widget.enabled) {
+      AppNavigator.toast(i18n('archive_record_unavailable'));
+      return;
+    }
+    showRecordPanel(context, room: widget.latest ?? () => widget.room);
+  }
 
   @override
   Widget build(BuildContext context) {

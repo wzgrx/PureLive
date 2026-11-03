@@ -261,7 +261,7 @@ class PictureStateView extends StatelessWidget {
           child: VideoCentreButton(
             key: const ValueKey('picture-paused-play'),
             tooltip: i18n('live_play_play'),
-            onPressed: () => unawaited(controller.session.togglePlayPause()),
+            onPressed: () => unawaited(controller.togglePlayback()),
           ),
         );
       case PictureStateKind.buffering:

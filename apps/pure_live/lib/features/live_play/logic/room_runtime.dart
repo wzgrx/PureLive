@@ -54,6 +54,10 @@ final class RoomRuntime {
   /// (`PlayerStandby`, F.1d).
   final Object? playerConfig;
 
+  final _retired = Completer<void>();
+
+  /// Resolves after real native release, including while a mini window owns it.
+  Future<void> get retirement => _retired.future;
   bool _disposed = false;
 
   /// Whether [dispose] ran.
@@ -64,10 +68,27 @@ final class RoomRuntime {
       controller.room.platform.trim().toLowerCase() == room.platform.trim().toLowerCase() &&
       controller.room.roomId == room.roomId;
 
+  Future<void>? _disposal;
+
   /// Stops the room and releases the player; with [keep] the player is only
   /// stopped and handed to it for the next room (3.x "播放器强制销毁" off,
   /// F.1d).
-  Future<void> dispose({void Function(PlaybackSession session)? keep}) async {
+  Future<void> dispose({void Function(PlaybackSession session)? keep}) => _disposal ??= _finishDisposal(keep: keep);
+
+  Future<void> _finishDisposal({void Function(PlaybackSession session)? keep}) async {
+    try {
+      await _dispose(keep: keep);
+      if (!_retired.isCompleted) _retired.complete();
+    } on Object catch (error, stack) {
+      if (!_retired.isCompleted) {
+        unawaited(_retired.future.catchError((Object _) {}));
+        _retired.completeError(error, stack);
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _dispose({void Function(PlaybackSession session)? keep}) async {
     if (_disposed) return;
     _disposed = true;
     // Given back when the room is left (not awaited: the system answers
@@ -78,11 +99,13 @@ final class RoomRuntime {
     orientation.dispose();
     controller.dispose();
     if (keep == null) {
-      await session.dispose();
+      await Future.wait<void>([session.dispose(), controller.archiveRetirement]);
       return;
     }
     // Handed over only once stopped: a stop still running would stop what
     // the next room opens.
+    await controller.archiveRetirement;
+    if (controller.isArchive) await session.setRate(1);
     await session.stop();
     keep(session);
   }
