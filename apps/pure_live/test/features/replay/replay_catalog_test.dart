@@ -14,6 +14,8 @@ import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/features/replay/replay_catalog_page.dart';
+import 'package:pure_live/shared/rooms/archive/archive_player_page.dart';
+import 'package:pure_live/shared/rooms/archive/archive_recording.dart';
 import 'package:pure_live/tv/tv_app.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
@@ -37,6 +39,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
   double scale = 1,
   bool standalone = false,
   bool tv = false,
+  PlaybackSession Function()? playbackFactory,
 }) async {
   tester.view
     ..physicalSize = size
@@ -56,7 +59,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
         huyaArchiveProvider.overrideWithValue(huya),
         douyuVodProvider.overrideWithValue(FakeVodSource(testSigner())),
         bilibiliReplayProvider.overrideWithValue(FakeBiliReplay()),
-        playbackSessionFactoryProvider.overrideWithValue(({config}) => fakeSession(engine)),
+        playbackSessionFactoryProvider.overrideWithValue(({config}) => playbackFactory?.call() ?? fakeSession(engine)),
       ],
       child: LiveUiScope(
         config: LiveUiConfig(strings: strings.ui),
@@ -128,11 +131,11 @@ void main() {
 
   testWidgets('TV replay rows have the standard visible focus target and OK opens on-demand playback', (tester) async {
     final (engine, _) = await page(tester, platform: SiteIds.huya, size: const Size(1280, 720), tv: true);
-    expect(find.byType(TvInputField), findsOneWidget);
+    expect(find.byType(TvInputField), findsNothing);
     final row = find.byKey(ValueKey('replay-recording-${firstArchive.id}'));
-    expect(tester.widget(row), isA<TvFocusable>());
+    expect(find.descendant(of: row, matching: find.byType(TvFocusable)), findsOneWidget);
     bool focused() =>
-        FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<TvFocusable>()?.key ==
+        FocusManager.instance.primaryFocus?.context?.findAncestorWidgetOfExactType<ArchiveRecordingTile>()?.key ==
         ValueKey('replay-recording-${firstArchive.id}');
     for (var i = 0; i < 8 && !focused(); i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
@@ -168,12 +171,64 @@ void main() {
           hasMore: false,
         ),
       );
+    expect(find.byKey(const ValueKey('replay-room-input')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('replay-open-query')));
+    await settle(tester);
     await tester.enterText(find.byKey(const ValueKey('replay-room-input')), 'https://www.huya.com/video/u/456');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await settle(tester);
     expect(find.text('测试主播'), findsNothing);
     expect(find.text('另一位主播的回放'), findsOneWidget);
     expect(source.calls.last, 'list:456:1');
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
+  for (final size in [const Size(393, 852), const Size(740, 360), const Size(1280, 800)]) {
+    testWidgets('v5 player and panel remain bounded at $size with 200 percent type', (tester) async {
+      await page(tester, platform: SiteIds.bilibili, size: size, scale: 2);
+      await tester.tap(find.byKey(ValueKey('replay-recording-${archive.bvid}')));
+      await settle(tester);
+      expect(find.byType(ArchivePlayerPage), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('archive-rate')));
+      await settle(tester);
+      expect(find.byKey(const ValueKey('archive-settings-panel')), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await settle(tester);
+      expect(find.byKey(const ValueKey('archive-settings-panel')), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await settle(tester);
+    });
+  }
+
+  testWidgets('landscape controls hide, keyboard restores them and panel leaves video size unchanged', (tester) async {
+    final (engine, _) = await page(tester, platform: SiteIds.bilibili, size: const Size(740, 360));
+    await tester.tap(find.byKey(ValueKey('replay-recording-${archive.bvid}')));
+    await settle(tester);
+    final stage = tester.getRect(find.byType(LiveVideoView).last);
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.byKey(const ValueKey('archive-rate')), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('archive-rate')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('archive-rate')));
+    await settle(tester);
+    expect(tester.getRect(find.byType(LiveVideoView).last), stage);
+    expect(engine.opens, hasLength(1));
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settle(tester);
+    expect(find.byType(ArchivePlayerPage), findsOneWidget);
+    expect(find.byKey(const ValueKey('archive-settings-panel')), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(tester.getRect(find.byType(LiveVideoView).last).width, lessThan(740));
+    tester.view.physicalSize = const Size(393, 852);
+    await tester.pump();
+    tester.view.physicalSize = const Size(740, 360);
+    await tester.pump();
+    expect(tester.getRect(find.byType(LiveVideoView).last).width, 740);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);
   });
@@ -197,6 +252,38 @@ void main() {
     await settle(tester);
     expect(source.calls, ['list:123:1', 'list:123:2']);
     expect(find.byKey(const ValueKey('replay-more')), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
+  testWidgets('switching a recording waits for native retirement before creating its replacement', (tester) async {
+    final retired = Completer<void>();
+    final engines = <FakeEngine>[];
+    await page(
+      tester,
+      platform: SiteIds.huya,
+      playbackFactory: () {
+        final engine = FakeEngine();
+        if (engines.isEmpty) engine.onDispose = () => retired.future;
+        engines.add(engine);
+        return fakeSession(engine);
+      },
+    );
+    await tester.tap(find.byKey(const ValueKey('replay-more')));
+    await settle(tester);
+    await tester.tap(find.byKey(ValueKey('replay-recording-${firstArchive.id}')));
+    await settle(tester);
+    final target = find.byKey(ValueKey('archive-related-${secondArchive.id}'));
+    await tester.ensureVisible(target);
+    await tester.tap(target);
+    await settle(tester);
+    expect(engines, hasLength(1));
+    expect(engines.first.disposed, isTrue);
+    retired.complete();
+    await settle(tester);
+    expect(engines, hasLength(2));
+    expect(engines.last.opens, hasLength(1));
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);
   });

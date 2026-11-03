@@ -9,6 +9,7 @@ import 'package:pure_live/features/douyu_vod/vod_page.dart';
 import 'package:pure_live/features/douyu_vod/vod_player_page.dart';
 import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
+import 'package:pure_live/shared/danmaku/danmaku_settings_content.dart';
 
 import '../../support.dart';
 import '../live_play/live_play_support.dart';
@@ -77,13 +78,13 @@ void main() {
   });
 
   testWidgets('on-video clocks and selected quality remain readable in the light app theme', (tester) async {
-    await pumpPage(tester, player: true);
-    for (final label in ['0:00', '高清']) {
+    await pumpPage(tester, player: true, size: const Size(740, 360));
+    for (final target in [find.byKey(const ValueKey('archive-video-clock')), find.text('高清')]) {
       final paragraph = tester.renderObject<RenderParagraph>(
-        find.descendant(of: find.text(label), matching: find.byType(RichText)).first,
+        find.descendant(of: target, matching: find.byType(RichText)).first,
       );
       final color = paragraph.text.style!.color!;
-      expect(color.computeLuminance(), greaterThan(0.65), reason: '$label must contrast with the dark video panel');
+      expect(color.computeLuminance(), greaterThan(0.65), reason: 'video controls must contrast with the dark panel');
     }
     await tester.pumpWidget(const SizedBox());
     await settle(tester);
@@ -119,11 +120,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('vod-play-pause')));
     await settle(tester);
     expect(find.byTooltip('播放'), findsOneWidget);
+    await tester.tap(find.byTooltip('更多'));
+    await settle(tester);
     await tester.ensureVisible(find.byKey(const ValueKey('vod-danmaku-settings')));
     await tester.tap(find.byKey(const ValueKey('vod-danmaku-settings')));
     await settle(tester);
-    expect(find.byKey(const ValueKey('live-play-danmaku-settings')), findsOneWidget);
-    await tester.tap(find.text('关闭'));
+    expect(find.byType(DanmakuSettingsContent), findsOneWidget);
+    await tester.tap(find.byTooltip('关闭'));
     await settle(tester);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
