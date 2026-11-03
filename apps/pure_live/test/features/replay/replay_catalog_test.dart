@@ -212,6 +212,10 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('archive-rate')));
       await settle(tester);
       expect(find.byKey(const ValueKey('archive-rate-editor')), findsOneWidget);
+      final editor = find.byKey(const ValueKey('archive-rate-editor'));
+      final surface = find.ancestor(of: editor, matching: find.byType(Material)).first;
+      expect(tester.widget<Material>(surface).color, Theme.of(tester.element(editor)).colorScheme.surface);
+      expect(tester.getSize(surface), tester.getSize(editor));
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await settle(tester);
       expect(find.byKey(const ValueKey('archive-rate-editor')), findsNothing);

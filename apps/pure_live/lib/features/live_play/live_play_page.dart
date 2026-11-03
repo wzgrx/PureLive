@@ -1160,18 +1160,21 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
 
   /// The open panel, or nothing.
   Widget _panelOf(LiveRoomController controller, {required bool portrait}) => switch (_panels.value) {
-    RoomPanelKind.archiveRate => ArchiveRateDialog(
-      key: const ValueKey('archive-rate-editor'),
-      rate: controller.archive?.rate ?? 1,
-      embedded: true,
-      onClose: _panels.close,
-      onSelected: (rate) async {
-        final archive = controller.archive;
-        final ok = await archive?.setRate(rate) ?? false;
-        if (!mounted || !identical(archive, controller.archive)) return;
-        if (!ok) AppNavigator.toast(i18n('archive_rate_unavailable'));
-        _panels.close();
-      },
+    RoomPanelKind.archiveRate => Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: ArchiveRateDialog(
+        key: const ValueKey('archive-rate-editor'),
+        rate: controller.archive?.rate ?? 1,
+        embedded: true,
+        onClose: _panels.close,
+        onSelected: (rate) async {
+          final archive = controller.archive;
+          final ok = await archive?.setRate(rate) ?? false;
+          if (!mounted || !identical(archive, controller.archive)) return;
+          if (!ok) AppNavigator.toast(i18n('archive_rate_unavailable'));
+          _panels.close();
+        },
+      ),
     ),
     RoomPanelKind.archiveCatalog => RoomSidePanel(
       title: i18n('archive_scenes'),
