@@ -6,6 +6,7 @@ import 'package:live_media/live_media.dart';
 import 'package:live_net/live_net.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_vod/live_vod.dart';
+import 'package:pure_live/shared/rooms/archive/huya_manifest_entry.dart';
 import 'package:pure_live/shared/rooms/archive_playback.dart';
 
 /// Bounded local-only positions; media URLs and browser/session data never enter it.
@@ -80,7 +81,10 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     this.ownsSession = true,
     this.seekTimeout = const Duration(seconds: 10),
     this.initialVolume = 1,
+    ProxyPolicy proxy = const FixedProxyPolicy(),
+    HuyaManifestEntry? manifestEntry,
   }) {
+    _entry = manifestEntry ?? HuyaManifestEntry(proxy: proxy);
     _states = session.states.listen(_changed);
   }
 
@@ -112,7 +116,15 @@ final class HuyaArchiveController extends ArchivePlaybackController {
   @override
   Object? error;
   @override
-  Duration get position => _pending ?? session.state.position;
+  Duration get position => _pending ?? _timelineOffset + session.state.position;
+
+  @override
+  Duration get duration => _timelineDuration > Duration.zero ? _timelineDuration : super.duration;
+
+  late final HuyaManifestEntry _entry;
+  Duration _timelineOffset = Duration.zero;
+  Duration _timelineDuration = Duration.zero;
+  bool _usesAnchor = false;
 
   CancelToken? _cancel;
   StreamSubscription<PlaybackState>? _states;
@@ -163,7 +175,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
       await session.open(
         PlaybackRequest(
           site: SiteIds.huya,
-          plan: _plan(selected, resume),
+          plan: await _plan(selected, resume),
           volume: volume,
           refresh: () => _refresh(generation),
         ),
@@ -171,6 +183,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
       if (_current(generation)) {
         await restoreRate();
         _ready = true;
+        await _entry.retirePrevious(keepCurrent: _usesAnchor);
       }
     } on Object catch (failure) {
       if (_current(generation)) error = failure;
@@ -182,12 +195,30 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     }
   }
 
-  PlaybackPlan _plan(HuyaArchiveQuality quality, Duration at) => PlaybackPlan(
-    sources: [LineSource(LivePlayLine(quality.url, format: StreamFormat.hls, headers: HuyaArchiveApi.mediaHeaders))],
-    onDemand: true,
-    start: at,
-    appliedQualityData: quality.id,
-  );
+  Future<PlaybackPlan> _plan(HuyaArchiveQuality quality, Duration at) async {
+    final generation = _generation;
+    final cancel = _cancel;
+    final provider = source;
+    final anchor = at > Duration.zero && provider is HuyaArchiveAnchorSource
+        ? await (provider as HuyaArchiveAnchorSource).anchor(quality.url, at, cancel: cancel)
+        : null;
+    if (!_current(generation) || !identical(cancel, _cancel)) throw StateError('Archive replaced');
+    final url = anchor == null ? quality.url : await _entry.publish(anchor, quality.url);
+    if (!_current(generation)) throw StateError('Archive replaced');
+    _timelineOffset = anchor?.offset ?? Duration.zero;
+    _timelineDuration = anchor?.duration ?? Duration.zero;
+    _usesAnchor = anchor != null;
+    return PlaybackPlan(
+      sources: [
+        LineSource(
+          LivePlayLine(url, format: StreamFormat.hls, headers: anchor == null ? HuyaArchiveApi.mediaHeaders : const {}),
+        ),
+      ],
+      onDemand: true,
+      start: anchor?.start ?? at,
+      appliedQualityData: quality.id,
+    );
+  }
 
   Future<PlaybackPlan> _refresh(int generation) async {
     final offered = await source.qualities(video.id, cancel: _cancel);
@@ -199,7 +230,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     qualities = offered;
     qualityId = selected.id;
     notifyListeners();
-    return _plan(selected, position);
+    return await _plan(selected, position);
   }
 
   @override
@@ -215,6 +246,8 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     final volume = session.state.volume;
     busy = true;
     error = null;
+    _pending = at;
+    _ready = false;
     notifyListeners();
     try {
       final plan = await _refresh(generation);
@@ -223,7 +256,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
       await session.open(
         PlaybackRequest(
           site: SiteIds.huya,
-          plan: PlaybackPlan(sources: plan.sources, onDemand: true, start: at, appliedQualityData: qualityId),
+          plan: PlaybackPlan(sources: plan.sources, onDemand: true, start: plan.start, appliedQualityData: qualityId),
           volume: volume,
           refresh: () => _refresh(generation),
         ),
@@ -231,6 +264,8 @@ final class HuyaArchiveController extends ArchivePlaybackController {
       if (_current(generation)) {
         await restoreRate();
         if (paused) await session.pause();
+        _ready = true;
+        await _entry.retirePrevious(keepCurrent: _usesAnchor);
       }
     } on Object catch (failure) {
       if (_current(generation)) {
@@ -248,7 +283,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
   @override
   Future<void> seek(Duration at) async {
     if (_disposed || !_ready || busy) return;
-    final duration = session.state.duration > Duration.zero ? session.state.duration : video.duration;
+    final duration = this.duration;
     final bounded = at < Duration.zero
         ? Duration.zero
         : duration > Duration.zero && at > duration
@@ -267,6 +302,13 @@ final class HuyaArchiveController extends ArchivePlaybackController {
 
     _seekDeadline = Timer(seekTimeout, recover);
     notifyListeners();
+    if (source is HuyaArchiveAnchorSource) {
+      // Native time-pos can acknowledge before decoding at a reset HLS PTS.
+      // Re-enter from nearby segments instead of scanning toward an old epoch.
+      _seekDeadline?.cancel();
+      await _recoverSeek(bounded, generation, serial);
+      return;
+    }
     try {
       await session.seek(bounded).timeout(seekTimeout);
     } on Object {
@@ -285,6 +327,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     final audioOnly = session.state.audioOnly;
     busy = true;
     error = null;
+    _ready = false;
     notifyListeners();
     try {
       final plan = await _refresh(generation);
@@ -292,7 +335,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
       await session.open(
         PlaybackRequest(
           site: SiteIds.huya,
-          plan: PlaybackPlan(sources: plan.sources, onDemand: true, start: at, appliedQualityData: qualityId),
+          plan: PlaybackPlan(sources: plan.sources, onDemand: true, start: plan.start, appliedQualityData: qualityId),
           volume: volume,
           audioOnly: audioOnly,
           refresh: () => _refresh(generation),
@@ -302,6 +345,8 @@ final class HuyaArchiveController extends ArchivePlaybackController {
       await restoreRate();
       if (paused) await session.pause();
       if (!current()) return;
+      _ready = true;
+      await _entry.retirePrevious(keepCurrent: _usesAnchor);
       if (_pending != null) {
         _seekDeadline = Timer(seekTimeout, () {
           if (!current() || _pending == null) return;
@@ -327,14 +372,16 @@ final class HuyaArchiveController extends ArchivePlaybackController {
   void _changed(PlaybackState state) {
     if (_disposed) return;
     final tolerance = Duration(milliseconds: 1000 + (rate * 1000).round());
-    if (_pending != null && (state.position - _pending!).abs() <= tolerance) {
+    final actual = _timelineOffset + state.position;
+    bool acknowledged(Duration target) => _usesAnchor
+        ? actual >= target - const Duration(milliseconds: 250) && actual <= target + tolerance
+        : (actual - target).abs() <= tolerance;
+    if (_pending != null && acknowledged(_pending!)) {
       _pending = null;
       _seekDeadline?.cancel();
       error = null;
     }
-    if (_failedSeekTarget != null &&
-        error is TimeoutException &&
-        (state.position - _failedSeekTarget!).abs() <= tolerance) {
+    if (_failedSeekTarget != null && error is TimeoutException && acknowledged(_failedSeekTarget!)) {
       _failedSeekTarget = null;
       error = null;
     }
@@ -366,7 +413,7 @@ final class HuyaArchiveController extends ArchivePlaybackController {
     _generation++;
     _cancel?.cancel();
     unawaited(_states?.cancel());
-    _retirement = Future.wait<void>([if (ownsSession) session.dispose(), saved]).then((_) {});
+    _retirement = Future.wait<void>([if (ownsSession) session.dispose(), saved, _entry.close()]).then((_) {});
     unawaited(_retirement);
     super.dispose();
   }

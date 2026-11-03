@@ -43,6 +43,10 @@ abstract class ArchivePlaybackController extends ChangeNotifier {
   /// Current input position, including a pending seek.
   Duration get position;
 
+  /// Public recording clock, which may span a segment-anchored native input.
+  Duration get duration =>
+      session.state.duration > Duration.zero ? session.state.duration : video?.duration ?? Duration.zero;
+
   /// Server-offered renditions.
   List<ArchiveQuality> get qualities;
 

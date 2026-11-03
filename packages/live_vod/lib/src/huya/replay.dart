@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:live_core/live_core.dart';
 import 'package:live_net/live_net.dart';
 import 'package:live_vod/src/archive.dart';
+import 'package:live_vod/src/huya/anchor.dart';
 import 'package:meta/meta.dart';
 
 final _id = RegExp(r'^[1-9][0-9]{0,18}$');
@@ -87,7 +88,7 @@ abstract interface class HuyaArchiveSource {
 
 /// Current official Huya user-video SSR data and getMomentContent qualities.
 /// Tars prototype functions are discarded as metadata, never evaluated.
-final class HuyaArchiveApi implements HuyaArchiveSource {
+final class HuyaArchiveApi implements HuyaArchiveSource, HuyaArchiveAnchorSource {
   /// Uses the application's shared transport, proxy and cancellation policy.
   const new(this.http);
 
@@ -137,6 +138,14 @@ final class HuyaArchiveApi implements HuyaArchiveSource {
     final qualities = HuyaApi.replayQualities(response.text, status: response.status);
     if (qualities.isEmpty) throw const StreamUnavailable('huya', 'Archive has no permitted rendition');
     return [for (final quality in qualities) HuyaArchiveQuality(quality)];
+  }
+
+  @override
+  Future<HuyaArchiveAnchor?> anchor(String url, Duration at, {CancelToken? cancel}) async {
+    if (HuyaApi.replayUrl(url) == null) throw const FormatException('Invalid archive playlist URL');
+    final uri = Uri.parse(url);
+    final response = await _get(uri, cancel);
+    return HuyaArchiveAnchor.parse(response.text, source: uri, at: at);
   }
 
   Future<LiveResponse> _get(Uri url, CancelToken? cancel, {Map<String, String> headers = mediaHeaders}) async {

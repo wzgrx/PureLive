@@ -76,8 +76,7 @@ class _RoomReplayTransportState extends State<RoomReplayTransport> {
     builder: (context, snapshot) {
       final archive = widget.controller.archive;
       if (archive == null) return const SizedBox.shrink();
-      final state = snapshot.data ?? widget.controller.session.state;
-      final duration = state.duration > Duration.zero ? state.duration : archive.video?.duration ?? Duration.zero;
+      final duration = archive.duration;
       final max = duration.inMilliseconds.toDouble();
       final value = (_scrub ?? archive.position.inMilliseconds.toDouble()).clamp(0.0, max > 0 ? max : 1.0);
       final ink = context.textStyles.t12.copyWith(color: OnVideoColors.foreground);

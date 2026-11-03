@@ -92,6 +92,7 @@ ArchivePlaybackController Function(ArchiveRecording) roomArchiveFactory(
   final douyuProgress = ref.read(douyuVodProgressProvider);
   final bili = ref.read(bilibiliReplayProvider);
   final biliProgress = ref.read(bilibiliReplayProgressProvider);
+  final proxy = ref.read(appServicesProvider).proxy;
   var initial = firstVolume;
   return (recording) {
     final volume = initial ?? session.state.volume;
@@ -99,6 +100,7 @@ ArchivePlaybackController Function(ArchiveRecording) roomArchiveFactory(
     return switch (recording.video) {
       final HuyaArchiveVideo video => HuyaArchiveController(
         source: huya,
+        proxy: proxy,
         session: session,
         video: video,
         progress: huyaProgress,

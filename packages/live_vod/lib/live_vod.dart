@@ -13,6 +13,7 @@ export 'src/douyu/models.dart';
 export 'src/douyu/sign.dart';
 export 'src/douyu/source.dart';
 export 'src/douyu/timeline.dart';
+export 'src/huya/anchor.dart';
 export 'src/huya/replay.dart';
 export 'src/models.dart';
 export 'src/music/audio_cache.dart';
