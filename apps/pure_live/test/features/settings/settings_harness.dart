@@ -44,6 +44,9 @@ Future<SettingsHarness> pumpSettings(
   Object? arguments,
   Future<void> Function(SettingsStore settings)? seed,
   List<Override> overrides = const [],
+  Widget? page,
+  double? textScale,
+  bool dark = false,
 }) async {
   tester.view
     ..physicalSize = Size(width, height)
@@ -70,7 +73,7 @@ Future<SettingsHarness> pumpSettings(
     routes: [
       GoRoute(
         path: '/',
-        builder: (_, _) => SettingsPage(route: RouteArgs(RoutePath.kSettings, arguments: arguments)),
+        builder: (_, _) => page ?? SettingsPage(route: RouteArgs(RoutePath.kSettings, arguments: arguments)),
       ),
       for (final path in [
         RoutePath.kSettingsDanmuShield,
@@ -102,12 +105,27 @@ Future<SettingsHarness> pumpSettings(
         config: LiveUiConfig(strings: strings.ui),
         child: MaterialApp.router(
           theme: const LiveTheme(primaryColor: LiveTheme.brandBlue, schemeVariant: DynamicSchemeVariant.fidelity).light,
+          darkTheme: const LiveTheme(
+            primaryColor: LiveTheme.brandBlue,
+            schemeVariant: DynamicSchemeVariant.fidelity,
+          ).dark,
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+          builder: textScale == null
+              ? null
+              : (context, child) => MediaQuery(
+                  data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
+                  child: child!,
+                ),
           routerConfig: router,
         ),
       ),
     ),
   );
-  await settleSettings(tester);
+  if (page == null) {
+    await settleSettings(tester);
+  } else {
+    await settleSettingsFiles(tester);
+  }
   return SettingsHarness(services, toasts, opened);
 }
 

@@ -17,6 +17,15 @@ import 'package:pure_live/features/settings/settings_tiles.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 
+/// The document picked by the platform adapter; imports copy its bytes locally.
+typedef LocalFontSelection = ({File file, String name});
+
+/// The native document picker, replaceable by deterministic widget tests.
+final localFontPickerProvider = Provider<Future<LocalFontSelection?> Function()>(
+  (ref) =>
+      () async => null,
+);
+
 /// The font page (3.x `FontFamilyManagerPage`; U.6b c13), one for the app
 /// font and one for the danmaku font: the system font, then the cloud list
 /// with download (progress, cancel), apply (a weight for multi-file
@@ -61,7 +70,43 @@ class _FontManagerPageState extends ConsumerState<FontManagerPage> {
   }
 
   void _changed() {
-    if (mounted) setState(() {});
+    if (mounted) unawaited(_load());
+  }
+
+  Future<void> _import() async {
+    if (_busy != null) return;
+    setState(() {
+      _busy = '@import';
+      _progress = null;
+    });
+    try {
+      final selected = await ref.read(localFontPickerProvider)();
+      if (selected == null || !mounted) return;
+      final result = await _library.importLocal(selected.file, fileName: selected.name);
+      await _load();
+      if (mounted) {
+        AppNavigator.toast(
+          i18n(result.duplicate ? 'font_import_existing' : 'font_import_done', args: {'name': result.family.name}),
+        );
+      }
+    } on FontImportException catch (error) {
+      if (mounted) {
+        AppNavigator.toast(
+          i18n(switch (error.failure) {
+            FontImportFailure.unsupported => 'font_import_unsupported',
+            FontImportFailure.tooLarge => 'font_import_too_large',
+            FontImportFailure.invalid => 'font_import_invalid',
+            FontImportFailure.damagedExisting => 'font_import_damaged',
+            FontImportFailure.tooMany => 'font_import_limit',
+            FontImportFailure.io => 'font_import_failed',
+          }),
+        );
+      }
+    } on Object {
+      if (mounted) AppNavigator.toast(i18n('font_import_failed'));
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
   }
 
   Future<void> _load() async {
@@ -135,7 +180,7 @@ class _FontManagerPageState extends ConsumerState<FontManagerPage> {
       context: context,
       title: i18n('settings_font_delete_title'),
       message: i18n(
-        'settings_font_delete_message',
+        family.local ? 'font_local_delete_message' : 'settings_font_delete_message',
         args: {
           'name': family.name,
           'count': '${_library.filesOf(family.id).length}',
@@ -146,7 +191,11 @@ class _FontManagerPageState extends ConsumerState<FontManagerPage> {
       destructive: true,
     );
     if (!confirmed) return;
-    if (!await _library.delete(family.id, _settings)) AppNavigator.toast(i18n('font_delete_failed'));
+    if (!await _library.delete(family.id, _settings)) {
+      AppNavigator.toast(i18n('font_delete_failed'));
+    } else {
+      await _load();
+    }
   }
 
   Future<void> _openFolder([String? id]) async {
@@ -187,6 +236,12 @@ class _FontManagerPageState extends ConsumerState<FontManagerPage> {
     final current = watchSetting(ref, _name);
     final isSystem = current.isEmpty || current == _name.defaultValue;
     final families = _families;
+    final local = families?.where((family) => family.local).toList();
+    final cloud = families?.where((family) => !family.local).toList();
+    final importing = _busy == '@import';
+    final importIcon = importing
+        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+        : const Icon(AppIcons.add);
     final systemName = !kIsWeb && Platform.isWindows ? 'Microsoft YaHei' : i18n('font_system_default');
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
@@ -195,6 +250,20 @@ class _FontManagerPageState extends ConsumerState<FontManagerPage> {
         title: i18n(widget.danmaku ? 'change_danmaku_font_family' : 'settings_font'),
         embedded: SettingsPane.of(context),
         actions: [
+          if (MediaQuery.textScalerOf(context).scale(14) > 21)
+            IconButton(
+              key: const ValueKey('font-import'),
+              tooltip: i18n('font_import'),
+              onPressed: _busy == null ? () => unawaited(_import()) : null,
+              icon: importIcon,
+            )
+          else
+            TextButton.icon(
+              key: const ValueKey('font-import'),
+              onPressed: _busy == null ? () => unawaited(_import()) : null,
+              icon: importIcon,
+              label: Text(i18n(importing ? 'font_importing' : 'font_import_short')),
+            ),
           IconButton(
             key: const ValueKey('font-open-folder-action'),
             tooltip: i18n('recorder_open_folder'),
@@ -232,7 +301,22 @@ class _FontManagerPageState extends ConsumerState<FontManagerPage> {
           ),
           SettingsGroup(
             card: false,
-            title: i18n('settings_font_group_cloud', args: {'count': '${families?.length ?? 0}'}),
+            title: i18n('font_local_group', args: {'count': '${local?.length ?? 0}'}),
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  i18n('font_import_hint'),
+                  style: context.textStyles.t13.copyWith(color: colors.onSurfaceVariant),
+                ),
+              ),
+              if (local != null)
+                for (final family in local) _FontCard(state: this, family: family, active: family.id == current),
+            ],
+          ),
+          SettingsGroup(
+            card: false,
+            title: i18n('settings_font_group_cloud', args: {'count': '${cloud?.length ?? 0}'}),
             children: [
               if (families == null)
                 Padding(
@@ -240,7 +324,7 @@ class _FontManagerPageState extends ConsumerState<FontManagerPage> {
                   child: Center(child: CircularProgressIndicator(color: colors.primary)),
                 )
               else
-                for (final family in families) _FontCard(state: this, family: family, active: family.id == current),
+                for (final family in cloud!) _FontCard(state: this, family: family, active: family.id == current),
             ],
           ),
         ],
@@ -291,7 +375,10 @@ class _FontCard extends StatelessWidget {
     final progress = state._progress;
     final weights = downloaded ? library.filesOf(family.id).length : family.files.length;
     final meta = [
-      i18n('settings_font_weights', args: {'count': '$weights'}),
+      if (family.local)
+        i18n(downloaded ? 'font_local_file' : 'font_local_missing')
+      else
+        i18n('settings_font_weights', args: {'count': '$weights'}),
       if (family.license.isNotEmpty) family.license,
       if (size != null) formatBytes(size),
     ].join('  ·  ');
@@ -328,7 +415,7 @@ class _FontCard extends StatelessWidget {
           Expanded(
             child: Text(meta, style: context.textStyles.t12.copyWith(color: colors.onSurfaceVariant)),
           ),
-          if (!downloaded)
+          if (!downloaded && !family.local)
             FilledButton.tonalIcon(
               key: ValueKey('font-download-${family.id}'),
               onPressed: locked ? null : () => unawaited(state._download(family)),
@@ -336,7 +423,7 @@ class _FontCard extends StatelessWidget {
               label: Text(i18n(active ? 'settings_font_download_chosen' : 'settings_font_download')),
             )
           else ...[
-            if (!active)
+            if (!active && downloaded)
               FilledButton.tonal(
                 key: ValueKey('font-apply-${family.id}'),
                 onPressed: locked ? null : () => unawaited(state._apply(family)),
@@ -373,6 +460,8 @@ class _FontCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       family.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: context.textStyles.t16.copyWith(fontWeight: FontWeight.w600, fontFamily: ownFont),
                     ),
                   ),

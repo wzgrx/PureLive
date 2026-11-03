@@ -1,0 +1,186 @@
+{
+  "builder_commit": "0443048272a511d7a990a2a3d5ca6bbaf55a869a",
+  "mpv": "41f6a645068483470267271e1d09966ca3b9f413",
+  "ffmpeg": "946fcce07b6dcd0331c8cc609192aeff5e1924f8",
+  "patch_sha256": "bbb3e26ca92c1658aa27b08cd5852b0c60859ecec2f605c6293750eaa1440c52",
+  "items": [
+    {
+      "abi": "arm64-v8a",
+      "binary_sha256": "210d011a90d13040ae681df4736ab7774ef56ebe7ddbf3b56c85b712f3607fe3",
+      "jar": "libmpv-android-0.41.0-ffmpeg-9.0.2-arm64-v8a.jar",
+      "jar_sha256": "49b3cf57eeaec839aa2480d9608fcf0795431b7c92f04bb68cd575c249751b4c",
+      "bytes": 9485189,
+      "hard_vulkan_imports": [
+        "vkCreateAndroidSurfaceKHR",
+        "vkDestroySurfaceKHR",
+        "vkEnumeratePhysicalDevices",
+        "vkGetInstanceProcAddr"
+      ],
+      "missing_api26_vulkan": [],
+      "elf_load_alignment": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libandroid.so",
+        "libmediandk.so",
+        "libvulkan.so",
+        "libOpenSLES.so",
+        "libEGL.so",
+        "libc.so"
+      ],
+      "members": [
+        {
+          "name": "lib/arm64-v8a/libmediakitandroidhelper.so",
+          "sha256": "a6862031015e390aa8a64536411132cf4df6a5a9dcf782f0d68b995380a1cccb",
+          "modified": false
+        },
+        {
+          "name": "lib/arm64-v8a/libmpv.so",
+          "sha256": "210d011a90d13040ae681df4736ab7774ef56ebe7ddbf3b56c85b712f3607fe3",
+          "modified": true
+        }
+      ]
+    },
+    {
+      "abi": "armeabi-v7a",
+      "binary_sha256": "0652b80c7ee05430997ea382d08205bf4e3ff9c430e47dd473a5835ff15cbf26",
+      "jar": "libmpv-android-0.41.0-ffmpeg-9.0.2-armeabi-v7a.jar",
+      "jar_sha256": "c23f5d6f52011b1e6418587f5029358e97c58cc04f0109197a826d8e77585389",
+      "bytes": 8497392,
+      "hard_vulkan_imports": [
+        "vkCreateAndroidSurfaceKHR",
+        "vkDestroySurfaceKHR",
+        "vkEnumeratePhysicalDevices",
+        "vkGetInstanceProcAddr"
+      ],
+      "missing_api26_vulkan": [],
+      "elf_load_alignment": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libm.so",
+        "libdl.so",
+        "libandroid.so",
+        "libmediandk.so",
+        "libvulkan.so",
+        "libOpenSLES.so",
+        "libEGL.so",
+        "libc.so"
+      ],
+      "members": [
+        {
+          "name": "lib/armeabi-v7a/libmediakitandroidhelper.so",
+          "sha256": "698ce761945a3bdaf6ffe690e715fc510bc30a3571c5ac6768a734847232d5cc",
+          "modified": false
+        },
+        {
+          "name": "lib/armeabi-v7a/libmpv.so",
+          "sha256": "0652b80c7ee05430997ea382d08205bf4e3ff9c430e47dd473a5835ff15cbf26",
+          "modified": true
+        }
+      ]
+    },
+    {
+      "abi": "x86_64",
+      "binary_sha256": "ecd30f0ec1a47c07f3b616dc340b12c5df0910391637bd01ab830d39043ac77e",
+      "jar": "libmpv-android-0.41.0-ffmpeg-9.0.2-x86_64.jar",
+      "jar_sha256": "802cc5ee5a3f4b1896f38329c19d09d5b9d73cc4bd7f10c49976c28baff22de1",
+      "bytes": 10238870,
+      "hard_vulkan_imports": [
+        "vkCreateAndroidSurfaceKHR",
+        "vkDestroySurfaceKHR",
+        "vkEnumeratePhysicalDevices",
+        "vkGetInstanceProcAddr"
+      ],
+      "missing_api26_vulkan": [],
+      "elf_load_alignment": [
+        16384,
+        16384,
+        16384
+      ],
+      "needed": [
+        "libm.so",
+        "libandroid.so",
+        "libmediandk.so",
+        "libdl.so",
+        "libvulkan.so",
+        "libOpenSLES.so",
+        "libEGL.so",
+        "libc.so"
+      ],
+      "members": [
+        {
+          "name": "lib/x86_64/libmediakitandroidhelper.so",
+          "sha256": "6541bff31b898e3564cd9bf1e89e993992f0c45e9c47764f1873668746173e6d",
+          "modified": false
+        },
+        {
+          "name": "lib/x86_64/libmpv.so",
+          "sha256": "ecd30f0ec1a47c07f3b616dc340b12c5df0910391637bd01ab830d39043ac77e",
+          "modified": true
+        }
+      ]
+    }
+  ],
+  "actual_frames_personally_viewed": true,
+  "source_repositories": {
+    "mpv": {
+      "url": "git@github.com:mpv-player/mpv.git",
+      "commit": "41f6a645068483470267271e1d09966ca3b9f413"
+    },
+    "ffmpeg": {
+      "url": "git@github.com:FFmpeg/FFmpeg.git",
+      "commit": "946fcce07b6dcd0331c8cc609192aeff5e1924f8"
+    },
+    "mbedtls": {
+      "url": "git@github.com:Mbed-TLS/mbedtls.git",
+      "commit": "068ff080b369adfac81509f9b57b2afabaf82dc5"
+    },
+    "dav1d": {
+      "url": "git@github.com:videolan/dav1d.git",
+      "commit": "54706fc6bc0cdecab7e9593974a4039cc038fca7"
+    },
+    "libxml2": {
+      "url": "git@github.com:GNOME/libxml2.git",
+      "commit": "96498992efa48d52b0e8b83058bd88dbdaf153c1"
+    },
+    "freetype": {
+      "url": "git@github.com:freetype/freetype.git",
+      "commit": "37515cf56ba3349656049edbed89ffc6f6466f2d"
+    },
+    "fribidi": {
+      "url": "git@github.com:fribidi/fribidi.git",
+      "commit": "b93119f5fdc7ea47672cc304c1455ffa6dfe7536"
+    },
+    "harfbuzz": {
+      "url": "git@github.com:harfbuzz/harfbuzz.git",
+      "commit": "c7a7457b7385f33178e8cf87615ca077a810bbe7"
+    },
+    "libass": {
+      "url": "git@github.com:libass/libass.git",
+      "commit": "4a05d8127f525943ebf45fdc6497c9e665947f0d"
+    },
+    "libplacebo": {
+      "url": "git@github.com:haasn/libplacebo.git",
+      "commit": "1dd022687b9ac1dd996855b51433bf770ae76aab"
+    },
+    "lcms2": {
+      "url": "git@github.com:mm2/Little-CMS.git",
+      "commit": "21c582a594fe5279f90c0b93437c398f93bf62b0"
+    },
+    "media_kit_android_helper": {
+      "url": "git@github.com:media-kit/media-kit-android-helper.git",
+      "commit": "42054e5d479f39ccbb0ae604862e2bcaf59b74c2"
+    }
+  },
+  "ndk": "30.0.16248370",
+  "android_min_api": 26,
+  "builder_patch_sha256": "65c6e321407414f0408afead04758b610e03d4dc4ba1988533972c9315e155c7",
+  "ffmpeg_script_sha256": "7f0226a15757da632ffe4d685a5cc5a899550294c67adefc4f3f28dffcfedaaf"
+}
