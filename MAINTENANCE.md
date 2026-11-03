@@ -1,31 +1,21 @@
 # 当前维护方针
 
-**本轮明确例外（D-089，2026-11-02）：维护者已直接授权C03.4的斗鱼、虎牙、哔哩哔哩公开回放、入口与倍速设计实现，以及D01.37的匿名昵称和常驻提示修复。该范围按本轮指令执行；不据此恢复其他功能队列。**
+生效：2026-11-03，依据维护者直接决定D-092。恢复接收功能需求、维护者开发和公开直播回放维护；此前功能冻结与回放停维公告已撤销，历史决定仅保留追溯。
 
-生效：2026-11-02。依据维护者明确决定（D-088）；本页优先于旧路线图、功能任务书和继续扩展功能的安排。
+## 功能需求与bug
 
-## 维护范围
+- 用户可以通过GitHub功能需求表单请求新增功能、平台、设置或操作优化，不要求先提供实现或PR。
+- 说明使用场景、涉及平台、期望操作和参考资料。先搜索已有及已关闭issue，一条issue聚焦一个主题。需求会评估可行性、维护成本和优先级，不以提交即承诺排期。
+- 已有功能bug、崩溃、卡死、兼容性、资源泄漏和数据安全继续优先处理；性能问题尽量附复现或测量。
+- 斗鱼、虎牙、哔哩哔哩公开直播回放继续维护，沿用现有直播间横竖屏、小窗与共享播放器体系增强。平台未公开或账号无权限的内容不伪装成已支持。
+- 因旧停维决定关闭的回放问题重新评估，验证修复或交付后再按completed关闭；不能把恢复维护本身说成bug已修复。
 
-- 暂停受理新功能需求和主动功能开发。后续维护集中于已有功能的 bug、崩溃、卡死、兼容性、资源泄漏、数据安全和稳定性；性能问题须有可复现的退化或测量依据。
-- 不再按旧功能清单自动补齐功能、增加开关、平台或客户端。旧任务的历史实现与验证记录保留；未交付的新功能暂停，恢复须维护者明确决定。
-- **直播回放功能停止维护和更新**：斗鱼、虎牙等平台的历史直播回放解析、列表、播放适配和扩展不再由维护者开发；相关需求和回放专项 bug 统一说明后以 `not_planned` 关闭，不宣称问题已修复。
-- 本次保留现有回放代码、入口、用户数据及历史发行版本。停维不表示删除功能，也不承诺现有入口持续可用。该范围不等同于电视普通点播、音乐或本机录制管理；共享播放器若影响正常直播或核心稳定性，仍按核心 bug 评估。
+## 贡献与验收
 
-## Issue 处理
+欢迎提交PR，也欢迎仅提交需求。不以使用某一AI模型作为需求受理门槛；贡献者说明实现、设计和实际验证材料即可，工具或模型声明可帮助审查，但不代替质量验收。
 
-- 保留直播、弹幕、登录、IPTV及核心应用的 bug 和稳定性反馈入口。按正文和复现情况判断，不仅看 `enhancement` 标签或标题。
-- 未附完成实现的新功能请求，回复本方针并以 `not_planned` 关闭，不建立维护者待开发承诺。
-- 已关闭的回放讨论补充停维通知。以前确实实现并发布的历史需求保留原完成记录；尚未实现的需求和未修复的回放 bug 不标记为完成。
-- 关闭后追加新功能需求仍按同一方针处理；不锁定讨论，不删除原始报文、复现步骤和历史回复。
+UI变化附设计或前后截图、受影响布局与焦点/大字/加载/错误等状态；代码说明默认值、升级兼容和维护成本，附合适回归。正式交付要求完整门禁、同源包验证、发布附件和更新源校验。没有原设备证据时如实保留验证边界。
 
-## 新功能只能由需求方提交完成的 PR
+旧的明确拒绝或原设备暂缓决定不因开放需求自动取消；有新证据或维护者明确新决定再评估。安全漏洞按SECURITY.md私下反馈，不公开Cookie、令牌、密码或个人资料。
 
-1. 需求方自行完成 UI 设计与代码实现，再提交可审查的 PR；维护者暂停代为设计、实现和补完功能。
-2. **UI 设计和代码实现均须使用 Opus 5.5 的 high 档，或更高规格模型。** 这是维护者指定的贡献准入要求。PR须写明实际使用的模型、版本、推理档位和用途，未达到要求或未声明的功能 PR 暂不受理。
-3. 有界面的功能须附设计说明及实现前后截图，覆盖竖屏、横屏、桌面/电视等受影响布局，以及空、加载、错误、大字和焦点等相关状态。无界面变化须说明。
-4. 代码须范围清楚、可以独立合并，说明依赖、设置默认值、升级兼容和维护成本；附适当回归测试、完整门禁结果及实际平台验证材料。不能只提交方案、截图或半成品。
-5. 模型声明由贡献者提供，维护者结合设计、代码和验证材料审核；声明本身不等于质量验收或合并承诺。提交 PR 后等待维护者后续审核，不保证排期或合并。回放类 PR 也适用，停维决定不会因有人提需求而自动撤销。
-
-Bug 修复、稳定性修复和文档贡献继续按 [贡献规范](CONTRIBUTING.md) 审查；上述模型门槛针对新功能 PR，不把 bug 标签当作绕过功能冻结的方式。
-
-English: Feature requests and maintainer-led feature development are paused. Maintenance focuses on bugs and stability. Historical live-stream replay support is unmaintained, including replay-specific fixes and platform updates. Keep existing code and data. New features require a complete contributor-owned PR: both UI design and implementation must use Opus 5.5 at high reasoning effort or a higher-specification model, with a model declaration, UI evidence, tests and reviewable code. Maintainer review and merge are discretionary.
+English: Feature requests and maintainer-led development are open again. Users may request features without providing a PR. Public replay support is maintained using the existing room UI and playback ownership. Requests and contributions are reviewed for feasibility, quality, compatibility and validation; acceptance does not guarantee a schedule. Historical deferred or explicitly rejected reports remain governed by their specific decisions.

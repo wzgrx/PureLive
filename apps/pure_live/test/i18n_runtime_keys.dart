@@ -200,6 +200,7 @@ const notTranslationKeyTemplates = {
   'archive_*', // tv/video/video_panes.dart: a Bilibili history row id
   'favorite_areas_*', // features/areas/favorite_areas_view.dart: a PageStorageKey
   'instance_*', // app/launch_args.dart: a safe instance name
+  'localfont_*', // app/local_fonts.dart: a content-addressed local family id
   'multiview_cell_*', // features/multiview/multiview_page.dart: a GlobalKey label
   'pgc_*', // tv/video/video_panes.dart: a Bilibili history row id
   'projection_*', // app/desktop/projection_channel.dart: an owned window instance id

@@ -115,6 +115,18 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // Restart Manager must bypass the normal hide-to-tray close policy.
+  // A query alone never closes the app; cancellation must leave it running.
+  if (message == WM_QUERYENDSESSION && (lparam & ENDSESSION_CLOSEAPP)) {
+    return TRUE;
+  }
+  if (message == WM_ENDSESSION && (lparam & ENDSESSION_CLOSEAPP)) {
+    if (wparam) {
+      uninstall_requested_ = true;
+      DispatchUninstallShutdown();
+    }
+    return 0;
+  }
   if (message == UninstallShutdownMessage()) {
     uninstall_requested_ = true;
     DispatchUninstallShutdown();

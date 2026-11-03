@@ -141,8 +141,13 @@ final class LoopbackRelay {
     required String site,
     HlsRelayRecipe recipe = const HlsRelayRecipe(),
     HlsLineRenewer? renew,
+    int maxEntries = 2048,
+    int maxPlaylistBytes = 4 << 20,
   }) {
     if (_closed) throw StateError('LoopbackRelay is closed');
+    if (maxEntries < 1 || maxEntries > 50001 || maxPlaylistBytes < 1 || maxPlaylistBytes > (16 << 20)) {
+      throw ArgumentError('HLS relay bounds');
+    }
     final secret = _secret();
     final input = _HlsInput(
       this,
@@ -155,6 +160,8 @@ final class LoopbackRelay {
         recipe: recipe,
         renew: renew,
         prefetch: hlsPrefetch,
+        maxEntries: maxEntries,
+        maxPlaylistBytes: maxPlaylistBytes,
       ),
     );
     _hlsRoutes[secret] = input;

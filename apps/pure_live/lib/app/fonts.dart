@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:math' show Random;
 
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,8 @@ import 'package:live_store/live_store.dart';
 import 'package:path/path.dart' as p;
 import 'package:pure_live/app/downloads.dart';
 import 'package:pure_live/app/services.dart';
+
+part 'local_fonts.dart';
 
 /// One font family of the cloud list (3.x `FontModel`,
 /// `assets/fonts/fonts-manifest.json`): files in the `liuchuancong/fonts`
@@ -26,6 +30,7 @@ final class FontFamily {
     this.official = '',
     this.license = '',
     this.licenseUrl = '',
+    this.local = false,
   });
 
   /// Reads one manifest entry.
@@ -62,6 +67,9 @@ final class FontFamily {
 
   /// License page.
   final String licenseUrl;
+
+  /// Imported by the user; never downloaded from the cloud font repository.
+  final bool local;
 
   /// The file names (last path segment) of [files].
   List<String> get fileNames => [for (final file in files) file.split('/').last];
@@ -184,14 +192,24 @@ final class FontLibrary extends ChangeNotifier {
 
   /// The cloud list; empty when the bundled file cannot be read.
   Future<List<FontFamily>> families() async {
-    final cached = _families;
-    if (cached != null) return cached;
-    try {
-      return _families = parseFontManifest(await _manifest());
-    } on Object catch (error) {
-      log('Font list unreadable', name: 'Fonts', error: error);
-      return _families = const [];
+    if (_families == null) {
+      try {
+        _families = parseFontManifest(await _manifest());
+      } on Object catch (error) {
+        log('Font list unreadable', name: 'Fonts', error: error);
+        _families = const [];
+      }
     }
+    final local = await _readLocalFontFamilies(root);
+    final ids = local.map((family) => family.id).toSet();
+    return List.unmodifiable([...local, ..._families!.where((family) => !ids.contains(family.id))]);
+  }
+
+  /// Copies a selected TTF/OTF into the managed library without changing selection.
+  Future<FontImportResult> importLocal(File source, {String? fileName}) async {
+    final result = await _withLocalFontLock(root, (managed) => _importLocalFont(managed, source, fileName));
+    notifyListeners();
+    return result;
   }
 
   /// The family [id] of the list, or null.
@@ -203,12 +221,21 @@ final class FontLibrary extends ChangeNotifier {
   /// The font files of [id] on this device, sorted; empty when not here.
   List<File> filesOf(String id) {
     if (!isSafeFontId(id)) return const [];
-    _finishInterrupted(id);
+    if (!_isLocalFontId(id)) _finishInterrupted(id);
     final folder = folderOf(id);
     if (!folder.existsSync()) return const [];
+    final local = _isLocalFontId(id) ? _readLocalFontFamily(folder) : null;
+    if (_isLocalFontId(id) && local == null) return const [];
     final files = [
       for (final entity in folder.listSync())
-        if (entity is File && _isFontName(entity.path) && isFontFile(entity)) entity,
+        if (entity is File &&
+            _isFontName(entity.path) &&
+            isFontFile(entity) &&
+            (local == null ||
+                FileSystemEntity.typeSync(entity.path, followLinks: false) == FileSystemEntityType.file) &&
+            (local == null ||
+                local.fileNames.contains(p.basename(entity.path)) && entity.lengthSync() <= maxLocalFontBytes))
+          entity,
     ]..sort((a, b) => a.path.compareTo(b.path));
     return files;
   }
@@ -320,6 +347,7 @@ final class FontLibrary extends ChangeNotifier {
     void Function(int done, int total)? onProgress,
     CancelToken? cancel,
   }) async {
+    if (family.local) throw ArgumentError('Local fonts are imported, not downloaded');
     if (!isSafeFontId(family.id) || !validFontFiles(family.files)) {
       throw const DownloadException(DownloadFailure.network, 'invalid manifest entry');
     }
@@ -379,6 +407,19 @@ final class FontLibrary extends ChangeNotifier {
   /// font (3.x `uninstallFontFamily`). A registered family stays usable
   /// until the app restarts (Flutter cannot unload fonts).
   Future<bool> delete(String id, SettingsStore settings) async {
+    if (_isLocalFontId(id)) {
+      try {
+        return await _withLocalFontLock(root, (_) => _deleteFiles(id, settings));
+      } on FontImportException {
+        return false;
+      } on FileSystemException {
+        return false;
+      }
+    }
+    return await _deleteFiles(id, settings);
+  }
+
+  Future<bool> _deleteFiles(String id, SettingsStore settings) async {
     if (!isSafeFontId(id)) return false;
     try {
       for (final folder in [

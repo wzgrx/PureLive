@@ -13,6 +13,7 @@ export 'src/scope.dart';
 export 'src/theme/douyu_colors.dart';
 export 'src/theme/dynamic_color.dart' show LiveDynamicColorBuilder, MaterialUiThemeBridge, toFlutterColorScheme;
 export 'src/theme/grid_columns.dart';
+export 'src/theme/huya_colors.dart';
 export 'src/theme/live_colors.dart';
 export 'src/theme/live_theme.dart';
 export 'src/theme/metrics.dart';

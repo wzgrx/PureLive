@@ -16,6 +16,7 @@ import 'package:pure_live/features/iptv/iptv_import.dart';
 import 'package:pure_live/features/record_settings/record_settings_dialogs.dart';
 import 'package:pure_live/features/recorder/recorder_page.dart';
 import 'package:pure_live/features/settings/data_tools.dart';
+import 'package:pure_live/features/settings/font_manager_page.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/overlay_window.dart';
 import 'package:pure_live/routes/app_navigator.dart';
@@ -57,6 +58,7 @@ void installPluginHooks(AppServices services) {
 /// the system pickers of the IPTV import, the backups, the record folder and
 /// the download folder; sharing the log file on phones.
 List<Override> pluginOverrides() => [
+  localFontPickerProvider.overrideWithValue(pickLocalFont),
   iptvFilePickerProvider.overrideWithValue(pickIptvFile),
   customBackgroundPickerProvider.overrideWithValue(pickBackgroundImage),
   backupPickerProvider.overrideWithValue(pickBackupPath),
@@ -136,6 +138,17 @@ Future<bool> openLocalFile(String path) async {
 /// MIME type, which most providers do not know for playlists and guides, so
 /// it shows every file and the importer checks the content.
 bool get _filterByExtension => !Platform.isAndroid;
+
+/// Android providers often omit font MIME types; inspect the copied document.
+Future<LocalFontSelection?> pickLocalFont() async {
+  final selected = await FilePicker.pickFile(
+    dialogTitle: i18n('font_import'),
+    type: _filterByExtension ? FileType.custom : FileType.any,
+    allowedExtensions: _filterByExtension ? const ['ttf', 'otf'] : null,
+  );
+  final path = selected?.path;
+  return path == null ? null : (file: File(path), name: selected!.name);
+}
 
 /// Uses the system document picker; no broad filesystem permission is needed.
 Future<File?> pickBackgroundImage() async {

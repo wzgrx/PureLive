@@ -185,11 +185,7 @@ class IptvSourceCard extends StatefulWidget {
         key: ValueKey('iptv-card-$id'),
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.fromLTRB(16, 14, 4, 12),
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(16),
-          border: !isGuide && inUse ? Border.all(color: scheme.primary, width: 1.5) : null,
-        ),
+        decoration: BoxDecoration(color: scheme.surfaceContainerLow, borderRadius: BorderRadius.circular(16)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

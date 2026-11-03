@@ -2,22 +2,22 @@
   "schema": 1,
   "bundles": {
     "android_arm64": {
-      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-android-0.41.0-ff9.0.2-b1/libmpv-android-0.41.0-ffmpeg-9.0.2-arm64-v8a.jar",
-      "sha256": "9c6d44f97fad10bd15a98d5d1928a07004d82464ed0e0f5c87f9d462cb62f020",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-android-0.41.0-ff9.0.2-b2/libmpv-android-0.41.0-ffmpeg-9.0.2-arm64-v8a.jar",
+      "sha256": "49b3cf57eeaec839aa2480d9608fcf0795431b7c92f04bb68cd575c249751b4c",
       "format": "zip",
       "root": "lib/arm64-v8a",
       "library": "libmpv.so"
     },
     "android_arm": {
-      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-android-0.41.0-ff9.0.2-b1/libmpv-android-0.41.0-ffmpeg-9.0.2-armeabi-v7a.jar",
-      "sha256": "59077eb6ed9c3553402b32efe83a855cb2e40bfffe4ae859704d543eb71fa513",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-android-0.41.0-ff9.0.2-b2/libmpv-android-0.41.0-ffmpeg-9.0.2-armeabi-v7a.jar",
+      "sha256": "c23f5d6f52011b1e6418587f5029358e97c58cc04f0109197a826d8e77585389",
       "format": "zip",
       "root": "lib/armeabi-v7a",
       "library": "libmpv.so"
     },
     "android_x64": {
-      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-android-0.41.0-ff9.0.2-b1/libmpv-android-0.41.0-ffmpeg-9.0.2-x86_64.jar",
-      "sha256": "13d3fd72ddd78e21a6af5daa44c9753bc48131a1b24ec4701d49a8ce86b261e4",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-android-0.41.0-ff9.0.2-b2/libmpv-android-0.41.0-ffmpeg-9.0.2-x86_64.jar",
+      "sha256": "802cc5ee5a3f4b1896f38329c19d09d5b9d73cc4bd7f10c49976c28baff22de1",
       "format": "zip",
       "root": "lib/x86_64",
       "library": "libmpv.so"

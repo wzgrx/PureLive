@@ -947,6 +947,14 @@ class _MultiviewPageState extends ConsumerState<MultiviewPage> {
   /// cells alone on black, the exit and mute buttons in the top-left corner
   /// (c12), and a panel on the right (landscape) or at the bottom (portrait)
   /// for a long-pressed cell, the picker or the danmaku settings (c13).
+  bool get _bareChromeVisible {
+    if (_controller.layout != MultiviewLayout.focus || _barVisible) return true;
+    final index = _controller.focusedIndex;
+    final cells = _controller.cells;
+    // Empty, failed and opening main cells keep an immediate exit route.
+    return index < 0 || index >= cells.length || !cells[index].playing;
+  }
+
   Widget _bare(BuildContext context, Size size) {
     final fullscreen = _mode == _DisplayMode.fullscreen;
     final padding = MediaQuery.paddingOf(context);
@@ -970,41 +978,43 @@ class _MultiviewPageState extends ConsumerState<MultiviewPage> {
       body: Stack(
         children: [
           Positioned.fill(child: wall),
-          Positioned.fromRect(
-            rect: exit,
-            child: _ExitButton(
-              key: ValueKey(fullscreen ? 'multiview-fullscreen-exit' : 'multiview-immersive-exit'),
-              icon: fullscreen ? AppIcons.gridExitFullscreen : AppIcons.exitImmersive,
-              tooltip: i18n(fullscreen ? 'multiview_fullscreen_exit' : 'multiview_immersive_exit'),
-              onTap: () => unawaited(_setMode(_DisplayMode.normal)),
-            ),
-          ),
-          Positioned.fromRect(
-            rect: mute,
-            child: Semantics(
-              button: true,
-              toggled: _controller.allMuted,
+          if (_bareChromeVisible) ...[
+            Positioned.fromRect(
+              rect: exit,
               child: _ExitButton(
-                key: const ValueKey('multiview-bare-mute-all'),
-                icon: _controller.allMuted ? AppIcons.mutedAll : AppIcons.muteAll,
-                tooltip: i18n(_controller.allMuted ? 'multiview_unmute_all' : 'multiview_mute_all'),
-                onTap: _controller.toggleMuteAll,
+                key: ValueKey(fullscreen ? 'multiview-fullscreen-exit' : 'multiview-immersive-exit'),
+                icon: fullscreen ? AppIcons.gridExitFullscreen : AppIcons.exitImmersive,
+                tooltip: i18n(fullscreen ? 'multiview_fullscreen_exit' : 'multiview_immersive_exit'),
+                onTap: () => unawaited(_setMode(_DisplayMode.normal)),
               ),
             ),
-          ),
-          Positioned.fromRect(
-            rect: mix,
-            child: Semantics(
-              button: true,
-              toggled: _controller.mixAudio,
-              child: _ExitButton(
-                key: const ValueKey('multiview-bare-mix-audio'),
-                icon: AppIcons.mixAudio,
-                tooltip: i18n('multiview_mix_audio'),
-                onTap: () => unawaited(_controller.setMixAudio(enabled: !_controller.mixAudio)),
+            Positioned.fromRect(
+              rect: mute,
+              child: Semantics(
+                button: true,
+                toggled: _controller.allMuted,
+                child: _ExitButton(
+                  key: const ValueKey('multiview-bare-mute-all'),
+                  icon: _controller.allMuted ? AppIcons.mutedAll : AppIcons.muteAll,
+                  tooltip: i18n(_controller.allMuted ? 'multiview_unmute_all' : 'multiview_mute_all'),
+                  onTap: _controller.toggleMuteAll,
+                ),
               ),
             ),
-          ),
+            Positioned.fromRect(
+              rect: mix,
+              child: Semantics(
+                button: true,
+                toggled: _controller.mixAudio,
+                child: _ExitButton(
+                  key: const ValueKey('multiview-bare-mix-audio'),
+                  icon: AppIcons.mixAudio,
+                  tooltip: i18n('multiview_mix_audio'),
+                  onTap: () => unawaited(_controller.setMixAudio(enabled: !_controller.mixAudio)),
+                ),
+              ),
+            ),
+          ],
           if (_overlay != _Overlay.none) _overlayPanel(size),
         ],
       ),
@@ -1070,6 +1080,7 @@ class _MultiviewPageState extends ConsumerState<MultiviewPage> {
       // the screen on).
       keepScreenOn: watchSetting(ref, Settings.enableScreenKeepOn),
       nameInset: nameInset,
+      showCornerMarks: !large || _mode == _DisplayMode.normal || _bareChromeVisible,
       onTap: () => _onCellTap(index),
       onLongPress: cell.stage == CellStage.empty ? null : () => _onCellLongPress(index),
       onRetry: () => unawaited(_controller.retry(index)),
