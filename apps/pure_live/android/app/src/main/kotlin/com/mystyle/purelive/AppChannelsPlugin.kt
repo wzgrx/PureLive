@@ -1,12 +1,15 @@
 package com.mystyle.purelive
 
 import android.content.Context
+import android.app.Activity
 import android.net.wifi.WifiManager
 import android.os.Handler
 import android.os.Looper
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -36,17 +39,24 @@ import javax.crypto.spec.GCMParameterSpec
  * - `pure_live/text_codec`: GBK playlists (IPTV);
  * - `pure_live/multicast_lock`: the Wi-Fi multicast lock of DLNA discovery;
  * - `pure_live/live_alerts`: `post` "开播提醒" ([LiveAlerts], O01.1).
+ * - `pure_live/xiaohongshu_guest`: isolated visitor initialization; this one
+ *   needs the attached activity and is cancelled when it detaches.
  */
-internal class AppChannelsPlugin : FlutterPlugin {
+internal class AppChannelsPlugin : FlutterPlugin, ActivityAware {
     private val channels = mutableListOf<MethodChannel>()
     private var executor: ExecutorService? = null
     private var multicastLock: WifiManager.MulticastLock? = null
+    private var xiaohongshuGuest: XiaohongshuGuestChannel? = null
+    private var activity: Activity? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         val pool = Executors.newFixedThreadPool(2)
         executor = pool
         val context = binding.applicationContext
         val messenger = binding.binaryMessenger
+        val visitor = XiaohongshuGuestChannel { activity }
+        xiaohongshuGuest = visitor
+        channel(messenger, "pure_live/xiaohongshu_guest", visitor::handle)
         channel(messenger, "pure_live/secret_cipher") { call, result ->
             background(pool, result) { SecretCipherChannel.handle(call) }
         }
@@ -76,12 +86,22 @@ internal class AppChannelsPlugin : FlutterPlugin {
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        xiaohongshuGuest?.dispose()
+        xiaohongshuGuest = null
         channels.forEach { it.setMethodCallHandler(null) }
         channels.clear()
         executor?.shutdownNow()
         executor = null
         releaseMulticastLock()
     }
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) { activity = binding.activity }
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) = onAttachedToActivity(binding)
+    override fun onDetachedFromActivity() {
+        xiaohongshuGuest?.dispose()
+        activity = null
+    }
+    override fun onDetachedFromActivityForConfigChanges() = onDetachedFromActivity()
 
     private fun channel(messenger: BinaryMessenger, name: String, handler: MethodChannel.MethodCallHandler) {
         channels += MethodChannel(messenger, name).also { it.setMethodCallHandler(handler) }

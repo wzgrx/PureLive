@@ -28,6 +28,7 @@ import 'package:pure_live/platform/recording_platform.dart';
 import 'package:pure_live/platform/secret_cipher.dart';
 import 'package:pure_live/platform/system_permissions.dart';
 import 'package:pure_live/platform/twitch_webview_http.dart';
+import 'package:pure_live/platform/xiaohongshu_guest.dart';
 import 'package:pure_live/shared/permission_prompts.dart';
 
 /// Keeps decoded covers and avatars bounded apart from the HTTP cache (3.x
@@ -337,6 +338,7 @@ abstract final class AppBootstrap {
         ?native,
         if (TwitchWebViewHttp.isAvailable) TwitchWebViewHttp(proxy: proxy),
       ],
+      xiaohongshuGuest: WebViewXiaohongshuGuest.isAvailable ? WebViewXiaohongshuGuest(proxy: proxy) : null,
       // Kick's API refuses HTTP/1.1 since 2026-10 (S02.4): HTTP/2 from Dart.
       // Android and Windows share the same HTTP/2 implementation; it does
       // not depend on Android's native HTTP channel.

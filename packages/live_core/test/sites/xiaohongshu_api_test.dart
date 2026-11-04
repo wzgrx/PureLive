@@ -130,7 +130,7 @@ void main() {
         expect(room.watching, isEmpty);
         expect(room.audienceType(preferRealOnline: false, platformEnabled: true), AudienceMetricType.unknown);
         expect(room.audienceValue(preferRealOnline: false, platformEnabled: true), isEmpty);
-        expect(room.supportsRealOnlineCount, isFalse);
+        expect(room.supportsRealOnlineCount, isTrue);
       });
     }
 

@@ -151,7 +151,7 @@ abstract final class XiaohongshuApi {
   /// The explanation 3.x showed on the empty directory (zh.json
   /// `xiaohongshu_directory_scope`, the directory notice key's text,
   /// reworded for users).
-  static const String directoryScope = '小红书没有公开的直播列表。请在搜索页输入直播房间号，或粘贴小红书的直播分享链接或分享文字；关注的是这一场直播，主播下次开播时要重新导入。';
+  static const String directoryScope = '此设备暂时无法加载小红书直播列表和弹幕。可以搜索直播房间号或粘贴直播分享链接观看；关注仅保留这一场直播。';
 
   /// The notice line with the platform's display count (zh.json
   /// `xiaohongshu_display_viewers`, reworded): the web page shows it as

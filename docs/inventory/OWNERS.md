@@ -6,7 +6,7 @@
 
 路径规则按 OWNERS.toml 里的顺序第一条匹配的生效，所以一条目录规则只管前面的规则没拿走的文件。本页只随归属表、设置、来源和通道变化，加删代码文件不用重新生成。
 
-路径规则 246 条；设置 298 个（分节默认 24 条、单独指定 111 个）；来源 35 个；通道 23 个。
+路径规则 248 条；设置 298 个（分节默认 24 条、单独指定 111 个）；来源 35 个；通道 24 个。
 
 | 子分类 | 路径规则 | 设置 | 播放 | 弹幕 | 通道 |
 |---|---:|---:|---:|---:|---:|
@@ -29,7 +29,7 @@
 | C01 进房和房间逻辑 | 2 | 3 |  |  |  |
 | C02 小窗、画中画、后台播放 | 3 | 8 |  |  | 1 |
 | C03 直播间工具 | 3 | 2 |  |  |  |
-| D01 平台弹幕协议 | 1 | 1 |  | 30 |  |
+| D01 平台弹幕协议 | 1 | 1 |  | 31 |  |
 | D02 过滤和屏蔽 | 2 | 10 |  |  |  |
 | D03 飞行弹幕引擎 | 2 |  |  |  |  |
 | D04 数据流和性能 | 1 |  |  |  |  |
@@ -37,7 +37,7 @@
 | D07 礼物和付费消息 | 2 | 1 |  |  |  |
 | D08 本地互动 | 1 | 34 |  |  |  |
 | E01 国内五大平台 | 5 |  | 5 |  |  |
-| E02 其他国内平台 | 1 |  | 13 |  |  |
+| E02 其他国内平台 | 3 |  | 13 |  | 1 |
 | E03 海外平台 | 16 | 1 | 16 |  |  |
 | E04 链接解析和分享口令 | 2 |  |  |  |  |
 | E05 平台框架和模型 | 1 |  |  |  |  |
@@ -195,7 +195,7 @@
 
 - 代码：`packages/live_danmaku/`
 - 设置：`youtubeShowAllChat`
-- 弹幕：`bilibili`、`douyu`、`huya`、`douyin`、`kuaishou`、`twitch`、`soop`、`yy`、`acfun`、`picarto`、`twitcasting`、`missevan`、`kilakila`、`niconico`、`showroom`、`chzzk`、`kick`、`liveme`、`tiktok`、`youtube`、`bigo`、`pandalive`、`fc2live`、`steambroadcast`、`jdlive`、`kugoulive`、`baidulive`、`sixroom`、`looklive`、`17live`
+- 弹幕：`bilibili`、`douyu`、`huya`、`douyin`、`kuaishou`、`twitch`、`soop`、`yy`、`acfun`、`picarto`、`twitcasting`、`missevan`、`kilakila`、`xiaohongshu`、`niconico`、`showroom`、`chzzk`、`kick`、`liveme`、`tiktok`、`youtube`、`bigo`、`pandalive`、`fc2live`、`steambroadcast`、`jdlive`、`kugoulive`、`baidulive`、`sixroom`、`looklive`、`17live`
 
 ## D02 过滤和屏蔽
 
@@ -232,8 +232,9 @@
 
 ## E02 其他国内平台
 
-- 代码：`packages/live_core/lib/src/sites/`（其余都是国内平台）
+- 代码：`apps/pure_live/lib/platform/xiaohongshu_guest.dart`、`apps/pure_live/android/**/XiaohongshuGuestChannel.kt`（小红书游客独立资料区及临时网页）、`packages/live_core/lib/src/sites/`（其余都是国内平台）
 - 播放：`cc`、`yy`、`acfun`、`missevan`、`inke`、`kilakila`、`xiaohongshu`、`weibo`、`jdlive`、`kugoulive`、`baidulive`、`sixroom`、`looklive`
+- 通道：`pure_live/xiaohongshu_guest`
 
 ## E03 海外平台
 
@@ -527,4 +528,4 @@
 
 ## 没有弹幕的来源
 
-`cc`、`inke`、`xiaohongshu`、`weibo`、`iptv`
+`cc`、`inke`、`weibo`、`iptv`
