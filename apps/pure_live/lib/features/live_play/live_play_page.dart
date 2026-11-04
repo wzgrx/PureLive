@@ -444,6 +444,12 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       background: background,
       audioFocus: audioFocus,
       playerConfig: playerConfig,
+      detachOnTaskRemoval: () {
+        if (mounted) {
+          _closingOnPurpose = true;
+          AppNavigator.offAllNamed(RoutePath.kInitial);
+        }
+      },
     );
   }
 
@@ -998,6 +1004,15 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final runtime = _runtime;
+    if (runtime == null) return _buildRoom(context);
+    return ValueListenableBuilder<bool>(
+      valueListenable: runtime.retiring,
+      builder: (context, retiring, _) => retiring ? const SizedBox.shrink() : _buildRoom(context),
+    );
+  }
+
+  Widget _buildRoom(BuildContext context) {
     final controller = _controller;
     if (controller == null) {
       return Scaffold(

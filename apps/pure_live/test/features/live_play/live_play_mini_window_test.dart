@@ -1832,6 +1832,9 @@ void main() {
       expect(rect.right, 393 - 16);
       expect(rect.bottom, closeTo(852 - 80 - 16, 0.01));
 
+      // External behavior is opt-in, even after the inside-app mini button.
+      await tester.runAsync(() => app.services.store.settings.set(Settings.autoPipOnLeave, true));
+      await _settle(tester);
       // c9: not allowed, leaving the app arms nothing; back, a toast says
       // the window can stay over other apps, once ever.
       await tester.pump();
@@ -1860,7 +1863,7 @@ void main() {
       expect(shown, hasLength(1), reason: 'once ever');
 
       // c8: allowed, leaving the app takes this window along where it is,
-      // whatever "离开应用时自动小窗" says (it is off).
+      // while "离开应用时自动小窗" is enabled.
       permitted = true;
       // Given in the system settings; looked at again on the way back.
       OverlayWindow.permitted.value = true;
@@ -1966,6 +1969,45 @@ void main() {
       expect(controller.volume, volume);
       PictureInPicture.active.value = false;
       await _settle(tester);
+      await _close(tester, app);
+    });
+
+    testWidgets('issue 194: the in-app mini respects the external auto-window switch and hot updates', (tester) async {
+      final app = await _app(tester);
+      final settings = app.services.store.settings;
+      expect(settings.get(Settings.autoPipOnLeave), isFalse);
+      await _openRoom(tester);
+      await _leaveRoom(tester, app);
+      await _settle(tester);
+      bool armed() => calls
+          .where((call) => call.method == 'setAutoEnter')
+          .any((call) => (call.arguments as Map)['enabled'] == true);
+      expect(find.byType(MiniPlayerSurface), findsOneWidget);
+      expect(armed(), isFalse, reason: 'inside-app mini must not opt into external picture-in-picture');
+      calls.clear();
+      await tester.runAsync(() => settings.set(Settings.autoPipOnLeave, true));
+      await _settle(tester);
+      expect((calls.lastWhere((call) => call.method == 'setAutoEnter').arguments as Map)['enabled'], isTrue);
+      calls.clear();
+      await tester.runAsync(() => settings.set(Settings.autoPipOnLeave, false));
+      await _settle(tester);
+      expect((calls.lastWhere((call) => call.method == 'setAutoEnter').arguments as Map)['enabled'], isFalse);
+      expect(app.engine.opens, hasLength(1), reason: 'a policy change never reopens the stream');
+      final runtime = FloatingRoom.instance.runtime!;
+      expect(runtime.background.onTaskRemoved, isNotNull);
+      final first = runtime.background.onTaskRemoved!();
+      final duplicate = runtime.background.onTaskRemoved!();
+      expect(identical(first, duplicate), isTrue, reason: 'task removal retires the native owner once');
+      // Stream done events are delivered in the widget test's fake zone.
+      // Pump that zone before awaiting the real retirement future.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
+      await _settle(tester);
+      await first;
+      await runtime.retirement;
+      expect(runtime.disposed, isTrue);
+      expect(app.engine.disposed, isTrue);
+      expect(app.danmaku.isConnected, isFalse);
       await _close(tester, app);
     });
 

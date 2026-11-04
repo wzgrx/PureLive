@@ -1,0 +1,9 @@
+# A07.42
+
+2026-11-04：核对当前三个开放issue及原始复现步骤，开始实现；发布、原生及真实平台证据后补。
+
+2026-11-04：根因是floating_window._syncAutoPip绕过autoPipOnLeave，使用miniWindowKind并enabled=true；现在使用leaveAppWindow，并以选择非none为启用条件。新增真实页面返回到小窗并热切换设置的回归，旧源码下失败，修复后通过。
+
+AudioService任务移除原本没有应用处理，增加当前播放所有者的幂等清理和原生closeTask。RoomRuntime在清理前撤下浮窗或标记主页面retiring，避免释放后旧StreamBuilder重建已销毁控制器；原回归确实捕获该错误，修正后通过。原生窗口关闭有等待上限，不因元数据/驱动长等待一直显示PiP，也不强杀进程或停止独立录制任务。
+
+专项小窗、后台和overlay共78项通过；旧测试曾明确假设应用内小窗不受外部自动开关控制，已将其外部场景显式开启自动小窗，保留新回归验证关闭时不误触。失败及测试事件循环中断日志保留在本地输出。Kotlin构建、Android原生最近任务/PiP及原Honor复验待后续。

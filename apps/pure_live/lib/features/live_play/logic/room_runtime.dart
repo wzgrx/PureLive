@@ -29,7 +29,41 @@ final class RoomRuntime {
     required this.orientation,
     this.audioFocus,
     this.playerConfig,
-  });
+    this.detachOnTaskRemoval,
+  }) {
+    background.onTaskRemoved = retireTask;
+  }
+
+  /// Lets the page leave before its disposed controller can be rebuilt.
+  final VoidCallback? detachOnTaskRemoval;
+
+  /// Presentations hide before asynchronous native retirement begins.
+  final ValueNotifier<bool> retiring = ValueNotifier(false);
+  Future<void>? _taskRetirement;
+
+  /// Explicit recent-task removal, distinct from Home or ordinary background.
+  Future<void> retireTask() => _taskRetirement ??= _retireTask();
+
+  Future<void> _retireTask() async {
+    retiring.value = true;
+    if (identical(FloatingRoom.instance.runtime, this)) {
+      await FloatingRoom.instance.close();
+      return;
+    }
+    detachOnTaskRemoval?.call();
+    final frame = Completer<void>();
+    final timer = Timer(const Duration(seconds: 1), () {
+      if (!frame.isCompleted) frame.complete();
+    });
+    SchedulerBinding.instance
+      ..addPostFrameCallback((_) {
+        if (!frame.isCompleted) frame.complete();
+      })
+      ..scheduleFrame();
+    await frame.future;
+    timer.cancel();
+    await dispose();
+  }
 
   /// The room's logic.
   final LiveRoomController controller;

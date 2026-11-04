@@ -391,6 +391,12 @@ class MainActivity : AudioServiceActivity() {
                         result.success(enterPictureInPicture())
                     }
 
+                    "closeTask" -> {
+                        setAutoEnterPictureInPicture(false)
+                        FloatingOverlay.onTaskRemoved()
+                        result.success(null)
+                        mainHandler.post { if (!isFinishing) finishAndRemoveTask() }
+                    }
                     "openSettings" -> result.success(openPictureInPictureSettings())
                     "setPlaying" -> {
                         setPictureInPicturePlaying(

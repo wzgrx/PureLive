@@ -1,0 +1,5 @@
+# V02.87
+
+读取AGENTS.md、docs/PROCESS.md和工程/UI规范。
+
+跟踪GitHub #194；实现由A07.42承接。按报告顺序验证应用内返回、Home、最近任务移除、PiP关闭/恢复与自动小窗开关；Honor MagicOS原机不能由模拟器或K90冒充。
