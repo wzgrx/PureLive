@@ -325,6 +325,7 @@ class LiveRoomController extends ChangeNotifier {
             'bilibili' => 'https://www.bilibili.com/video/${_archiveSelection!.recording.id}/',
             'huya' => 'https://v.huya.com/play/${_archiveSelection!.recording.id}.html',
             'douyu' => 'https://v.douyu.com/show/${_archiveSelection!.recording.id}',
+            'soop' => 'https://vod.sooplive.com/player/${_archiveSelection!.recording.id}',
             _ => _room.link,
           },
         )
@@ -928,7 +929,7 @@ class LiveRoomController extends ChangeNotifier {
       _historyRecorded = true;
       unawaited(_guard(() => store.history.record(_room, now: _now()), 'history'));
     }
-    unawaited(_syncDanmaku(force: true));
+    unawaited(_syncDanmaku());
     unawaited(_loadSuperChats(epoch));
   }
 
@@ -1010,6 +1011,9 @@ class LiveRoomController extends ChangeNotifier {
     _notify();
     final quality = _qualities[playing];
     final startup = userChoice ? null : _takeStartup(epoch);
+    // Visitor chat may need its own browser/handshake. Start it alongside
+    // the first decoder open, rather than adding that cost after playback.
+    if (!userChoice) unawaited(_syncDanmaku(force: true));
     await session.open(
       PlaybackRequest(
         site: site.id,

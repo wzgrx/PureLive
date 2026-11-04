@@ -252,6 +252,15 @@ object FloatingOverlay {
         channel?.invokeMethod("changed", false)
     }
 
+    /** Explicit task removal must not leave this application-owned window alive. */
+    fun onTaskRemoved() {
+        armed = false
+        leaving = false
+        if (!showing) return
+        removeWindow()
+        channel?.invokeMethod("changed", false)
+    }
+
     /** A new activity is created while the window shows: its own view takes the engine. */
     fun onNewActivity() {
         leaving = false

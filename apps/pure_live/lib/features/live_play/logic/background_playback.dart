@@ -226,6 +226,21 @@ abstract final class PictureInPicture {
     }
   }
 
+  /// The user removed the application task: dismiss its external window only
+  /// after the playback owner has retired its media resources.
+  static Future<void> closeTask() async {
+    if (!_android) return;
+    _autoOwner = null;
+    // A cached Flutter engine can outlive the removed PiP Activity. Some
+    // devices never deliver its final mode callback before detaching it.
+    active.value = false;
+    try {
+      await _channel.invokeMethod<void>('closeTask');
+    } on Object catch (error) {
+      developer.log('Task window cleanup failed', name: 'LivePlay', error: error);
+    }
+  }
+
   /// Opens this app's picture-in-picture page of the system settings (its
   /// details page where there is none). False when nothing opened.
   static Future<bool> openSettings() async {
@@ -311,10 +326,45 @@ class _RoomAudioHandler extends audio.BaseAudioHandler {
   Future<void> Function()? onPlay;
   Future<void> Function()? onPause;
   Future<void> Function()? onStop;
+  Future<void> Function()? onTaskRemoval;
+  Future<void>? _taskRemoval;
   // Music (A17.7): the queue's buttons and the position.
   Future<void> Function()? onNext;
   Future<void> Function()? onPrevious;
   Future<void> Function(Duration position)? onSeek;
+
+  @override
+  Future<void> onTaskRemoved() => _taskRemoval ??= _finishTaskRemoval();
+
+  Future<void> _finishTaskRemoval() async {
+    RoomMediaNotification.debugLog?.call('taskRemoved');
+    final owner = RoomMediaNotification._owner;
+    var retired = false;
+    try {
+      // Closing a task must not wait forever for a driver or metadata write.
+      // The runtime still owns any retirement continuing after this grace.
+      await (onTaskRemoval ?? onStop)?.call().timeout(const Duration(seconds: 3));
+      retired = true;
+    } on Object catch (error, stackTrace) {
+      developer.log('Task playback retirement failed', name: 'LivePlay', error: error, stackTrace: stackTrace);
+    } finally {
+      // A new playback owner can appear while the old native resources retire.
+      // Its notification and newly opened task must not be closed by this callback.
+      if (RoomMediaNotification._owner == null || identical(RoomMediaNotification._owner, owner)) {
+        // Runtime retirement normally hides its notification first. Publishing
+        // idle twice can call an audio_service instance already destroyed by the
+        // first update, while the cached Flutter engine is detaching.
+        // A grace timeout is not native retirement. The runtime keeps the
+        // service alive until its resource tracker completes and hides it.
+        if (retired && playbackState.value.processingState != audio.AudioProcessingState.idle) {
+          playbackState.add(
+            playbackState.value.copyWith(playing: false, processingState: audio.AudioProcessingState.idle),
+          );
+        }
+        await PictureInPicture.closeTask();
+      }
+    }
+  }
 
   @override
   Future<void> skipToNext() async {
@@ -414,6 +464,7 @@ abstract final class RoomMediaNotification {
     required Future<void> Function() play,
     required Future<void> Function() pause,
     required Future<void> Function() stop,
+    Future<void> Function()? taskRemoved,
   }) async {
     debugLog?.call('show $playing');
     if (!available) return;
@@ -423,7 +474,9 @@ abstract final class RoomMediaNotification {
     handler
       ..onPlay = play
       ..onPause = pause
-      ..onStop = stop;
+      ..onStop = stop
+      ..onTaskRemoval = taskRemoved ?? stop
+      .._taskRemoval = null;
     final cover = Uri.tryParse(room.cover.trim());
     handler.mediaItem.add(
       audio.MediaItem(
@@ -485,6 +538,8 @@ abstract final class RoomMediaNotification {
       ..onPlay = play
       ..onPause = pause
       ..onStop = stop
+      ..onTaskRemoval = stop
+      .._taskRemoval = null
       ..onNext = next
       ..onPrevious = previous
       ..onSeek = seek;
@@ -549,6 +604,7 @@ abstract final class RoomMediaNotification {
       ..onPlay = null
       ..onPause = null
       ..onStop = null
+      ..onTaskRemoval = null
       ..onNext = null
       ..onPrevious = null
       ..onSeek = null
@@ -626,6 +682,9 @@ class RoomBackgroundPolicy with WidgetsBindingObserver {
   /// The user paused or stopped from the notification or the lock screen
   /// (the audio focus forgets a resume it planned).
   void Function()? onUserPause;
+
+  /// The runtime owns real native retirement when the Android task is removed.
+  Future<void> Function()? onTaskRemoved;
 
   late final BackgroundKeeper _keeper;
   Timer? _pauseTimer;
@@ -765,6 +824,7 @@ class RoomBackgroundPolicy with WidgetsBindingObserver {
           play: _session.resume,
           pause: _userPause,
           stop: _userPause,
+          taskRemoved: onTaskRemoved,
         ),
       );
     } else if (wanted) {
@@ -970,8 +1030,9 @@ class RoomBackgroundPolicy with WidgetsBindingObserver {
     }
   }
 
-  /// Stops following; releases the locks and the notification.
-  void dispose() {
+  /// Stops following and releases locks. The runtime can retain the
+  /// engine-owning notification until its native video textures are released.
+  void dispose({bool hideNotification = true}) {
     if (_disposed) return;
     _pauseTimer?.cancel();
     _awayTimer?.cancel();
@@ -989,7 +1050,7 @@ class RoomBackgroundPolicy with WidgetsBindingObserver {
     unawaited(_states?.cancel());
     unawaited(_network?.cancel());
     unawaited(BackgroundKeepAlive.set(enabled: false));
-    unawaited(RoomMediaNotification.hide(this));
+    if (hideNotification) unawaited(RoomMediaNotification.hide(this));
     PictureInPicture.unbindPlayback(this);
   }
 }

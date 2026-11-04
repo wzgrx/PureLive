@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -28,6 +30,7 @@ import 'package:pure_live/routes/route_observer.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/images.dart';
 
+import '../../qa_capture.dart';
 import '../../support.dart';
 
 Future<AppServices> _pump(
@@ -62,6 +65,68 @@ Future<AppServices> _pump(
 }
 
 void main() {
+  for (final dark in [false, true]) {
+    testWidgets('issue 200: custom tablet wallpaper joins rail safe areas and app bar, dark=$dark', (tester) async {
+      final services = await _pump(tester, width: 1024, height: 768);
+      addTearDown(() => tester.runAsync(services.close));
+      tester.view.padding = const FakeViewPadding(top: 28, bottom: 20, left: 8);
+      await tester.runAsync(() async {
+        final recorder = ui.PictureRecorder();
+        final canvas = ui.Canvas(recorder);
+        const bounds = ui.Rect.fromLTWH(0, 0, 1024, 768);
+        canvas.drawRect(
+          bounds,
+          ui.Paint()
+            ..shader = ui.Gradient.linear(ui.Offset.zero, const ui.Offset(1024, 768), [
+              const ui.Color(0xff126d78),
+              const ui.Color(0xff503b89),
+            ]),
+        );
+        for (var i = 0; i < 9; i++) {
+          canvas.drawCircle(
+            ui.Offset(i * 150, 180 + (i % 3) * 210),
+            110,
+            ui.Paint()..color = const ui.Color(0x408bdbd5),
+          );
+        }
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(1024, 768);
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+        image.dispose();
+        picture.dispose();
+        final folder = Directory('${services.dataRoot.path}/custom_background')..createSync(recursive: true);
+        File('${folder.path}/background-200.png').writeAsBytesSync(bytes!.buffer.asUint8List());
+        await services.store.settings.set(Settings.customBackground, {
+          'kind': 'image',
+          'file': 'background-200.png',
+          'mask': 0.25,
+        });
+        await services.store.settings.set(Settings.themeMode, dark ? 'Dark' : 'Light');
+      });
+      for (var n = 0; n < 8; n++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+      final rail = find.byKey(const ValueKey('home-rail'));
+      final material = tester.widget<Material>(rail);
+      expect(material.color!.a, lessThan(1), reason: 'the rail must reveal the wallpaper surface');
+      final surface = find.byKey(const ValueKey('home-rail-surface'));
+      final shell = tester.widget<Scaffold>(find.ancestor(of: surface, matching: find.byType(Scaffold)).first);
+      final bounds = tester.getRect(find.byWidget(shell.body!));
+      expect(tester.getRect(surface).top, bounds.top);
+      expect(tester.getRect(surface).bottom, bounds.bottom, reason: 'the entire shell safe area shares the surface');
+      final bar = find.byType(AppBar).first;
+      expect(Theme.of(tester.element(bar)).appBarTheme.backgroundColor!.a, lessThan(1));
+      await captureQaFrame(tester, 'issue200-tablet-${dark ? 'Dark' : 'Light'}');
+      await tester.runAsync(() => services.store.settings.set(Settings.customBackground, <String, Object?>{}));
+      await tester.pumpAndSettle();
+      expect(tester.widget<Material>(rail).color!.a, 1, reason: 'disabled backgrounds keep the original opaque theme');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
   testWidgets('A06.9: a mouse drags the short desktop rail scrollbar thumb', (tester) async {
     final services = await _pump(tester, width: 1000, height: 400);
     addTearDown(() => tester.runAsync(services.close));

@@ -267,6 +267,7 @@ const List<String> _withKick = [
 
 /// Settings v4 added (no 3.x key) and their defaults, with the task.
 const Map<String, Object> newInV4 = {
+  'portraitFullscreenDanmakuLayout': 'rolling', // A08.17: preserve existing layout
   'customBackground': <String, Object?>{}, // A11.11: no custom page background by default.
   'screenCaptureHint': 'full', // N02.4: keep the existing visible capture banner.
   'playbackHud': <String, Object?>{}, // A07.36: shared clock/rate display defaults.

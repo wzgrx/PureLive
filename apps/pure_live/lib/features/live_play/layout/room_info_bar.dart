@@ -69,7 +69,7 @@ class RoomInfoBar extends ConsumerWidget {
               Expanded(
                 child: _TitleLine(controller: controller, detailsOpen: detailsOpen, onTap: onToggleDetails),
               ),
-              if ({SiteIds.huya, SiteIds.douyu, SiteIds.bilibili}.contains(controller.room.platform))
+              if ({SiteIds.huya, SiteIds.douyu, SiteIds.bilibili, SiteIds.soop}.contains(controller.room.platform))
                 TextButton.icon(
                   key: const ValueKey('room-replay-entry'),
                   onPressed: () => unawaited(RoomMenuButton.run(context, ref, controller, RoomMenuEntry.replayArchive)),

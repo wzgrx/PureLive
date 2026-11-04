@@ -77,14 +77,17 @@ String _v3ErrorName(Object error) => switch (error) {
 
 /// What legacy_expected.dart writes for one answer: the body decoded once,
 /// then parsed.
-Map<String, Object?> _parsed(Object? decoded) {
+Map<String, Object?> _parsed(Object? decoded, {bool legacyGiftSubset = false}) {
   try {
     final batch = KuaishouDanmakuProtocol.parse(decoded);
     return {
       'cursor': batch.cursor,
       'pullDelayMs': batch.pullDelay.inMilliseconds,
       'onlineViewers': batch.onlineViewers,
-      'messages': [for (final message in batch.messages) _project(message)],
+      'messages': [
+        for (final message in batch.messages)
+          if (!legacyGiftSubset || message.type != LiveMessageType.gift) _project(message),
+      ],
     };
   } on Object catch (error) {
     return {'error': _v3ErrorName(error)};
@@ -314,13 +317,21 @@ void main() {
       expect(batch.cursor, 'next-cursor');
       expect(batch.pullDelay, const Duration(seconds: 3));
       expect(batch.onlineViewers, 12000);
-      expect(batch.messages, hasLength(1));
-      expect(batch.messages.single.message, '测试弹幕');
-      expect(batch.messages.single.userName, '快手用户A');
-      expect(batch.messages.single.userId, '4143159120');
-      expect(batch.messages.single.messageId, startsWith('kuaishou:'));
-      expect(batch.messages.single.sentAt?.millisecondsSinceEpoch, 1788278277492);
-      expect(batch.reported.map((message) => message.type), [LiveMessageType.online, LiveMessageType.chat]);
+      expect(batch.messages, hasLength(2));
+      final comment = batch.messages.first;
+      expect(comment.message, '测试弹幕');
+      expect(comment.userName, '快手用户A');
+      expect(comment.userId, '4143159120');
+      expect(comment.messageId, startsWith('kuaishou:'));
+      expect(comment.sentAt?.millisecondsSinceEpoch, 1788278277492);
+      expect(batch.messages.last.type, LiveMessageType.gift);
+      expect(batch.messages.last.message, '礼物');
+      expect(batch.messages.last.gift, isNull, reason: 'plain gift text never invents price, count or icon metadata');
+      expect(batch.reported.map((message) => message.type), [
+        LiveMessageType.online,
+        LiveMessageType.chat,
+        LiveMessageType.gift,
+      ]);
       final audience = batch.reported.first;
       expect(audience.data, isA<LiveAudienceUpdate>());
       expect((audience.data! as LiveAudienceUpdate).kind, LiveAudienceMetricKind.onlineViewers);
@@ -388,7 +399,17 @@ void main() {
       final name = feed['name']! as String;
       test(name, () {
         final v3 = Map.of(expected[name]!)..remove('name');
-        final actual = _parsed(jsonDecode(_bodyOf(feed)));
+        final decoded = jsonDecode(_bodyOf(feed));
+        final giftsAdded =
+            name == 'recorded shape: two layers, a comment and a gift' || name == 'only comments, in any case';
+        if (giftsAdded) {
+          final gifts = KuaishouDanmakuProtocol.parse(decoded).messages
+              .where((message) => message.type == LiveMessageType.gift)
+              .toList();
+          expect(gifts, hasLength(1), reason: 'D07.9 preserves gift text that 3.x discarded');
+          expect(gifts.single.gift, isNull, reason: 'no price/icon data was supplied');
+        }
+        final actual = _parsed(decoded, legacyGiftSubset: giftsAdded);
         if (feed['skipEntry'] != null) {
           // 3.x failed the whole answer on the entry DateTime cannot hold;
           // the new code skips that entry only (差异 2).
