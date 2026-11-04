@@ -135,7 +135,7 @@ void main() {
     expect(site, isA<LiveSiteLinks>());
     expect(site, isNot(isA<LiveCancellableSearch>()));
     expect(site, isNot(isA<LiveSearchPaginationPolicy>()));
-    expect(AudiencePlatformCapability.of('xiaohongshu').supportsConcurrentOnline, isFalse);
+    expect(AudiencePlatformCapability.of('xiaohongshu').supportsConcurrentOnline, isTrue);
   });
 
   group('directory', () {
@@ -170,7 +170,7 @@ void main() {
       // 3.x: 暂无已接入的公开直播目录。请在搜索页输入直播房间号，或导入官网 /livestream/
       // 分享链接；收藏仅跟踪该直播房间，不代表跨场次跟随主播。
       expect(XiaohongshuSite(ReplayHttp(const [])).directoryNoticeKey, 'xiaohongshu_directory_scope');
-      expect(XiaohongshuApi.directoryScope, startsWith('小红书没有公开的直播列表。'));
+      expect(XiaohongshuApi.directoryScope, startsWith('此设备暂时无法加载小红书直播列表和弹幕。'));
       expect(XiaohongshuApi.directoryScope, isNot(contains('/livestream/')));
     });
   });

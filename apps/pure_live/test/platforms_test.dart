@@ -17,6 +17,17 @@ import 'package:pure_live/platform/native_http.dart';
 
 import 'support.dart';
 
+final class _XiaohongshuVisitor implements XiaohongshuGuest {
+  @override
+  Future<String> categories({CancelToken? cancel}) => throw UnimplementedError();
+  @override
+  Future<String> directory({required String category, required String cursor, CancelToken? cancel}) =>
+      throw UnimplementedError();
+  @override
+  Future<XiaohongshuPushIdentity> pushIdentity(String roomId, {bool refresh = false, CancelToken? cancel}) =>
+      throw UnimplementedError();
+}
+
 /// A fake FC2 control socket replaying the recorded server frames of
 /// fixtures/fc2live/control/S04-control.
 final class _Fc2Socket implements SocketChannel {
@@ -48,6 +59,28 @@ final class _Fc2Socket implements SocketChannel {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('Xiaohongshu directory and chat share the injected visitor; isolates keep link playback', () async {
+    final services = await testServices();
+    addTearDown(services.close);
+    final guest = _XiaohongshuVisitor();
+    final deps = PlatformDeps(
+      http: services.http,
+      proxy: services.proxy,
+      cookies: services.cookies,
+      store: services.store,
+      xiaohongshuGuest: guest,
+    );
+    final sites = buildSiteRegistry(deps);
+    final adapter = sites.of(SiteIds.xiaohongshu) as XiaohongshuSite;
+    final registry = buildDanmakuRegistry(deps, sites);
+    final connection = registry.connectionFor(SiteIds.xiaohongshu) as XiaohongshuDanmakuConnection;
+    addTearDown(connection.close);
+    expect(adapter.guest, same(guest));
+    expect(connection.guest, same(guest));
+    expect(registry.supports(SiteIds.xiaohongshu), isTrue);
+    expect(services.danmaku.supports(SiteIds.xiaohongshu), isFalse);
+  });
 
   test('every platform of 3.x and IPTV is registered, adapters are kept', () async {
     final services = await testServices();

@@ -2,6 +2,7 @@
 // row's trailing slot (docs/A-界面设计/A07-直播间界面/A07.12-直播间子弹窗统一: the room menu, the unfollow
 // and orientation menus, the cast receivers).
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
@@ -22,6 +23,36 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
 }
 
 void main() {
+  testWidgets('compact choice descriptions are hover hints and never select a row', (tester) async {
+    int? chosen;
+    await _pump(
+      tester,
+      Builder(
+        builder: (context) => TextButton(
+          onPressed: () async => chosen = await showSmallMenu(
+            context,
+            entries: const ['自动识别', '强制竖屏'],
+            tooltips: const ['Follow the reported source size', 'Treat this source as portrait'],
+            current: 0,
+          ),
+          child: const Text('方向'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('方向'));
+    await tester.pumpAndSettle();
+    expect(find.text('Treat this source as portrait'), findsNothing);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(find.byKey(const ValueKey('stream-menu-item-1'))));
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('Treat this source as portrait'), findsOneWidget);
+    expect(chosen, isNull);
+    expect(find.byKey(const ValueKey('stream-menu-item-0')), findsOneWidget);
+    await mouse.removePointer();
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+  });
   testWidgets('a title row on top and a second line under an entry; the button tells when it opens and closes', (
     tester,
   ) async {

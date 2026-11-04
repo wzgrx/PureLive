@@ -1466,9 +1466,14 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
         ),
       );
 
-  Widget _infoBar(LiveRoomController controller) => controller.isArchive
+  Widget _infoBar(LiveRoomController controller, {bool showFigures = true}) => controller.isArchive
       ? RoomReplayInfo(controller: controller)
-      : RoomInfoBar(controller: controller, detailsOpen: _details, onToggleDetails: _toggleDetails);
+      : RoomInfoBar(
+          controller: controller,
+          detailsOpen: _details,
+          onToggleDetails: _toggleDetails,
+          showFigures: showFigures,
+        );
 
   /// The details over [below] (the chat), sliding in unless the system asks
   /// for less motion.
@@ -1504,27 +1509,28 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   /// The strip, a divider and the chat with the details over it; with
   /// [composerCollapsed] the local composer is a star on the chat list
   /// (the portrait room's panel, A07.17 c3).
-  Widget _chatColumn(LiveRoomController controller, {bool composerCollapsed = false}) => ListenableSelector<bool>(
-    listenable: controller,
-    selector: () => controller.isArchive,
-    builder: (context, _, _) => Column(
-      children: [
-        _infoBar(controller),
-        const Divider(height: 1),
-        Expanded(
-          child: _withDetails(
-            controller,
-            ChatPanel(
-              controller: controller,
-              detailsOpen: _details,
-              memory: _memory,
-              composerCollapsed: composerCollapsed,
+  Widget _chatColumn(LiveRoomController controller, {bool composerCollapsed = false, bool figuresBelowVideo = false}) =>
+      ListenableSelector<bool>(
+        listenable: controller,
+        selector: () => controller.isArchive,
+        builder: (context, _, _) => Column(
+          children: [
+            _infoBar(controller, showFigures: !figuresBelowVideo),
+            const Divider(height: 1),
+            Expanded(
+              child: _withDetails(
+                controller,
+                ChatPanel(
+                  controller: controller,
+                  detailsOpen: _details,
+                  memory: _memory,
+                  composerCollapsed: composerCollapsed,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 
   Widget _buildInline(BuildContext context, LiveRoomController controller, _LayoutSettings settings) => LayoutBuilder(
     builder: (context, page) {
@@ -1786,13 +1792,38 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
         onPressed: () => _toggleChat(collapsed),
       ),
     );
-    final picture = ColoredBox(
+    final video = ColoredBox(
       color: OnVideoColors.ground,
-      child: portrait
-          ? player
-          : Center(
-              child: AspectRatio(key: const ValueKey('live-play-video-frame'), aspectRatio: 16 / 9, child: player),
-            ),
+      child: portrait ? player : SizedBox.expand(key: const ValueKey('live-play-video-frame'), child: player),
+    );
+    // The player viewport follows the split boundary, while its own fit
+    // preserves the source aspect. Controls and the chat handle therefore
+    // never follow a narrower, centred 16:9 wrapper.
+    final picture = Column(
+      children: [
+        Expanded(child: video),
+        ListenableSelector<bool>(
+          listenable: controller,
+          selector: () => controller.isArchive,
+          builder: (context, archive, _) => archive
+              ? const SizedBox.shrink()
+              : Material(
+                  key: const ValueKey('live-play-wide-footer'),
+                  color: Theme.of(context).colorScheme.surface,
+                  child: SafeArea(
+                    top: false,
+                    left: false,
+                    right: false,
+                    child: RoomInfoBar(
+                      controller: controller,
+                      detailsOpen: _details,
+                      onToggleDetails: _toggleDetails,
+                      showTitle: false,
+                    ),
+                  ),
+                ),
+        ),
+      ],
     );
     final scheme = Theme.of(context).colorScheme;
     final row = Row(
@@ -1813,7 +1844,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
                 decoration: BoxDecoration(
                   border: Border(left: BorderSide(color: scheme.outlineVariant)),
                 ),
-                child: _chatColumn(controller),
+                child: _chatColumn(controller, figuresBelowVideo: true),
               ),
             ),
           ),

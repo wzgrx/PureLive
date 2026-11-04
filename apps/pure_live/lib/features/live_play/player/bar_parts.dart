@@ -323,16 +323,14 @@ class PortraitModeButton extends ConsumerWidget {
         constraints: const BoxConstraints(minWidth: kMinInteractiveDimension, minHeight: kMinInteractiveDimension),
         onPressed: () async {
           onMenu?.call(true);
-          final width = MediaQuery.sizeOf(anchor).width;
           final chosen = await showSmallMenu(
             anchor,
-            title: i18n('portrait_fullscreen_display_mode'),
+            semanticLabel: i18n('portrait_fullscreen_display_mode'),
             entries: [for (final value in PortraitDisplayMode.values) portraitModeName(value)],
-            descriptions: [for (final value in PortraitDisplayMode.values) portraitModeDescription(value)],
+            tooltips: [for (final value in PortraitDisplayMode.values) portraitModeDescription(value)],
             current: mode.index,
             entryKey: 'portrait-mode',
             preferAbove: true,
-            width: (width - 24).clamp(200.0, 340.0),
           );
           onMenu?.call(false);
           if (chosen != null && chosen != mode.index) {

@@ -66,6 +66,13 @@ final class AudiencePlatformCapability {
 
 /// Audience metrics per platform id.
 const Map<String, AudiencePlatformCapability> audienceCapabilities = {
+  // The public web feed and RWP refresh distinguish member_count (online)
+  // from uv/displayViewerCount (cumulative). Never substitute hot_value.
+  'xiaohongshu': AudiencePlatformCapability(
+    hasPopularity: false,
+    hasTotalViewers: true,
+    onlineAvailability: AudienceOnlineAvailability.roomList,
+  ),
   // Bilibili's room `online` field and operation-3 heartbeat are popularity;
   // WATCHED_CHANGE is cumulative. Neither is a concurrent head count.
   'bilibili': AudiencePlatformCapability(

@@ -281,13 +281,17 @@ final class InAppHeadlessBrowser implements HeadlessBrowser {
     required String script,
     required Duration timeout,
     String? proxyRule,
-  }) async {
+  }) => exclusive(proxyRule: proxyRule, body: () => _run(origin, script, timeout));
+
+  /// Shares the process-global Android proxy scope with other short-lived
+  /// visitor bootstraps. No browser may change it while another page runs.
+  static Future<T> exclusive<T>({required Future<T> Function() body, String? proxyRule}) async {
     final predecessor = _tail;
     final release = Completer<void>();
     _tail = release.future;
     try {
       await predecessor;
-      return await _withProxy(proxyRule, () => _run(origin, script).timeout(timeout));
+      return await _withProxy(proxyRule, body);
     } finally {
       release.complete();
     }
@@ -316,7 +320,7 @@ final class InAppHeadlessBrowser implements HeadlessBrowser {
     }
   }
 
-  static Future<Object?> _run(Uri origin, String script) async {
+  static Future<Object?> _run(Uri origin, String script, Duration timeout) async {
     final created = Completer<InAppWebViewController>();
     final loaded = Completer<void>();
     final page = WebUri.uri(origin);
@@ -350,7 +354,7 @@ final class InAppHeadlessBrowser implements HeadlessBrowser {
         if (!loaded.isCompleted) loaded.complete();
       },
     );
-    try {
+    Future<Object?> execute() async {
       await view.run();
       final controller = await created.future;
       await loaded.future;
@@ -359,6 +363,12 @@ final class InAppHeadlessBrowser implements HeadlessBrowser {
         throw StateError('Twitch WebView script failed: ${result?.error ?? 'no result'}');
       }
       return result.value;
+    }
+
+    try {
+      // The timeout must enter this finally before the exclusive proxy
+      // scope is released, including when a page never finishes loading.
+      return await execute().timeout(timeout);
     } finally {
       if (view.isRunning()) await view.dispose();
     }

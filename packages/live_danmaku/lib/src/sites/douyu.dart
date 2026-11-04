@@ -254,6 +254,9 @@ abstract final class DouyuDanmakuProtocol {
       color: color(int.tryParse(fields['col'] ?? '') ?? 0),
       messageId: messageId.isEmpty ? '' : 'douyu:$messageId',
       userLevel: level > 0 ? '$level' : '',
+      userLevelValue: int.tryParse(fields['level'] ?? ''),
+      fansLevelValue: int.tryParse(fields['bl'] ?? ''),
+      suspectedAutomated: isSuspectedAutomated(fields),
       fansName: fans,
       fansLevel: fans.isNotEmpty && fansLevel > 0 ? '$fansLevel' : '',
       sentAt: timestamp == null

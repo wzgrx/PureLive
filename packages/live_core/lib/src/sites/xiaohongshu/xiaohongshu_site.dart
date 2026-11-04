@@ -6,6 +6,8 @@ import 'package:live_core/src/live_room.dart';
 import 'package:live_core/src/live_site.dart';
 import 'package:live_core/src/site_error.dart';
 import 'package:live_core/src/sites/xiaohongshu/xiaohongshu_api.dart';
+import 'package:live_core/src/sites/xiaohongshu/xiaohongshu_directory.dart';
+import 'package:live_core/src/sites/xiaohongshu/xiaohongshu_guest.dart';
 import 'package:live_net/live_net.dart';
 
 const _site = 'xiaohongshu';
@@ -17,31 +19,28 @@ const _shortLinkTimeout = Duration(seconds: 12);
 /// The Xiaohongshu adapter (3.x's `XiaohongshuSite`, `XiaohongshuApi` and
 /// `XiaohongshuLink`; parsing in [XiaohongshuApi]).
 ///
-/// Link-only, as in 3.x: the website's live list needs a signed login
-/// request, so the directory is empty (with a lasting explanation) and
-/// search looks up the one room a room id, share link, short link or app
-/// deep link names. A room is its public share page, read anonymously as
-/// `xiaohongshu` with 3.x's headers and without following redirects; the
-/// page also holds the pull addresses (one quality per `quality_type`, its
-/// H.264 and H.265 addresses as lines). Room ids are the broadcast rooms
-/// asked for: following the streamer across broadcasts (16-5) is blocked,
-/// see [XiaohongshuApi]. There is no danmaku (3.x's `EmptyDanmaku`), no
-/// account and no start time. Failures are `SiteError`s; nothing is
-/// disguised as an offline room.
+/// Public share-page playback keeps the existing restriction and stream URL
+/// checks. Shells with a visitor bootstrap also expose native categories,
+/// caller-owned cursor pages and non-secret room chat arguments (E02.16).
+/// A follow still identifies this broadcast, not the streamer's next room.
+/// Errors remain typed; bootstrap refusals are never disguised as offline.
 final class XiaohongshuSite extends LiveSite
     with LiveSiteLinks
     implements
-        LiveSiteDirectoryPager,
+        LiveSiteCursorDirectoryPager,
         LiveDirectoryNotice,
         LiveSiteRoomRefresher,
         LiveSiteRecordRoomResolver,
         LivePlayUrlResolver,
         LivePlayRecoveryResolver {
   /// Creates the adapter.
-  new(this.http);
+  new(this.http, {this.guest});
 
   /// Transport.
   final LiveHttp http;
+
+  /// Anonymous web session, injected only where the browser backend exists.
+  final XiaohongshuGuest? guest;
 
   @override
   String get id => _site;
@@ -51,7 +50,7 @@ final class XiaohongshuSite extends LiveSite
 
   /// 3.x's `xiaohongshu_directory_scope` (text: [XiaohongshuApi.directoryScope]).
   @override
-  String get directoryNoticeKey => 'xiaohongshu_directory_scope';
+  String get directoryNoticeKey => guest == null ? 'xiaohongshu_directory_scope' : 'xiaohongshu_guest_directory_scope';
 
   // Requests ------------------------------------------------------------------
 
@@ -83,22 +82,95 @@ final class XiaohongshuSite extends LiveSite
 
   // Directory -----------------------------------------------------------------
 
-  /// Always empty: no public directory is reachable anonymously (3.x shows
-  /// [directoryNoticeKey] instead). Only recommendation pages exist; page 0
-  /// or a category is a caller error (`ArgumentError`), as 3.x refused them.
-  /// Nothing is requested.
+  /// Dynamic platform categories. The old link-only adapter remains usable
+  /// in isolates and shells without a browser backend.
+  @override
+  Future<List<LiveCategory>> getCategories(int page, int pageSize) async {
+    if (page != 1 || guest == null) return const [];
+    return XiaohongshuDirectory.categories(await guest!.categories());
+  }
+
+  String _category(LiveArea? area) {
+    if (area == null) return '0';
+    if (area.platform != _site || !RegExp(r'^\d{1,8}$').hasMatch(area.areaId)) {
+      throw ArgumentError.value(area, 'category', 'Expected a Xiaohongshu category');
+    }
+    return area.areaId;
+  }
+
+  /// One request by caller-owned cursor, so refreshing or switching tabs
+  /// cannot reuse another listing's cursor.
+  @override
+  Future<LiveDirectoryPage> getDirectoryPageAtCursor({
+    required int page,
+    String? cursor,
+    LiveArea? category,
+    CancelToken? cancel,
+  }) async {
+    if (cancel?.isCancelled ?? false) throw const TransportFailure(_site, TransportReason.cancelled);
+    if (page < 1) throw RangeError.range(page, 1, null, 'page');
+    if ((page == 1) != (cursor == null)) throw ArgumentError.value(cursor, 'cursor', 'Cursor does not match page');
+    final session = guest;
+    if (session == null) {
+      if (category != null) throw ArgumentError.value(category, 'category', 'Directory is unavailable in this shell');
+      return LiveDirectoryPage(rooms: const [], page: page, hasMore: false);
+    }
+    final score = cursor ?? '0';
+    if (score.isEmpty || score.length > 128) throw ArgumentError.value(cursor, 'cursor');
+    final body = await session.directory(category: _category(category), cursor: score, cancel: cancel);
+    if (cancel?.isCancelled ?? false) throw const TransportFailure(_site, TransportReason.cancelled);
+    return XiaohongshuDirectory.page(body, page: page, cursor: score);
+  }
+
+  /// Compatibility paging (1–20), replaying cursors locally with a bounded
+  /// deadline. The application's directory uses the single-request method.
   @override
   Future<LiveDirectoryPage> getDirectoryPage({int page = 1, LiveArea? category, CancelToken? cancel}) async {
     if (cancel?.isCancelled ?? false) throw const TransportFailure(_site, TransportReason.cancelled);
     if (page < 1) throw RangeError.range(page, 1, null, 'page');
-    if (category != null) throw ArgumentError.value(category, 'category', 'Xiaohongshu has no categories');
-    return LiveDirectoryPage(rooms: const [], page: page, hasMore: false);
+    if (guest == null) {
+      if (category != null) throw ArgumentError.value(category, 'category', 'Directory is unavailable in this shell');
+      return LiveDirectoryPage(rooms: const [], page: page, hasMore: false);
+    }
+    if (page > 20) throw RangeError.range(page, 1, 20, 'page');
+    final owned = CancelToken();
+    if (cancel != null) unawaited(cancel.whenCancelled.then((_) => owned.cancel()));
+    Future<LiveDirectoryPage> replay() async {
+      String? cursor;
+      final shown = <String>{};
+      for (var current = 1; ; current++) {
+        final result = await getDirectoryPageAtCursor(page: current, cursor: cursor, category: category, cancel: owned);
+        if (current == page) {
+          return LiveDirectoryPage(
+            rooms: result.rooms.where((room) => !shown.contains(room.roomId)),
+            page: page,
+            hasMore: result.hasMore,
+            nextCursor: result.nextCursor,
+          );
+        }
+        if (!result.hasMore) return LiveDirectoryPage(rooms: const [], page: page, hasMore: false);
+        shown.addAll(result.rooms.map((room) => room.roomId));
+        cursor = result.nextCursor;
+      }
+    }
+
+    try {
+      return await replay().timeout(const Duration(seconds: 45));
+    } on TimeoutException {
+      throw const NetworkFailure(_site, 'Directory timed out');
+    } finally {
+      owned.cancel();
+    }
   }
 
-  /// Empty, as the directory.
+  /// Public recommendations, or the explicit link-only fallback.
   @override
   Future<List<LiveRoom>> getRecommendRooms({int page = 1, int pageSize = 30}) async =>
       (await getDirectoryPage(page: page)).rooms;
+
+  @override
+  Future<List<LiveRoom>> getCategoryRooms(LiveArea category, {int page = 1, int pageSize = 30}) async =>
+      guest == null ? const [] : (await getDirectoryPage(page: page, category: category)).rooms;
 
   // Search --------------------------------------------------------------------
 
@@ -162,7 +234,10 @@ final class XiaohongshuSite extends LiveSite
   @override
   Future<LiveRoom> getRoomDetail({required String roomId}) async {
     final page = await _read(roomId);
-    return page.room.copyWith(data: page.data);
+    return page.room.copyWith(
+      data: page.data,
+      danmakuData: guest == null ? null : XiaohongshuDanmakuArgs(roomId: page.room.roomId),
+    );
   }
 
   /// Follow-card refresh: the same one request, without stream data (3.x).

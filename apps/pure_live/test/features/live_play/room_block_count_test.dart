@@ -54,7 +54,7 @@ void main() {
       if (line.kind == ChatLineKind.chat) line.text,
   ];
 
-  test('a pattern blocks; the blocks count, duplicates and repeats do not', () async {
+  test('a pattern and repeated content count; transport duplicate packets do not', () async {
     await store.blockLists.add(BlockKind.keyword, r'/^[0-9]+$/');
     await store.settings.set(Settings.collapseRepeatedDanmaku, true);
     final controller = controllerFor();
@@ -72,8 +72,12 @@ void main() {
       ..chat('你好', id: 'm1')
       ..chat('主播666', user: '别人');
     expect(chatTexts(controller), ['主播666', '你好']);
-    expect(controller.blocked.value, 2, reason: 'the duplicate packet and the repeat are not blocks');
-    expect(heard, 2, reason: 'without a frame scheduler each change is heard at once');
+    expect(
+      controller.blocked.value,
+      3,
+      reason: 'two blocked words plus one repeated text; the packet duplicate is excluded',
+    );
+    expect(heard, 3, reason: 'without a frame scheduler each change is heard at once');
     controller.dispose();
   });
 
@@ -105,6 +109,71 @@ void main() {
       ['火箭 ×1'],
     );
     expect(controller.blocked.value, 1);
+    controller.dispose();
+  });
+
+  test('similarity filters contribute to the same session count', () async {
+    await store.settings.set(Settings.enableDanmakuSimilarityFilter, true);
+    await store.settings.set(Settings.danmakuSimilarityThreshold, 85);
+    final controller = controllerFor();
+    await controller.start();
+    await settle();
+    danmaku
+      ..chat('welcome to this live room', id: 'original')
+      ..chat('welcome to this live room!', id: 'similar');
+    expect(chatTexts(controller), ['welcome to this live room']);
+    expect(controller.blocked.value, 1);
+    controller.dispose();
+  });
+
+  test('attribute, bot, user, keyword and repeated filters each count a real packet once', () async {
+    await store.settings.set(Settings.danmakuColoredOnly, true);
+    await store.settings.set(Settings.danmakuMinUserLevel, 5);
+    await store.settings.set(Settings.danmakuMinFansLevel, 3);
+    await store.settings.set(Settings.filterDouyuSuspectedAutomatedMessages, true);
+    await store.settings.set(Settings.collapseRepeatedDanmaku, true);
+    await store.blockLists.add(BlockKind.keyword, '广告');
+    await store.blockLists.add(BlockKind.user, 'blocked-viewer');
+    final controller = controllerFor();
+    await controller.start();
+    await settle();
+    void emit(
+      String id, {
+      String text = 'hello',
+      String name = 'viewer',
+      LiveMessageColor color = const LiveMessageColor(30, 135, 240),
+      int user = 10,
+      int fan = 5,
+      bool bot = false,
+    }) => danmaku.emit(
+      DanmakuReceived(
+        LiveMessage(
+          type: LiveMessageType.chat,
+          userName: name,
+          message: text,
+          color: color,
+          messageId: id,
+          userLevelValue: user,
+          fansLevelValue: fan,
+          suspectedAutomated: bot,
+        ),
+      ),
+    );
+    emit('white', color: LiveMessageColor.white);
+    emit('low-user', user: 0);
+    emit('low-fan', fan: 0);
+    emit('bot', bot: true);
+    emit('keyword', text: '广告');
+    emit('user', name: 'blocked-viewer');
+    emit('shown');
+    emit('repeat');
+    emit('repeat');
+    expect(chatTexts(controller), ['hello']);
+    expect(
+      controller.blocked.value,
+      7,
+      reason: 'six explicit blocks plus one repeated chat, without counting its packet replay',
+    );
     controller.dispose();
   });
 

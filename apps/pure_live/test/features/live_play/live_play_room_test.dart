@@ -443,12 +443,17 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('live-play-orientation')));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
-    // Too tall for the room above the bar's button: under it, lined up with
-    // its right edge.
+    // The compact menu uses whichever side fits, with the same 4px gap as
+    // quality/line selection; the removed visual title is not a locator.
     final button = tester.getRect(find.byKey(const ValueKey('live-play-orientation')));
-    final title = tester.getRect(find.byKey(const ValueKey('small-menu-title')));
-    expect(title.top, greaterThanOrEqualTo(button.bottom));
-    expect(title.top - button.bottom, lessThan(24));
+    final menu = tester.getRect(
+      find.ancestor(of: find.byKey(const ValueKey('room-orientation-0')), matching: find.byType(Material)).first,
+    );
+    if (menu.bottom <= button.top) {
+      expect(button.top - menu.bottom, closeTo(4, 0.1));
+    } else {
+      expect(menu.top - button.bottom, closeTo(4, 0.1));
+    }
     await tester.tap(find.byKey(const ValueKey('room-orientation-2')));
     await _settle(tester);
     final orientation = tester.widget<VideoIconButton>(find.byKey(const ValueKey('live-play-orientation')));

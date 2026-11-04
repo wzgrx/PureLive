@@ -761,6 +761,10 @@ class LiveRoomController extends ChangeNotifier {
     Settings.blockEmoteOnlyDanmaku,
     Settings.blockLongDanmaku,
     Settings.blockLongDanmakuLength,
+    Settings.danmakuColoredOnly,
+    Settings.danmakuMinUserLevel,
+    Settings.danmakuMinFansLevel,
+    Settings.filterDouyuSuspectedAutomatedMessages,
   ];
 
   Future<void> _reloadFilter() async {
@@ -780,6 +784,10 @@ class LiveRoomController extends ChangeNotifier {
       blockEmoteOnly: settings.get(Settings.blockEmoteOnlyDanmaku),
       blockLong: settings.get(Settings.blockLongDanmaku),
       blockLongLength: settings.get(Settings.blockLongDanmakuLength),
+      coloredOnly: settings.get(Settings.danmakuColoredOnly),
+      minUserLevel: settings.get(Settings.danmakuMinUserLevel),
+      minFansLevel: settings.get(Settings.danmakuMinFansLevel),
+      filterSuspectedAutomated: settings.get(Settings.filterDouyuSuspectedAutomatedMessages),
     );
   }
 
@@ -1552,10 +1560,10 @@ class LiveRoomController extends ChangeNotifier {
         switch (_filter.judge(message)) {
           case DanmakuVerdict.shown:
             break;
-          case DanmakuVerdict.blocked:
+          case DanmakuVerdict.blocked || DanmakuVerdict.repeated || DanmakuVerdict.similar:
             blocked.add();
             return;
-          case DanmakuVerdict.duplicate || DanmakuVerdict.repeated || DanmakuVerdict.similar:
+          case DanmakuVerdict.duplicate:
             return;
         }
         chat.add(ChatLine.chat(message));

@@ -295,31 +295,36 @@ class JumpButtons extends StatelessWidget {
 /// c8: the reminder colour of the page-top bar): shown while the last load
 /// ran on mobile data; ✕ hides it until the next such load, "不再显示" for
 /// the session (3.x).
-class MobileDataBanner extends StatelessWidget {
+class MobileDataBanner extends ConsumerWidget {
   /// Creates the reminder.
   const new({super.key});
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([MobileDataNotice.onMobileData, MobileDataNotice.dismissed]),
-    builder: (context, _) {
-      if (!MobileDataNotice.onMobileData.value || MobileDataNotice.dismissed.value) return const SizedBox.shrink();
-      return StatusBanner(
-        key: const ValueKey('mobile-data-notice'),
-        kind: StatusBannerKind.warning,
-        icon: AppIcons.mobileData,
-        text: i18n('cellular_warning_msg'),
-        actions: [
-          (
-            key: const ValueKey('mobile-data-never'),
-            label: i18n('never_show'),
-            onPressed: () => MobileDataNotice.dismissed.value = true,
-          ),
-        ],
-        onClose: () => MobileDataNotice.onMobileData.value = false,
-      );
-    },
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = watchSetting(ref, Settings.showCellularWarning);
+    return ListenableBuilder(
+      listenable: Listenable.merge([MobileDataNotice.onMobileData, MobileDataNotice.dismissed]),
+      builder: (context, _) {
+        if (!enabled || !MobileDataNotice.onMobileData.value || MobileDataNotice.dismissed.value) {
+          return const SizedBox.shrink();
+        }
+        return StatusBanner(
+          key: const ValueKey('mobile-data-notice'),
+          kind: StatusBannerKind.warning,
+          icon: AppIcons.mobileData,
+          text: i18n('cellular_warning_msg'),
+          actions: [
+            (
+              key: const ValueKey('mobile-data-never'),
+              label: i18n('never_show'),
+              onPressed: () => unawaited(ref.read(storeProvider).settings.set(Settings.showCellularWarning, false)),
+            ),
+          ],
+          onClose: () => MobileDataNotice.onMobileData.value = false,
+        );
+      },
+    );
+  }
 }
 
 /// Reloads [onOnline] when the device gets a connection back (the offline

@@ -332,6 +332,9 @@ final class LiveMessage {
     this.data,
     this.userLevel = '',
     this.fansLevel = '',
+    this.userLevelValue,
+    this.fansLevelValue,
+    this.suspectedAutomated = false,
     this.fansName = '',
     this.fansColors,
     this.isLocal = false,
@@ -369,6 +372,17 @@ final class LiveMessage {
 
   /// Fan badge level.
   final String fansLevel;
+
+  /// Numeric level explicitly reported by the platform, including zero.
+  /// Null is unknown, not a zero-level viewer.
+  final int? userLevelValue;
+
+  /// Explicit numeric fan badge level, including zero; null is unknown.
+  final int? fansLevelValue;
+
+  /// Platform-protocol heuristic metadata, evaluated by the room's filters
+  /// so the session count includes messages hidden by that setting.
+  final bool suspectedAutomated;
 
   /// Fan badge name.
   final String fansName;

@@ -402,6 +402,10 @@ class MultiviewController extends ChangeNotifier {
     Settings.blockEmoteOnlyDanmaku,
     Settings.blockLongDanmaku,
     Settings.blockLongDanmakuLength,
+    Settings.danmakuColoredOnly,
+    Settings.danmakuMinUserLevel,
+    Settings.danmakuMinFansLevel,
+    Settings.filterDouyuSuspectedAutomatedMessages,
   ];
 
   Future<void> _reloadFilter() async {
@@ -421,6 +425,10 @@ class MultiviewController extends ChangeNotifier {
       blockEmoteOnly: settings.get(Settings.blockEmoteOnlyDanmaku),
       blockLong: settings.get(Settings.blockLongDanmaku),
       blockLongLength: settings.get(Settings.blockLongDanmakuLength),
+      coloredOnly: settings.get(Settings.danmakuColoredOnly),
+      minUserLevel: settings.get(Settings.danmakuMinUserLevel),
+      minFansLevel: settings.get(Settings.danmakuMinFansLevel),
+      filterSuspectedAutomated: settings.get(Settings.filterDouyuSuspectedAutomatedMessages),
     );
   }
 

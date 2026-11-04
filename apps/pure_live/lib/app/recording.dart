@@ -67,7 +67,10 @@ RecordChatConnector recordChatConnector({
   bool gifts() => store.settings.get(Settings.recordDanmakuGifts);
   final events = connection.events.listen((event) {
     switch (event) {
-      case DanmakuReceived(:final message) when message.type == LiveMessageType.chat && filter.accepts(message):
+      case DanmakuReceived(:final message)
+          when message.type == LiveMessageType.chat &&
+              !(message.suspectedAutomated && store.settings.get(Settings.filterDouyuSuspectedAutomatedMessages)) &&
+              filter.accepts(message):
         onMessage(message);
       case DanmakuReceived(:final message)
           when message.type == LiveMessageType.gift &&

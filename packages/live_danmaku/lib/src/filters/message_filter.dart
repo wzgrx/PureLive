@@ -24,6 +24,10 @@ final class DanmakuFilterSettings {
     this.blockEmoteOnly = false,
     this.blockLong = false,
     this.blockLongLength = 30,
+    this.coloredOnly = false,
+    this.minUserLevel = 0,
+    this.minFansLevel = 0,
+    this.filterSuspectedAutomated = false,
   });
 
   /// Collapse repeated text (`collapseRepeatedDanmaku`).
@@ -64,6 +68,18 @@ final class DanmakuFilterSettings {
   /// The most characters [blockLong] lets through, used clamped to 10–100
   /// (`blockLongDanmakuLength`).
   final int blockLongLength;
+
+  /// Keep only source colours with chroma, independent of display styling.
+  final bool coloredOnly;
+
+  /// Lowest reported viewer level; zero disables this filter.
+  final int minUserLevel;
+
+  /// Lowest reported fan level; zero disables this filter.
+  final int minFansLevel;
+
+  /// Hide protocol-tagged suspected automated chat (Douyu's existing rule).
+  final bool filterSuspectedAutomated;
 }
 
 /// What the filter did with a message ([DanmakuMessageFilter.judge]).
@@ -155,7 +171,9 @@ final class DanmakuMessageFilter {
     if (message.type != LiveMessageType.chat) return DanmakuVerdict.shown;
     final now = _clock();
     if (!gate.accepts(message, now: now)) return DanmakuVerdict.duplicate;
-    if (_blockList.blocks(message) || _blocksShape(message)) return DanmakuVerdict.blocked;
+    if (_blockList.blocks(message) || _blocksShape(message) || _blocksAttributes(message)) {
+      return DanmakuVerdict.blocked;
+    }
     final window = Duration(seconds: _settings.repeatedWindowSeconds.clamp(1, 30));
     if (!repeated.accepts(message, enabled: _settings.collapseRepeated, window: window, now: now)) {
       return DanmakuVerdict.repeated;
@@ -172,6 +190,23 @@ final class DanmakuMessageFilter {
     final shape = shapeOf(message);
     return (settings.blockEmoteOnly && shape.emoteOnly) ||
         (settings.blockLong && shape.length > settings.blockLongLength.clamp(10, 100));
+  }
+
+  bool _blocksAttributes(LiveMessage message) {
+    if (message.isLocal) return false;
+    final settings = _settings;
+    if (settings.filterSuspectedAutomated && message.suspectedAutomated) return true;
+    final color = message.color;
+    if (settings.coloredOnly && color.r == color.g && color.g == color.b) return true;
+    int? level(int? numeric, String display) {
+      final value = numeric ?? int.tryParse(display.trim());
+      return value != null && value >= 0 ? value : null;
+    }
+
+    final user = level(message.userLevelValue, message.userLevel);
+    final fans = level(message.fansLevelValue, message.fansLevel);
+    return (settings.minUserLevel > 0 && user != null && user < settings.minUserLevel) ||
+        (settings.minFansLevel > 0 && fans != null && fans < settings.minFansLevel);
   }
 
   /// Steps 1 and 2 for a platform gift (D07.1): the duplicate gate and the
