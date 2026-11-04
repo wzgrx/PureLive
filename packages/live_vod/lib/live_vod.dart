@@ -26,6 +26,7 @@ export 'src/music/third_party.dart';
 export 'src/parse.dart';
 export 'src/pgc_api.dart';
 export 'src/pgc_models.dart';
+export 'src/soop/replay.dart';
 export 'src/store.dart';
 export 'src/streams.dart';
 export 'src/ugc_api.dart';

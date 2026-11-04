@@ -261,6 +261,7 @@ DanmakuRegistry buildDanmakuRegistry(PlatformDeps deps, SiteRegistry sites) {
     // B-6: SOOP's chat follows the app proxy (CONNECT tunnel). Its own
     // case-preserving handshake: its edge does not answer dart:io's
     // lower-case headers (Q03.1), so never the generic connector.
+    SiteIds.cc: () => CcDanmakuConnection(proxy: proxy, connector: generic),
     SiteIds.soop: () => SoopDanmakuConnection(proxy: proxy),
     SiteIds.yy: YyDanmakuConnection.new,
     SiteIds.acfun: () => AcfunDanmakuConnection(proxy: proxy, connector: connector(SiteIds.acfun)),

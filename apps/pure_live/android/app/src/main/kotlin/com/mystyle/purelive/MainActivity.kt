@@ -383,6 +383,17 @@ class MainActivity : AudioServiceActivity() {
         }
         pipChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PIP_CHANNEL).also { channel ->
             channel.setMethodCallHandler { call, result ->
+                // The audio engine can outlive its Activity. Late Dart cleanup
+                // must not register a receiver or mutate a destroyed window.
+                if (isFinishing || isDestroyed) {
+                    when (call.method) {
+                        "isSupported", "openSettings" -> result.success(false)
+                        "status" -> result.success("unsupported")
+                        "enter" -> result.success("failed")
+                        else -> result.success(null)
+                    }
+                    return@setMethodCallHandler
+                }
                 when (call.method) {
                     "isSupported" -> result.success(pictureInPictureSupported())
                     "status" -> result.success(pictureInPictureStatus())

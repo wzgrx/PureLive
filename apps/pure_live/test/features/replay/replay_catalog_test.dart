@@ -26,6 +26,37 @@ import '../huya_replay/huya_archive_support.dart';
 import '../live_play/live_play_support.dart';
 import 'replay_test_support.dart';
 
+const soopRecording = SoopArchiveVideo(
+  id: '1234567',
+  title: 'SOOP直播回放',
+  authorId: 'creator',
+  authorName: '测试主播',
+  duration: Duration(hours: 2),
+);
+
+class FakeSoopReplay implements SoopArchiveSource {
+  final calls = <String>[];
+  @override
+  Future<SoopArchiveList> list(String author, {int page = 1, CancelToken? cancel}) async {
+    calls.add('list:$author:$page');
+    return (videos: [soopRecording], hasMore: false);
+  }
+
+  @override
+  Future<List<SoopArchivePart>> detail(String id, {CancelToken? cancel}) async => [
+    for (var n = 1; n <= 2; n++)
+      SoopArchivePart(
+        recording: soopRecording,
+        order: n,
+        duration: const Duration(hours: 1),
+        qualities: [
+          SoopArchiveQuality(id: 'original', label: '1080p', url: 'https://vod.sooplive.com/$n/manifest.m3u8'),
+          SoopArchiveQuality(id: 'hd4k', label: '720p', url: 'https://vod.sooplive.com/$n/720.m3u8'),
+        ],
+      ),
+  ];
+}
+
 Future<void> settle(WidgetTester tester) async {
   await tester.runAsync(pumpEventQueue);
   await tester.pump();
@@ -62,6 +93,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
         huyaArchiveProvider.overrideWithValue(huya),
         douyuVodProvider.overrideWithValue(FakeVodSource(testSigner())),
         bilibiliReplayProvider.overrideWithValue(biliSource ?? FakeBiliReplay()),
+        soopArchiveProvider.overrideWithValue(FakeSoopReplay()),
         playbackSessionFactoryProvider.overrideWithValue(({config}) => playbackFactory?.call() ?? fakeSession(engine)),
       ],
       child: LiveUiScope(
@@ -84,6 +116,27 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
 }
 
 void main() {
+  testWidgets('SOOP replay uses the existing room UI with actual part choices, speed and one native session', (
+    tester,
+  ) async {
+    final (engine, _) = await page(tester, platform: SiteIds.soop);
+    expect(find.text('SOOP直播回放'), findsOneWidget);
+    await captureQaFrame(tester, 'replay-soop-catalog');
+    final entry = find.byKey(const ValueKey('replay-recording-1234567'));
+    await tester.ensureVisible(entry);
+    await tester.tap(entry);
+    await settle(tester);
+    expect(engine.opens, hasLength(1));
+    expect(engine.opens.single.onDemand, isTrue);
+    expect(find.byKey(const ValueKey('archive-rate')), findsOneWidget);
+    expect(find.byKey(const ValueKey('archive-part-1234567:1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('archive-part-1234567:2')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await captureQaFrame(tester, 'replay-soop-room');
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
   testWidgets('a list failure stops automatic requests and retry preserves the keyword', (tester) async {
     final source = FakeHuyaArchive()..failList = true;
     await page(tester, platform: SiteIds.huya, huyaSource: source);
@@ -227,6 +280,8 @@ void main() {
                   ? firstArchive.id
                   : platform == SiteIds.douyu
                   ? secondVideo.id
+                  : platform == SiteIds.soop
+                  ? soopRecording.id
                   : archive.bvid}',
             ),
           ),

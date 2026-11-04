@@ -32,7 +32,7 @@ const replayDatePresetLabels = {
 };
 
 /// Platforms with an implemented, official creator archive contract.
-const replayPlatforms = <String>[SiteIds.huya, SiteIds.douyu, SiteIds.bilibili];
+const replayPlatforms = <String>[SiteIds.huya, SiteIds.douyu, SiteIds.bilibili, SiteIds.soop];
 
 /// One date-led creator archive on phones, desktop and keyboard/remote clients.
 class ReplayCatalogPage extends ConsumerStatefulWidget {
@@ -154,6 +154,22 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
           await _readPositions(g);
           return;
         }
+        if (_platform == SiteIds.soop) {
+          final videoId = SoopArchiveApi.videoFromText(text);
+          if (videoId != null) {
+            final parts = await ref.read(soopArchiveProvider).detail(videoId, cancel: cancel);
+            if (!mounted || g != _generation) return;
+            final v = parts.first.recording;
+            _author = v.authorId;
+            _entries = [
+              ArchiveRecording(v, title: v.title, cover: v.cover, date: v.publishedAt?.toLocal(), duration: v.duration),
+            ];
+            await _readPositions(g);
+            return;
+          }
+          author = SoopArchiveApi.authorFromText(text);
+          if (author == null) throw const FormatException('Invalid SOOP archive URL');
+        }
         if (_platform == SiteIds.huya) author = HuyaArchiveApi.uidFromText(text);
         if (_platform == SiteIds.bilibili && uri.host == 'space.bilibili.com') {
           final match = RegExp(r'^/([1-9][0-9]{0,18})/(?:lists|channel)(?:/([1-9][0-9]{0,18}))?/?$')
@@ -180,7 +196,10 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
         }
       } else {
         if (!RegExp(r'^[A-Za-z0-9_-]{1,64}$').hasMatch(text)) throw const FormatException('Invalid room');
-        author = await ref.read(replayIdentityProvider).resolve(_platform, text, cancel: cancel);
+        author = _platform == SiteIds.soop
+            ? SoopArchiveApi.authorFromText(text)
+            : await ref.read(replayIdentityProvider).resolve(_platform, text, cancel: cancel);
+        if (author == null) throw const FormatException('Invalid SOOP author');
       }
       if (!mounted || g != _generation) return;
       _author = author;
@@ -232,6 +251,13 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
             ArchiveRecording(v, title: v.title, cover: v.cover, date: DateTime.tryParse(v.date), duration: v.duration),
         ];
         more = result.hasMore;
+      } else if (_platform == SiteIds.soop) {
+        final result = await ref.read(soopArchiveProvider).list(_author, page: page, cancel: cancel);
+        next = [
+          for (final v in result.videos)
+            ArchiveRecording(v, title: v.title, cover: v.cover, date: v.publishedAt?.toLocal(), duration: v.duration),
+        ];
+        more = result.hasMore;
       } else if (_platform == SiteIds.douyu) {
         final result = await ref.read(douyuVodProvider).author(_author, page: page, cancel: cancel);
         next = [
@@ -278,7 +304,11 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
       }
     } else {
       final progress = ref.read(
-        _platform == SiteIds.huya ? huyaArchiveProgressProvider : bilibiliReplayProgressProvider,
+        _platform == SiteIds.huya
+            ? huyaArchiveProgressProvider
+            : _platform == SiteIds.soop
+            ? soopArchiveProgressProvider
+            : bilibiliReplayProgressProvider,
       );
       for (final entry in _entries) {
         // Bilibili list rows can lack cid; detail resolves the correct per-part key.
@@ -286,6 +316,9 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
           positions[entry.id] = (await progress.recent('${entry.id}:'))?.position ?? Duration.zero;
         }
         if (_platform == SiteIds.huya) positions[entry.id] = await progress.position(entry.id);
+        if (_platform == SiteIds.soop) {
+          positions[entry.id] = (await progress.recent('${entry.id}:'))?.position ?? Duration.zero;
+        }
       }
     }
     if (mounted && g == _generation) setState(() => _positions = positions);

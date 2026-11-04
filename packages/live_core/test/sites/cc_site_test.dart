@@ -348,7 +348,7 @@ void main() {
       expect(room.startedAt, DateTime.utc(2026, 9, 14, 6, 53, 45));
       expect(room.restriction, LiveRestriction.none);
       expect(room.data, isA<CcRoomData>());
-      expect(room.danmakuData, isNull, reason: 'CC has no danmaku, as in 3.x');
+      expect(room.danmakuData, isA<CcDanmakuArgs>(), reason: 'D01.39 adds current anonymous channel routing');
       for (final other in [
         await setup.site.getRoomDetailForRefresh(roomId: '341438909'),
         await setup.site.getRoomDetailForRecording(roomId: '341438909'),

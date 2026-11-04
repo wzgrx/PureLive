@@ -29,6 +29,7 @@ final class ArchiveRecording {
 
   /// Stable public id.
   String get id => switch (video) {
+    final SoopArchiveVideo v => v.id,
     final HuyaArchiveVideo v => v.id,
     final DouyuVodVideo v => v.id,
     final VodArchive v => v.bvid,
@@ -37,6 +38,7 @@ final class ArchiveRecording {
 
   /// Platform proxy/account namespace.
   String get platform => switch (video) {
+    SoopArchiveVideo() => SiteIds.soop,
     HuyaArchiveVideo() => SiteIds.huya,
     DouyuVodVideo() => SiteIds.douyu,
     _ => SiteIds.bilibili,
@@ -44,6 +46,7 @@ final class ArchiveRecording {
 
   /// Creator name supplied with metadata, if present.
   String get author => switch (video) {
+    final SoopArchiveVideo v => v.authorName,
     final HuyaArchiveVideo v => v.authorName,
     final DouyuVodVideo v => v.authorName,
     final VodArchive v => v.owner.name,

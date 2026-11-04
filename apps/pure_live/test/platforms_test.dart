@@ -204,7 +204,6 @@ void main() {
     addTearDown(services.close);
     final danmaku = services.danmaku;
     const without = {
-      SiteIds.cc,
       SiteIds.inke,
       SiteIds.xiaohongshu,
       SiteIds.weibo,
@@ -217,6 +216,7 @@ void main() {
         if (!without.contains(id)) id,
     ]);
     expect(danmaku.connectionFor(SiteIds.tiktok), isA<EmptyDanmakuConnection>());
+    expect(danmaku.connectionFor(SiteIds.cc), isA<CcDanmakuConnection>());
     expect(danmaku.connectionFor(SiteIds.soop), isA<SoopDanmakuConnection>());
     expect(danmaku.connectionFor(SiteIds.niconico), isA<NiconicoDanmakuConnection>());
   });

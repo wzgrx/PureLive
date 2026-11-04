@@ -2,6 +2,7 @@ import 'package:live_core/src/links.dart';
 import 'package:live_core/src/live_area.dart';
 import 'package:live_core/src/live_room.dart';
 import 'package:live_core/src/live_site.dart';
+import 'package:live_core/src/play_line.dart';
 import 'package:live_core/src/site_error.dart';
 import 'package:live_core/src/sites/soop/soop_api.dart';
 import 'package:live_net/live_net.dart';
@@ -57,13 +58,18 @@ final class SoopSite extends LiveSite
     implements LiveSiteRoomRefresher, LiveSiteRecordRoomResolver, LivePlayUrlResolver, LivePlayRecoveryResolver {
   /// Creates the adapter. [_cookies] holds the user's cookie, if any; [now]
   /// (the cover's cache buster) is injectable for tests.
-  new(this.http, {this._cookies, DateTime Function()? now}) : _now = now ?? DateTime.now;
+  new(this.http, {this._cookies, DateTime Function()? now, this.cdnCandidates = SoopApi.webCdns})
+    : _now = now ?? DateTime.now;
 
   /// Transport.
   final LiveHttp http;
 
   final CookieVault? _cookies;
   final DateTime Function() _now;
+
+  /// Additional official CDN types to resolve (bounded, three requests at once).
+  /// An empty list preserves the single-assignment fixture contract.
+  final List<String> cdnCandidates;
 
   @override
   String get id => _site;
@@ -85,10 +91,11 @@ final class SoopSite extends LiveSite
     }
   }
 
-  Future<LiveResponse> _get(Uri url) => _send(
+  Future<LiveResponse> _get(Uri url, {Duration timeout = defaultRequestTimeout}) => _send(
     LiveRequest(
       site: _site,
       url: url,
+      timeout: timeout,
       headers: SoopApi.apiHeaders(cookie: _cookie()),
     ),
   );
@@ -341,18 +348,49 @@ final class SoopSite extends LiveSite
   Future<LivePlayUrlResolution> _resolve(String roomId, LivePlayQuality quality, SoopRoomData data) async {
     if (data.bno.isEmpty || data.rmd.isEmpty) throw const ApiChanged(_site, 'player_live_api: no BNO or RMD');
     final name = '${quality.selectionId}';
-    final assign = await _get(SoopApi.assignUrl(rmd: data.rmd, cdn: data.cdn, bno: data.bno, quality: name));
-    final playlist = SoopApi.assignedPlaylist(assign.text, status: assign.status);
+    final primary = SoopApi.returnType(data.cdn);
+    final urls = <String, String>{};
+    SiteError? firstFailure;
+    Future<void> assign(String cdn) async {
+      try {
+        final response = await _get(
+          SoopApi.assignUrl(rmd: data.rmd, cdn: cdn, bno: data.bno, quality: name),
+          timeout: const Duration(seconds: 4),
+        );
+        urls[cdn] = SoopApi.assignedPlaylist(response.text, status: response.status);
+      } on SiteError catch (failure) {
+        firstFailure ??= failure;
+      }
+    }
+
+    await assign(primary);
     final key = await _player(roomId, type: 'aid', bno: data.bno, quality: name);
-    return SoopApi.resolution(
-      playlist: playlist,
-      aid: SoopApi.aid(key.text, status: key.status, password: data.password),
-      roomId: roomId,
-      quality: name,
-      cdn: data.cdn,
-      codec: data.codecOf(name),
-      cookie: _cookie(),
-    );
+    final aid = SoopApi.aid(key.text, status: key.status, password: data.password);
+    final candidates = {
+      for (final cdn in cdnCandidates.take(7))
+        if (SoopApi.webCdns.contains(cdn) && cdn != primary) cdn,
+    }.toList();
+    for (var start = 0; start < candidates.length; start += 3) {
+      await Future.wait(candidates.skip(start).take(3).map(assign));
+    }
+    final lines = <LivePlayLine>[];
+    final seen = <String>{};
+    for (final cdn in [primary, ...candidates]) {
+      final playlist = urls[cdn];
+      if (playlist == null) continue;
+      final line = SoopApi.resolution(
+        playlist: playlist,
+        aid: aid,
+        roomId: roomId,
+        quality: name,
+        cdn: cdn,
+        codec: data.codecOf(name),
+        cookie: _cookie(),
+      ).lines.single;
+      if (seen.add(line.url)) lines.add(line);
+    }
+    if (lines.isEmpty) throw firstFailure ?? const StreamUnavailable(_site, 'No CDN assignment');
+    return LivePlayUrlResolution.lines(lines, appliedQualityData: name);
   }
 
   // Links ---------------------------------------------------------------------

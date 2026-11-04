@@ -25,6 +25,7 @@ export 'src/sites/acfun.dart';
 export 'src/sites/baidulive.dart';
 export 'src/sites/bigo.dart';
 export 'src/sites/bilibili.dart';
+export 'src/sites/cc.dart';
 export 'src/sites/chzzk.dart';
 export 'src/sites/douyin.dart';
 export 'src/sites/douyu.dart';
