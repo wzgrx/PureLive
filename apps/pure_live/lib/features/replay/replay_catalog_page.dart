@@ -20,7 +20,7 @@ import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 
 /// Literal translation keys keep all date presets visible to locale audits.
 const replayDatePresetLabels = {
-  'all': 'replay_date_all',
+  'all': 'archive_all_dates',
   'today': 'replay_date_today',
   'yesterday': 'replay_date_yesterday',
   'three': 'replay_date_three',

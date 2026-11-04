@@ -203,14 +203,7 @@ void main() {
     final services = await testServices();
     addTearDown(services.close);
     final danmaku = services.danmaku;
-    const without = {
-      SiteIds.inke,
-      SiteIds.xiaohongshu,
-      SiteIds.weibo,
-      SiteIds.liveMe,
-      SiteIds.tiktok,
-      SiteIds.iptv,
-    };
+    const without = {SiteIds.inke, SiteIds.xiaohongshu, SiteIds.weibo, SiteIds.liveMe, SiteIds.tiktok, SiteIds.iptv};
     expect(danmaku.platforms, [
       for (final id in SiteIds.supported)
         if (!without.contains(id)) id,
@@ -350,8 +343,9 @@ void main() {
       expect(danmakuHandshake(plain: true), isNotNull);
     });
 
-    test('SOOP, YY and FC2 keep their own handshake; the other 20 sockets take the generic one', () {
-      expect(genericDanmakuHandshakeSites, hasLength(20));
+    test('SOOP, YY and FC2 keep their own handshake; the other 21 sockets take the generic one', () {
+      expect(genericDanmakuHandshakeSites, hasLength(21));
+      expect(genericDanmakuHandshakeSites, contains(SiteIds.cc));
       expect(
         genericDanmakuHandshakeSites,
         isNot(anyOf(contains(SiteIds.soop), contains(SiteIds.yy), contains(SiteIds.fc2Live))),

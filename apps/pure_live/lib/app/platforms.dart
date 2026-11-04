@@ -305,6 +305,7 @@ const bool plainDanmakuUserAgent = bool.fromEnvironment('PURE_LIVE_PLAIN_WS_UA')
 /// handshake, `exact_websocket.dart`), FC2 (its own socket), and Kuaishou,
 /// niconico, YouTube, Steam and Baidu (no WebSocket of ours to shake).
 const Set<String> genericDanmakuHandshakeSites = {
+  SiteIds.cc,
   SiteIds.bilibili,
   SiteIds.douyu,
   SiteIds.huya,

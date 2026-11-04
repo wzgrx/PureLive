@@ -2281,7 +2281,6 @@
     "replay_catalog_paused": "No new items returned. You can retry loading.",
     "replay_clear_search": "Clear search",
     "replay_collection": "Replay collection",
-    "replay_date_all": "All dates",
     "replay_date_custom": "Custom date range",
     "replay_date_month": "Last 30 days",
     "replay_date_quarter": "Last 90 days",

@@ -2280,7 +2280,6 @@
     "replay_catalog_paused": "暂时没有返回新内容，可以重试加载。",
     "replay_clear_search": "清空搜索",
     "replay_collection": "回放合集",
-    "replay_date_all": "全部日期",
     "replay_date_custom": "自定义日期范围",
     "replay_date_month": "近30天",
     "replay_date_quarter": "近90天",
