@@ -249,11 +249,7 @@ DanmakuRegistry buildDanmakuRegistry(PlatformDeps deps, SiteRegistry sites) {
   SocketConnector? connector(String site) => genericDanmakuHandshakeSites.contains(site) ? generic : null;
   return DanmakuRegistry({
     SiteIds.bilibili: () => BilibiliDanmakuConnection(proxy: proxy, connector: connector(SiteIds.bilibili)),
-    SiteIds.douyu: () => DouyuDanmakuConnection(
-      proxy: proxy,
-      connector: connector(SiteIds.douyu),
-      filterSuspectedAutomatedMessages: () => settings.get(Settings.filterDouyuSuspectedAutomatedMessages),
-    ),
+    SiteIds.douyu: () => DouyuDanmakuConnection(proxy: proxy, connector: connector(SiteIds.douyu)),
     SiteIds.huya: () => HuyaDanmakuConnection(proxy: proxy, connector: connector(SiteIds.huya)),
     if (deps.xiaohongshuGuest case final guest?)
       SiteIds.xiaohongshu: () =>

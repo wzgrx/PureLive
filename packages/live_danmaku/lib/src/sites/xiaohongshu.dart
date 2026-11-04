@@ -273,6 +273,7 @@ final class XiaohongshuDanmakuConnection extends DanmakuSocketConnection<Xiaohon
         session.send(XiaohongshuDanmakuProtocol.join(_expected, _args.roomId));
       } else if (_step == 2) {
         _step = 3;
+        _renewals = 0;
         session
           ..ready()
           ..send(XiaohongshuDanmakuProtocol.viewerHeart(_id(), _args.roomId, _identity.uid));

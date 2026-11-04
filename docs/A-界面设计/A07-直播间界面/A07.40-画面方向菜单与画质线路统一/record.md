@@ -9,3 +9,5 @@
 证据：外部outputs/purelive-orientation-menu-20261104的before/after、old-code-regression.log、red-proof.json与qa-tests.log；work/purelive-orientation-targeted.log、purelive-orientation-integration.log、purelive-orientation-menus.log。
 
 当前仅本地实现与组件验证：未做物理手机验证，未跑本次全量all/14，未推送分支或替换已公开测试安装包。后续推送/打包前仍须完整门禁，不能把父提交的门禁当作本次结果。
+
+2026-11-04后续指令：一并将竖屏全屏四种画面模式改为同款紧凑列表；原长说明改成手机长按/桌面悬停提示，查看时不选择、不关闭。两菜单的完整标题保留为无障碍名称。长按/悬停专项及现有模式应用流程通过，本次随Y01.43进入正式候选。

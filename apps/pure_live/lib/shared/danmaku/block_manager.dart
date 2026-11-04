@@ -410,6 +410,41 @@ class _DanmakuBlockManagerState extends ConsumerState<DanmakuBlockManager> {
           ),
           if (widget.showFilters) ...[
             // D02.2 c3: off by default; the length greys out while off.
+            PanelGroupTitle(i18n('danmaku_attribute_filter')),
+            PanelCard(
+              children: [
+                SettingSwitchRow(
+                  settingKey: 'coloredOnly',
+                  title: i18n('danmaku_colored_only'),
+                  subtitle: i18n('danmaku_colored_only_desc'),
+                  value: watchSetting(ref, Settings.danmakuColoredOnly),
+                  onChanged: (value) => set(Settings.danmakuColoredOnly, value),
+                ),
+                SettingCounterRow(
+                  settingKey: 'minUserLevel',
+                  title: i18n('danmaku_min_user_level'),
+                  value: watchSetting(ref, Settings.danmakuMinUserLevel),
+                  min: 0,
+                  max: 999,
+                  onChanged: (value) => set(Settings.danmakuMinUserLevel, value),
+                ),
+                SettingCounterRow(
+                  settingKey: 'minFansLevel',
+                  title: i18n('danmaku_min_fans_level'),
+                  value: watchSetting(ref, Settings.danmakuMinFansLevel),
+                  min: 0,
+                  max: 999,
+                  onChanged: (value) => set(Settings.danmakuMinFansLevel, value),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Text(
+                    i18n('danmaku_level_filter_desc'),
+                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
+                ),
+              ],
+            ),
             PanelGroupTitle(i18n('danmaku_content_block')),
             PanelCard(
               children: [

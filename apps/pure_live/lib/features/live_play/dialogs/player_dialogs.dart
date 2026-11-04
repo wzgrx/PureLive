@@ -91,10 +91,14 @@ Future<void> showRoomOrientationMenu(
     anchor,
     semanticLabel: i18n('portrait_room_override'),
     entries: [for (final orientation in options) roomOrientationName(orientation)],
+    tooltips: [for (final orientation in options) roomOrientationDescription(orientation)],
     current: options.indexOf(choice.value),
     entryKey: 'room-orientation',
     preferAbove: preferAbove,
-    footer: _RememberOrientation(choice: choice),
+    footer: Tooltip(
+      message: i18n('portrait_remember_room_override_desc'),
+      child: _RememberOrientation(choice: choice),
+    ),
   );
   if (chosen == null) return;
   final orientation = options[chosen];

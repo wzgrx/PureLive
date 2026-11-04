@@ -179,12 +179,14 @@ class _StreamMenuButtonState extends State<StreamMenuButton> {
 /// (a switch that applies at once) sits under a line after the entries and
 /// does not close the menu. The picture is not dimmed. Returns the chosen
 /// index, or null. [semanticLabel] names the menu for screen readers
-/// without adding a visible title row.
+/// without adding a visible title row. [tooltips] keeps explanations in
+/// long-press/hover hints without selecting or closing the menu.
 Future<int?> showSmallMenu(
   BuildContext anchor, {
   required List<String> entries,
   required int current,
   List<String>? descriptions,
+  List<String>? tooltips,
   String? title,
   String? semanticLabel,
   String entryKey = 'stream-menu-item',
@@ -211,40 +213,55 @@ Future<int?> showSmallMenu(
       for (final (index, entry) in entries.indexed)
         KeyedSubtree(
           key: index == current ? currentRow : null,
-          child: PopupMenuItem<int>(
-            key: ValueKey('$entryKey-$index'),
-            value: index,
-            height: rowHeight,
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry,
-                        style: index == current
-                            ? text?.emphasis.copyWith(color: scheme.primary)
-                            : text?.regular.copyWith(color: scheme.onSurface),
-                      ),
-                      if (descriptions case final lines? when index < lines.length) ...[
-                        const SizedBox(height: 2),
-                        Text(lines[index], style: small),
+          child: _choiceHint(
+            anchor,
+            tooltips != null && index < tooltips.length ? tooltips[index] : null,
+            PopupMenuItem<int>(
+              key: ValueKey('$entryKey-$index'),
+              value: index,
+              height: rowHeight,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          entry,
+                          style: index == current
+                              ? text?.emphasis.copyWith(color: scheme.primary)
+                              : text?.regular.copyWith(color: scheme.onSurface),
+                        ),
+                        if (descriptions case final lines? when index < lines.length) ...[
+                          const SizedBox(height: 2),
+                          Text(lines[index], style: small),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                if (index == current) ...[
-                  const SizedBox(width: 16),
-                  Icon(AppIcons.selected, size: 18, color: scheme.primary),
+                  if (index == current) ...[
+                    const SizedBox(width: 16),
+                    Icon(AppIcons.selected, size: 18, color: scheme.primary),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
       if (footer != null) ...[const PopupMenuDivider(), footer],
     ],
+  );
+}
+
+Widget _choiceHint(BuildContext anchor, String? message, Widget child) {
+  if (message == null || message.isEmpty) return child;
+  final available = MediaQuery.sizeOf(anchor).width - 32;
+  return Tooltip(
+    message: message,
+    showDuration: const Duration(seconds: 4),
+    constraints: BoxConstraints(maxWidth: available.clamp(0, 280)),
+    child: child,
   );
 }
 

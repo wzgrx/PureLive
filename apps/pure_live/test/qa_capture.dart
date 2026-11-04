@@ -16,7 +16,14 @@ Future<void> prepareQaFonts(WidgetTester tester) async {
   if (font != null && font.isNotEmpty) {
     await tester.runAsync(() async {
       final bytes = ByteData.sublistView(await File(font).readAsBytes());
-      for (final family in ['Ahem', 'Roboto']) {
+      for (final family in [
+        'Ahem',
+        'Roboto',
+        'Segoe UI',
+        '.AppleSystemUIFont',
+        'CupertinoSystemText',
+        'CupertinoSystemDisplay',
+      ]) {
         await (FontLoader(family)..addFont(Future.value(bytes))).load();
       }
       await (FontLoader('MaterialIcons')..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();

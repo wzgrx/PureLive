@@ -885,6 +885,30 @@ abstract final class Settings {
     defaultValue: false,
   );
 
+  /// Show only chromatic platform chat; off for existing installations.
+  static const danmakuColoredOnly = BoolSetting('danmakuColoredOnly', section: 'danmaku', defaultValue: false);
+
+  /// Minimum known sender level; zero leaves levels unrestricted.
+  static const danmakuMinUserLevel = IntSetting(
+    'danmakuMinUserLevel',
+    section: 'danmaku',
+    defaultValue: 0,
+    min: 0,
+    max: 999,
+  );
+
+  /// Minimum known fan badge level; zero leaves badge levels unrestricted.
+  static const danmakuMinFansLevel = IntSetting(
+    'danmakuMinFansLevel',
+    section: 'danmaku',
+    defaultValue: 0,
+    min: 0,
+    max: 999,
+  );
+
+  /// Persistent list reminder; closing its banner does not disable it.
+  static const showCellularWarning = BoolSetting('showCellularWarning', section: 'player', defaultValue: true);
+
   /// Similarity filter.
   static const enableDanmakuSimilarityFilter = BoolSetting(
     'enableDanmakuSimilarityFilter',
@@ -2173,6 +2197,10 @@ abstract final class Settings {
     pipDanmakuFps,
     pipDanmakuAutoFps,
     filterDouyuSuspectedAutomatedMessages,
+    danmakuColoredOnly,
+    danmakuMinUserLevel,
+    danmakuMinFansLevel,
+    showCellularWarning,
     enableDanmakuSimilarityFilter,
     danmakuSimilarityThreshold,
     danmakuSimilarityCacheDuration,

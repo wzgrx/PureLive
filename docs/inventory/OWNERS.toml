@@ -400,6 +400,10 @@ setting = [
   { key = "themeColorMigration", sub = "A01" },
   # player 分节（默认 G01）
   { key = "videoFitIndex", sub = "G04" },
+  { key = "showCellularWarning", sub = "A09" },
+  { key = "danmakuColoredOnly", sub = "D02" },
+  { key = "danmakuMinUserLevel", sub = "D02" },
+  { key = "danmakuMinFansLevel", sub = "D02" },
   { key = "enableRtxVsr", sub = "G04" },
   { key = "showPortraitDiagnostics", sub = "G04" },
   { key = "preferResolution", sub = "C01" },

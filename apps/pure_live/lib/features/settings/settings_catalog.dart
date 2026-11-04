@@ -908,6 +908,14 @@ List<SettingsEntry> _build() {
       when: _mobile,
     )
     ..toggle(
+      'show_cellular_warning',
+      'settings_cellular_warning',
+      Settings.showCellularWarning,
+      AppIcons.settingsCellularQuality,
+      desc: 'settings_cellular_warning_desc',
+      keywords: ['流量', '蜂窝', 'mobile data', 'cellular'],
+    )
+    ..toggle(
       'prefer_h264',
       'settings_prefer_h264',
       Settings.preferH264,
@@ -1162,7 +1170,27 @@ List<SettingsEntry> _build() {
         Settings.blockLongDanmaku,
         Settings.blockLongDanmakuLength,
       ],
-      keywords: ['屏蔽', '关键词', '过滤', 'block', '相似', '刷屏', '斗鱼', '机器人', '正则', 'regex', '只有表情', '纯表情', '超长', '字数'],
+      keywords: [
+        '屏蔽',
+        '关键词',
+        '过滤',
+        'block',
+        '相似',
+        '刷屏',
+        '斗鱼',
+        '机器人',
+        '正则',
+        'regex',
+        '只有表情',
+        '纯表情',
+        '超长',
+        '字数',
+        '彩色',
+        '用户等级',
+        '粉丝牌等级',
+        'level',
+        'color',
+      ],
     )
     // ---- portrait streams (U.6c, a page of the video page) ----
     ..subpage = SettingsSubpage.portrait

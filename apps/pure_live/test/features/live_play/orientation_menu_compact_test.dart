@@ -150,6 +150,13 @@ void main() {
       find.descendant(of: find.byKey(const ValueKey('room-orientation-0')), matching: find.byIcon(AppIcons.selected)),
       findsOneWidget,
     );
+    final hold = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('room-orientation-1'))));
+    await tester.pump(const Duration(seconds: 1));
+    await hold.up();
+    await tester.pump();
+    expect(find.text('当作竖屏直播：画面加高、下面是可拖的面板，能进竖屏全屏'), findsOneWidget);
+    expect(choice.value, RoomOrientation.automatic, reason: 'reading a long-press hint must not select the row');
+    expect(find.byKey(const ValueKey('room-orientation-0')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('room-orientation-remember-switch')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
     await tester.pumpAndSettle();

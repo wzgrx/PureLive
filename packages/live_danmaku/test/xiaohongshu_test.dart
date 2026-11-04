@@ -208,6 +208,36 @@ void main() {
   });
 
   group('native connection lifecycle', () {
+    test('a later expired identity can renew after an earlier renewal joined successfully', () async {
+      final guest = _Guest();
+      final connector = _Connector();
+      final connection = XiaohongshuDanmakuConnection(guest: guest, connector: connector.call);
+      final events = <DanmakuEvent>[];
+      final sub = connection.events.listen(events.add);
+      addTearDown(() async {
+        await connection.close();
+        await sub.cancel();
+      });
+      await connection.connect(const XiaohongshuDanmakuArgs(roomId: _room));
+      connector.channels.last.ack(code: 3100001);
+      await _settle();
+      expect(connector.channels.length, 2);
+      await _join(connector.channels.last);
+      expect(connection.isConnected, isTrue);
+      await connector.channels.last.incoming.close();
+      for (var i = 0; i < 5 && connector.channels.length < 3; i++) {
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
+      expect(connector.channels.length, 3);
+      connector.channels.last.ack(code: 3100001);
+      await _settle();
+      expect(guest.requests.map((r) => r.refresh), [false, true, true]);
+      expect(connector.channels.length, 4);
+      await _join(connector.channels.last);
+      expect(connection.isConnected, isTrue);
+      expect(events.whereType<DanmakuReady>().length, 2);
+    });
+
     test('auth, register and join need their own acknowledgements; text dedup and heartbeats', () async {
       final guest = _Guest();
       final connector = _Connector();

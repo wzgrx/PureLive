@@ -20,6 +20,7 @@ import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/live_play/buttons/room_menu_button.dart';
+import 'package:pure_live/features/live_play/buttons/stream_menu.dart';
 import 'package:pure_live/features/live_play/live_play_page.dart';
 import 'package:pure_live/features/live_play/logic/room_layout.dart';
 import 'package:pure_live/features/live_play/logic/room_orientation.dart';
@@ -30,6 +31,7 @@ import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
 
+import '../../qa_capture.dart';
 import '../../support.dart';
 import 'live_play_support.dart';
 import 'no_images.dart';
@@ -61,6 +63,7 @@ Future<_Room> _pump(
     ..physicalSize = Size(width, height)
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  await prepareQaFonts(tester);
   RoomOrientationChoice.clearSession();
   final services = (await tester.runAsync(testServices))!;
   await tester.runAsync(loadStrings);
@@ -452,6 +455,31 @@ void main() {
   });
 
   group('U.2d wide room', () {
+    testWidgets('issue180: iPad landscape keeps title with chat and source selectors below the player', (tester) async {
+      final room = await _pump(tester, width: 1180, height: 820, platform: TargetPlatform.iOS);
+      final chat = tester.getRect(_key('live-play-chat-box'));
+      expect(_key('live-play-wide-footer'), findsOneWidget);
+      expect(tester.getRect(_key('live-play-chat-handle')).right, closeTo(chat.left, 0.1));
+      expect(find.descendant(of: _key('live-play-chat-box'), matching: _key('live-play-info')), findsOneWidget);
+      expect(find.descendant(of: _key('live-play-chat-box'), matching: find.byType(StreamPickers)), findsNothing);
+      await captureQaFrame(tester, 'issue180-ipad-landscape');
+      await _close(tester, room);
+    });
+    testWidgets('issue180: wide short player handle stays at the chat boundary and figures live in the footer', (
+      tester,
+    ) async {
+      final room = await _pump(tester, width: 1600, height: 500, platform: TargetPlatform.windows);
+      final chat = tester.getRect(_key('live-play-chat-box'));
+      final handle = tester.getRect(_key('live-play-chat-handle'));
+      expect(handle.right, closeTo(chat.left, 0.1));
+      final footer = tester.getRect(_key('live-play-wide-footer'));
+      expect(footer.right, closeTo(chat.left, 0.1));
+      expect(footer.top, closeTo(tester.getRect(find.byType(RoomPlayer)).bottom, 0.1));
+      expect(find.descendant(of: _key('live-play-chat-box'), matching: find.byType(StreamPickers)), findsNothing);
+      expect(find.descendant(of: _key('live-play-wide-footer'), matching: find.byType(StreamPickers)), findsOneWidget);
+      await captureQaFrame(tester, 'issue180-wide-short');
+      await _close(tester, room);
+    });
     testWidgets('840 and wider: the chat column (34 %, 300-400) with the strip; a 16:9 frame; Windows bar', (
       tester,
     ) async {
@@ -460,7 +488,15 @@ void main() {
       expect(tester.getSize(_key('live-play-chat-box')).width, 400);
       expect(find.descendant(of: _key('live-play-chat-box'), matching: _key('live-play-info')), findsOneWidget);
       final frame = tester.getSize(_key('live-play-video-frame'));
-      expect(frame.width / frame.height, closeTo(16 / 9, 0.01));
+      final chat = tester.getRect(_key('live-play-chat-box'));
+      final handle = tester.getRect(_key('live-play-chat-handle'));
+      expect(handle.right, closeTo(chat.left, 0.01));
+      expect(frame.width, closeTo(chat.left, 0.01));
+      expect(
+        find.descendant(of: _key('live-play-wide-footer'), matching: _key('live-play-audience-row')),
+        findsOneWidget,
+      );
+      expect(find.descendant(of: _key('live-play-chat-box'), matching: _key('live-play-audience-row')), findsNothing);
       expect(_order(tester, _key('live-play-bottom-bar'), _bottomKeys), [
         'live-play-pause',
         'live-play-refresh',
@@ -839,19 +875,22 @@ void main() {
       }
     });
 
-    testWidgets('picture mode: the 画面比例 icon, yellow off the default; a titled menu with lines; applies', (
-      tester,
-    ) async {
+    testWidgets('picture mode: the 画面比例 icon uses compact choices and applies immediately', (tester) async {
       final room = await _pump(tester, portrait: true);
       await _tap(tester, 'live-play-fullscreen');
       expect(tester.widget<IconButton>(_key('live-play-portrait-mode')).color, OnVideoColors.foreground);
       await _tap(tester, 'live-play-portrait-mode');
-      expect(_key('small-menu-title'), findsOneWidget);
-      expect(find.text('竖屏全屏画面模式'), findsWidgets);
+      expect(_key('small-menu-title'), findsNothing);
       for (final line in ['完整保留直播内容，空白区域保持纯色', '铺满整个屏幕，可能裁掉左右部分内容']) {
-        expect(find.text(line), findsOneWidget);
+        expect(find.text(line), findsNothing);
       }
       expect(find.descendant(of: _key('portrait-mode-1'), matching: find.byIcon(AppIcons.selected)), findsOneWidget);
+      final hold = await tester.startGesture(tester.getCenter(_key('portrait-mode-0')));
+      await tester.pump(const Duration(seconds: 1));
+      await hold.up();
+      await tester.pump();
+      expect(find.text('完整保留直播内容，空白区域保持纯色'), findsOneWidget);
+      expect(room.services.store.settings.get(Settings.portraitFullscreenDisplayMode), 'ambient');
       // The picture is not dimmed (a menu, not a dialog).
       expect(
         find.byType(ModalBarrier).evaluate().every((barrier) {
@@ -919,7 +958,10 @@ void main() {
     ) async {
       final room = await _pump(tester, width: 1280, height: 800, portrait: true, platform: TargetPlatform.windows);
       expect(_key('live-play-video-frame'), findsNothing);
-      expect(tester.getSize(find.byType(RoomPlayer)).height, 744);
+      final player = tester.getRect(find.byType(RoomPlayer));
+      final footer = tester.getRect(_key('live-play-wide-footer'));
+      expect(player.height + footer.height, 744);
+      expect(player.bottom, footer.top);
       expect(_key('ambient-backdrop'), findsOneWidget);
       await _close(tester, room);
     });

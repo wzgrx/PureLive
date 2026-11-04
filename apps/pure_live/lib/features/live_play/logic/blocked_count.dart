@@ -2,7 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:pure_live/features/live_play/danmaku/chat_feed.dart';
 
 /// How many of the room's messages the user's blocks hid (D02.2 c4: the
-/// block list, "屏蔽只有表情的弹幕", "屏蔽超长弹幕"), for "本场已屏蔽 N 条".
+/// block list, shape/attribute rules, repeat collapsing and similarity),
+/// for "本场已屏蔽 N 条". Transport packet duplicates are not user blocks.
 ///
 /// Counted only, never stored: a new room has a new controller and starts
 /// at 0. The value changes at once; the listeners hear of it at most once
