@@ -706,7 +706,6 @@ abstract final class DouyuApi {
 
   /// The `getH5PlayV1` form for room [roomId] at Unix second [tt]. [did]
   /// must be the one the descriptor was issued for and the cookie carries.
-  /// Only AVC is asked for (`hevc=0`).
   static Map<String, String> signedForm(
     DouyuDescriptor descriptor, {
     required String roomId,
@@ -721,7 +720,7 @@ abstract final class DouyuApi {
     'auth': descriptor.auth(roomId, tt),
     'cdn': cdn,
     'rate': '$rate',
-    'hevc': '0',
+    'hevc': '1',
     'fa': '0',
     'ive': '0',
     'ver': 'Douyu_new',
@@ -879,10 +878,79 @@ abstract final class DouyuApi {
     );
   }
 
+  /// All playable media URLs from a play answer, in codec order (AVC first,
+  /// then HEVC when available). Returns one or two entries.
+  static List<String> mediaUrls(Map<String, dynamic> data) {
+    final urls = <String>[];
+    final seen = <String>{};
+    void add(String? value) {
+      if (value == null || value.isEmpty) return;
+      if (seen.add(value)) urls.add(value);
+    }
+    // AVC: rtmp_url + rtmp_live (or flv_url direct)
+    String field(String key) => decodeHtmlEntities(jsonString(data[key]) ?? '');
+    final live = field('rtmp_live');
+    if (_playable(live)) add(live);
+    for (final key in const ['rtmp_url', 'flv_url']) {
+      final base = field(key);
+      if (base.isEmpty || live.isEmpty) continue;
+      final joined = '${base.replaceFirst(RegExp(r'/+$'), '')}/${live.replaceFirst(RegExp('^/+'), '')}';
+      if (_playable(joined)) add(joined);
+    }
+    // HEVC fallback: player_1, stream_url, url
+    for (final key in const ['player_1', 'stream_url', 'url']) {
+      final value = field(key);
+      if (_playable(value)) add(value);
+    }
+    final flv = field('flv_url');
+    final path = Uri.tryParse(flv)?.path.toLowerCase() ?? '';
+    if (_playable(flv) && (path.endsWith('.flv') || path.endsWith('.m3u8') || path.endsWith('.mp4'))) add(flv);
+    return urls;
+  }
+
+  /// One CDN's answer as lines for each codec present (AVC then HEVC).
+  /// Returns at least one line; throws [ApiChanged] when no URL is found.
+  static List<({LivePlayLine line, int? rate})> answers(
+    Map<String, dynamic> data, {
+    required String roomId,
+    required String cdn,
+    required String cookie,
+    required DateTime issuedAt,
+    bool forceRenewal = false,
+  }) {
+    final urls = mediaUrls(data);
+    if (urls.isEmpty) throw const ApiChanged(_site, 'getH5PlayV1: no playable URL');
+    final results = <({LivePlayLine line, int? rate})>[];
+    for (var i = 0; i < urls.length; i++) {
+      final url = urls[i];
+      final path = Uri.tryParse(url)?.path.toLowerCase() ?? '';
+      // First URL is AVC, remaining are HEVC (player_1 comes after rtmp combo)
+      final codec = i == 0 ? 'avc' : 'hevc';
+      results.add((
+        line: LivePlayLine(
+          url,
+          headers: mediaHeaders(roomId, cookie: cookie),
+          codec: codec,
+          format: path.endsWith('.flv')
+              ? StreamFormat.flv
+              : path.endsWith('.m3u8')
+              ? StreamFormat.hls
+              : null,
+          lineId: cdn.isEmpty ? null : cdn,
+          lease: lease(url, issuedAt, forceRenewal: forceRenewal),
+        ),
+        rate: confirmedRate(data),
+      ));
+    }
+    return results;
+  }
+
   /// The lines for one requested rate from the CDNs' [answers] (in CDN
   /// order). CDNs may confirm different rates, and one label must never
   /// cover a mix: the group confirming [requestedRate] wins, else the first
   /// confirmed group, else the unconfirmed one (marked so).
+  ///
+  /// All HEVC lines are sorted before all AVC lines globally.
   static LivePlayUrlResolution resolution(
     List<({LivePlayLine line, int? rate})> answers, {
     required int requestedRate,
@@ -890,12 +958,17 @@ abstract final class DouyuApi {
     if (answers.isEmpty) return LivePlayUrlResolution(urls: const []);
     final groups = <int?, List<LivePlayLine>>{};
     for (final answer in answers) {
-      final group = groups.putIfAbsent(answer.rate, () => []);
+      groups.putIfAbsent(answer.rate, () => []);
+      final group = groups[answer.rate]!;
       if (group.every((line) => line.url != answer.line.url)) group.add(answer.line);
     }
     final applied = groups.containsKey(requestedRate) ? requestedRate : groups.keys.whereType<int>().firstOrNull;
+    final lines = groups[applied]!;
+    // All HEVC before all AVC globally
+    final hevcLines = lines.where((line) => line.codec == 'hevc').toList();
+    final avcLines = lines.where((line) => line.codec != 'hevc').toList();
     return LivePlayUrlResolution.lines(
-      groups[applied]!,
+      [...hevcLines, ...avcLines],
       appliedQualityData: applied,
       qualityUnconfirmed: applied == null,
     );
