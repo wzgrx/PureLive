@@ -1328,6 +1328,19 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
         fit: StackFit.expand,
         children: [
           below,
+          if (_panels.value != null)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              right: width,
+              child: GestureDetector(
+                key: const ValueKey('live-play-panel-dismiss'),
+                behavior: HitTestBehavior.opaque,
+                onTap: _panels.close,
+                child: Semantics(button: true, label: i18n('close'), child: const SizedBox.expand()),
+              ),
+            ),
           Positioned(
             key: const ValueKey('live-play-side-panel'),
             top: 0,

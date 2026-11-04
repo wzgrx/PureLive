@@ -15,3 +15,14 @@ native最近任务预检发现接收器与音频idle真实竞态并修复，完�
 正式改为只对RMD读取有界单个JSON对象：64KiB、嵌套16、整体8秒，正确处理字符串转义/分块UTF8；一旦对象完整即取消响应流，代理与Cookie语义保留，不改变其他HTTP接口。新增永不EOF的离线响应反证：旧码1秒截止失败，新码立即成功且连接取消；超长/非JSON取消并显式报错。97项原/新SOOP测试与严格分析通过。生产直连、代理分别取得5条不同CDN URL，前两条HLS均200；其余3条仅分配验证，未称全部实播。
 
 6fea761b的all/14虽已通过，但实网发现该缺陷，六个本地包和对应Apple运行均退为未公开候选并保留，不用于发布；修复后重新冻结、完整all/14及全部同源构建。没有公开5.6.4或覆盖已有用户安装。
+
+2026-11-05追加原生反证：同源重验捕获FlutterJNI.scheduleFrame在纹理回调里调用已销毁引擎，完整堆栈本地保留。Flutter上游#174859有相同堆栈；不能据此说是设备或网络问题。当前代码RoomRuntime先background.dispose并发布audio_service idle，再等待异步视频释放；audio_service在无Activity时销毁缓存引擎，形成真实先后顺序竞态。改为先停止策略监听/锁，再等待session.waitForResourceRelease的实际退休（不把dispose的有界grace当作真实完成），最后清通知。任务回调3秒grace到期不再强制idle，真实退休仍由runtime持有；新房间所有者保护保持。
+
+使用可控native dispose future延迟超过5秒的新回归，旧顺序在通知提前hide断言失败；修后保持通知到真实释放后才hide。既有小窗/后台/PiP/叠加窗口80项通过，延迟测试与严格分析另通过。独立API37原生AppTask.finishAndRemoveTask连续3轮通过回调、原生视频释放、音频服务1→0、无接收器泄漏/音频空指针并正常重开；不是原Honor/MagicOS验收，也不声称修复所有Flutter内核路径。
+参考：https://github.com/flutter/flutter/issues/174859
+
+仅调整当前房间的释放顺序还不足：9250复验中当前纹理已先释放，旧导航栈房间的另一条纹理仍在，媒体插件onDetachedFromEngine原来仅删除MethodChannel处理器、未释放管理器所有输出。最终补上插件detach时先断开回调，再幂等disposeAll所有剩余SurfaceProducer（包括旧房间/空闲输出），拒绝迟到create。FlutterEngine.destroy源码明确plugins.destroy先于JNI detach；利用已有生命周期修复，不补丁SDK、不改解码内核或强行杀应用。8个相关生产文件SHA与最终源一一核对。两次真实崩溃及只改顺序仍失败的反证保留。
+
+新增#200纳入5.6.4，见A06.11；全部安装包重新冻结同源，不混用a45候选。
+
+新增#202纳入5.6.4，见A07.43；全部安装包重新冻结同源，不混用a45候选。

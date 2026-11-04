@@ -8299,3 +8299,27 @@ from = "GitHub #177及本轮用户要求新旧issue新回复一起处理"
 branch = "ai/Y01.44-stable-564"
 date = "2026-11-04"
 next = "5.6.4源码冻结；完整门禁、同源构建与发布验证后追加，原机和礼物边界保留。"
+
+[[task]]
+id = "A06.11"
+title = "平板壁纸导航表面统一"
+type = "界面"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #200及本轮新issue一并解决要求"
+branch = "ai/Y01.44-stable-564"
+date = "2026-11-05"
+next = "实现最小界面修复，反证回归和同源发布。"
+
+[[task]]
+id = "A07.43"
+title = "全屏面板点击外侧关闭"
+type = "界面"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #202及本轮新issue一并解决要求"
+branch = "ai/Y01.44-stable-564"
+date = "2026-11-05"
+next = "实现最小界面修复，反证回归和同源发布。"

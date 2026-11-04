@@ -1,3 +1,10 @@
 # A07.42
 
 修复#194：区分应用内离开直播间小窗与离开应用自动小窗。关闭自动外部小窗时应用内返回不能把整个Activity留在外部PiP；用户移除任务时及时释放播放/PiP，正常Home与显式后台播放策略分开。保留主动PiP、画中画关闭、恢复和既有录制策略。用原代码失败的回归证明根因，测试API26/31/37差异，原Honor机器未覆盖如实记录。
+
+2026-11-05追加原生反证：同源重验捕获FlutterJNI.scheduleFrame在纹理回调里调用已销毁引擎，完整堆栈本地保留。Flutter上游#174859有相同堆栈；不能据此说是设备或网络问题。当前代码RoomRuntime先background.dispose并发布audio_service idle，再等待异步视频释放；audio_service在无Activity时销毁缓存引擎，形成真实先后顺序竞态。改为先停止策略监听/锁，再等待session.waitForResourceRelease的实际退休（不把dispose的有界grace当作真实完成），最后清通知。任务回调3秒grace到期不再强制idle，真实退休仍由runtime持有；新房间所有者保护保持。
+
+使用可控native dispose future延迟超过5秒的新回归，旧顺序在通知提前hide断言失败；修后保持通知到真实释放后才hide。既有小窗/后台/PiP/叠加窗口80项通过，延迟测试与严格分析另通过。独立API37原生AppTask.finishAndRemoveTask连续3轮通过回调、原生视频释放、音频服务1→0、无接收器泄漏/音频空指针并正常重开；不是原Honor/MagicOS验收，也不声称修复所有Flutter内核路径。
+参考：https://github.com/flutter/flutter/issues/174859
+
+仅调整当前房间的释放顺序还不足：9250复验中当前纹理已先释放，旧导航栈房间的另一条纹理仍在，媒体插件onDetachedFromEngine原来仅删除MethodChannel处理器、未释放管理器所有输出。最终补上插件detach时先断开回调，再幂等disposeAll所有剩余SurfaceProducer（包括旧房间/空闲输出），拒绝迟到create。FlutterEngine.destroy源码明确plugins.destroy先于JNI detach；利用已有生命周期修复，不补丁SDK、不改解码内核或强行杀应用。8个相关生产文件SHA与最终源一一核对。两次真实崩溃及只改顺序仍失败的反证保留。

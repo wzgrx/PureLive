@@ -9,6 +9,7 @@ import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/home/home_menu.dart';
 import 'package:pure_live/features/home/menu_button.dart';
 import 'package:pure_live/i18n/i18n.dart';
+import 'package:pure_live/shared/background/custom_background.dart';
 
 /// The phone layout (3.x `HomeMobileView`): the page and a bottom bar; the
 /// bar is hidden with one destination.
@@ -224,26 +225,32 @@ class HomeTabletView extends ConsumerWidget {
       color: scheme.outlineVariant,
     );
     final rail = _HomeRailScroll(child: Column(children: [top, separator, ...destinations]));
+    final background = CustomBackgroundFrame.activeOf(context);
     return Scaffold(
-      body: SafeArea(
-        child: Row(
-          children: [
-            // The rail scrolls in short windows; its position must not
-            // attach to the page's primary scroll controller.
-            PrimaryScrollController.none(
-              child: Material(
-                key: const ValueKey('home-rail'),
-                color: scheme.surface,
-                child: SizedBox(
-                  width: HomeRailMetrics.width,
-                  child: FocusTraversalGroup(child: rail),
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Paint through this rail's safe areas so the status-bar corner
+          // and bottom inset cannot reveal a different rectangle.
+          CustomBackgroundSurface(
+            key: const ValueKey('home-rail-surface'),
+            child: SafeArea(
+              right: false,
+              child: PrimaryScrollController.none(
+                child: Material(
+                  key: const ValueKey('home-rail'),
+                  color: background ? OnVideoColors.clear : scheme.surface,
+                  child: SizedBox(
+                    width: HomeRailMetrics.width,
+                    child: FocusTraversalGroup(child: rail),
+                  ),
                 ),
               ),
             ),
-            const VerticalDivider(width: 1),
-            Expanded(child: body),
-          ],
-        ),
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(child: SafeArea(left: false, child: body)),
+        ],
       ),
     );
   }

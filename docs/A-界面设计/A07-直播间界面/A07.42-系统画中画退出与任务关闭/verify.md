@@ -11,3 +11,16 @@
 ![自动开关关闭后桌面无PiP](verify/pip-native-home.jpg)
 
 ![任务移除后重新打开正常](verify/pip-native-reopened.jpg)
+
+2026-11-04原生复核：同代码预检profile、独立入口、API37自有模拟器（非原Honor设备）。自动小窗关闭：返回应用内小窗后Home无外部PiP；开启后Home进入PiP。标准系统把PiP任务排除在最近任务卡片之外，使用同签名、独立Instrumentation调用本应用AppTask.finishAndRemoveTask，非force-stop。先清理自有生成测试任务，明确当前任务号，移除前确认在PiP且音频服务1个。
+
+第一轮捕获真实退出竞态：已销毁Activity仍收到setPlaying并注册pipReceiver，触发IntentReceiverLeaked；重复idle向已销毁AudioService.setState写入出现NullPointerException。修复为PiP通道在Activity finishing/destroyed时返回安全结果，不再注册或操作窗口；回调结束仅在尚非idle时发布idle。失败完整日志本地保留，非门禁例外。
+
+复验在Instrumentation结束前确认Dart taskRemoved回调、hide通知、原生VideoOutputManager.dispose、Activity销毁、音频服务1→0，无上述接收器泄漏/空指针；之后同进程重新打开Activity仍存活且不是PiP。截图在本地，原生预检文件SHA记录防止后续变更冒充已验证。正式同源包及正常入口冒烟仍由发布统一执行。未操作K90/正式安装，未覆盖原MagicOS厂商最近任务实现。
+
+2026-11-05追加原生反证：同源重验捕获FlutterJNI.scheduleFrame在纹理回调里调用已销毁引擎，完整堆栈本地保留。Flutter上游#174859有相同堆栈；不能据此说是设备或网络问题。当前代码RoomRuntime先background.dispose并发布audio_service idle，再等待异步视频释放；audio_service在无Activity时销毁缓存引擎，形成真实先后顺序竞态。改为先停止策略监听/锁，再等待session.waitForResourceRelease的实际退休（不把dispose的有界grace当作真实完成），最后清通知。任务回调3秒grace到期不再强制idle，真实退休仍由runtime持有；新房间所有者保护保持。
+
+使用可控native dispose future延迟超过5秒的新回归，旧顺序在通知提前hide断言失败；修后保持通知到真实释放后才hide。既有小窗/后台/PiP/叠加窗口80项通过，延迟测试与严格分析另通过。独立API37原生AppTask.finishAndRemoveTask连续3轮通过回调、原生视频释放、音频服务1→0、无接收器泄漏/音频空指针并正常重开；不是原Honor/MagicOS验收，也不声称修复所有Flutter内核路径。
+参考：https://github.com/flutter/flutter/issues/174859
+
+仅调整当前房间的释放顺序还不足：9250复验中当前纹理已先释放，旧导航栈房间的另一条纹理仍在，媒体插件onDetachedFromEngine原来仅删除MethodChannel处理器、未释放管理器所有输出。最终补上插件detach时先断开回调，再幂等disposeAll所有剩余SurfaceProducer（包括旧房间/空闲输出），拒绝迟到create。FlutterEngine.destroy源码明确plugins.destroy先于JNI detach；利用已有生命周期修复，不补丁SDK、不改解码内核或强行杀应用。8个相关生产文件SHA与最终源一一核对。两次真实崩溃及只改顺序仍失败的反证保留。

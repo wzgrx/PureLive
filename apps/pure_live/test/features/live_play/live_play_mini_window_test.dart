@@ -83,6 +83,7 @@ Future<_App> _app(
   Size size = const Size(393, 852),
   bool floatPlay = true,
   FakeSite? site,
+  FakeEngine Function()? createEngine,
   List<Override> overrides = const [],
 }) async {
   tester.view
@@ -148,7 +149,7 @@ Future<_App> _app(
           }),
         ),
         playbackSessionFactoryProvider.overrideWithValue(({config}) {
-          final engine = FakeEngine();
+          final engine = createEngine?.call() ?? FakeEngine();
           engines.add(engine);
           return fakeSession(engine);
         }),
@@ -249,6 +250,33 @@ final class _FakeHost implements MiniWindowHost {
 }
 
 void main() {
+  testWidgets('issue 194: keep the engine-owning notification until native video retirement completes', (tester) async {
+    final gate = Completer<void>();
+    final engine = FakeEngine()..onDispose = () => gate.future;
+    final app = await _app(tester, createEngine: () => engine);
+    await _openRoom(tester);
+    await _leaveRoom(tester, app);
+    final runtime = FloatingRoom.instance.runtime!;
+    final events = <String>[];
+    RoomMediaNotification.debugLog = events.add;
+    addTearDown(() => RoomMediaNotification.debugLog = null);
+    final retirement = runtime.retireTask();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await _settle(tester);
+    await tester.pump(const Duration(seconds: 5));
+    await _settle(tester);
+    final hiddenBeforeVideoReleased = events.contains('hide');
+    gate.complete();
+    await tester.pump();
+    await _settle(tester);
+    await retirement;
+    expect(hiddenBeforeVideoReleased, isFalse, reason: 'audio_service may destroy the Flutter engine at idle');
+    expect(engine.disposed, isTrue);
+    expect(events, contains('hide'), reason: 'the notification must still be removed after actual retirement');
+    await _close(tester, app);
+  });
+
   testWidgets('replay floats and restores the original session with pause, position and rate', (tester) async {
     final app = await _app(tester, overrides: [bilibiliReplayProvider.overrideWithValue(replay.FakeBiliReplay())]);
     await _openRoom(tester);

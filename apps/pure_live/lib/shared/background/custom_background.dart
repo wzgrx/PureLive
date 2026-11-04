@@ -152,6 +152,9 @@ class CustomBackgroundFrame extends ConsumerWidget {
   /// Wraps every phone and desktop page; never owns media decoders.
   const new({required this.child, super.key});
 
+  /// Whether a valid background is currently visible below this context.
+  static bool activeOf(BuildContext context) => context.dependOnInheritedWidgetOfExactType<_BackgroundScope>() != null;
+
   /// Application navigator and floating layers.
   final Widget child;
 
@@ -162,35 +165,75 @@ class CustomBackgroundFrame extends ConsumerWidget {
     if (config.kind == 'none' || (config.kind == 'image' && file == null)) return child;
     final theme = Theme.of(context);
     return Theme(
-      data: theme.copyWith(scaffoldBackgroundColor: OnVideoColors.clear),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ColoredBox(color: theme.scaffoldBackgroundColor),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: ExcludeSemantics(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (config.kind == 'color')
-                      ColoredBox(color: Color(config.color))
-                    else
-                      Image.file(
-                        file!,
-                        fit: BoxFit.values.asNameMap()[config.fit],
-                        gaplessPlayback: true,
-                        errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                      ),
-                    ColoredBox(color: theme.colorScheme.surface.withValues(alpha: config.mask)),
-                  ],
+      data: theme.copyWith(
+        scaffoldBackgroundColor: OnVideoColors.clear,
+        appBarTheme: theme.appBarTheme.copyWith(
+          backgroundColor: theme.colorScheme.surface.withValues(alpha: 0.78),
+          surfaceTintColor: OnVideoColors.clear,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+        ),
+      ),
+      child: _BackgroundScope(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ColoredBox(color: theme.scaffoldBackgroundColor),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: ExcludeSemantics(
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (config.kind == 'color')
+                        ColoredBox(color: Color(config.color))
+                      else
+                        Image.file(
+                          file!,
+                          fit: BoxFit.values.asNameMap()[config.fit],
+                          gaplessPlayback: true,
+                          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        ),
+                      ColoredBox(color: theme.colorScheme.surface.withValues(alpha: config.mask)),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          child,
-        ],
+            child,
+          ],
+        ),
       ),
+    );
+  }
+}
+
+final class _BackgroundScope extends InheritedWidget {
+  const new({required super.child});
+
+  @override
+  bool updateShouldNotify(_BackgroundScope oldWidget) => false;
+}
+
+/// A bounded navigation surface over the static custom wallpaper.
+/// Dialogs and content cards retain their original accessible surfaces.
+class CustomBackgroundSurface extends StatelessWidget {
+  /// Clips the blur to this surface; an absent or missing wallpaper adds no filter.
+  const new({required this.child, super.key});
+
+  /// Navigation content including its own safe areas.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = CustomBackgroundFrame.activeOf(context);
+    final surface = ColoredBox(
+      color: Theme.of(context).colorScheme.surface.withValues(alpha: active ? 0.78 : 1),
+      child: child,
+    );
+    if (!active) return surface;
+    return ClipRect(
+      child: BackdropFilter(filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12), child: surface),
     );
   }
 }

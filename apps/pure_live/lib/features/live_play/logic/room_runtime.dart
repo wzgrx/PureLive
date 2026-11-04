@@ -128,20 +128,26 @@ final class RoomRuntime {
     // Given back when the room is left (not awaited: the system answers
     // in its own time).
     unawaited(audioFocus?.dispose());
-    background.dispose();
-    reconnect.dispose();
-    orientation.dispose();
-    controller.dispose();
-    if (keep == null) {
-      await Future.wait<void>([session.dispose(), controller.archiveRetirement]);
-      return;
+    // audio_service destroys its cached Flutter engine when idle without
+    // an Activity. Keep that owner alive until the video plugin has released
+    // every texture, including delayed native disposal and archive writes.
+    background.dispose(hideNotification: false);
+    try {
+      reconnect.dispose();
+      orientation.dispose();
+      controller.dispose();
+      if (keep == null) {
+        await Future.wait<void>([session.waitForResourceRelease(), controller.archiveRetirement]);
+        return;
+      }
+      // A player handed to the next room must have finished stopping.
+      await controller.archiveRetirement;
+      if (controller.isArchive) await session.setRate(1);
+      await session.stop();
+      keep(session);
+    } finally {
+      await RoomMediaNotification.hide(background);
     }
-    // Handed over only once stopped: a stop still running would stop what
-    // the next room opens.
-    await controller.archiveRetirement;
-    if (controller.isArchive) await session.setRate(1);
-    await session.stop();
-    keep(session);
   }
 }
 

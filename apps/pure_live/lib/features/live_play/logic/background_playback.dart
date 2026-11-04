@@ -339,10 +339,12 @@ class _RoomAudioHandler extends audio.BaseAudioHandler {
   Future<void> _finishTaskRemoval() async {
     RoomMediaNotification.debugLog?.call('taskRemoved');
     final owner = RoomMediaNotification._owner;
+    var retired = false;
     try {
       // Closing a task must not wait forever for a driver or metadata write.
       // The runtime still owns any retirement continuing after this grace.
       await (onTaskRemoval ?? onStop)?.call().timeout(const Duration(seconds: 3));
+      retired = true;
     } on Object catch (error, stackTrace) {
       developer.log('Task playback retirement failed', name: 'LivePlay', error: error, stackTrace: stackTrace);
     } finally {
@@ -352,7 +354,9 @@ class _RoomAudioHandler extends audio.BaseAudioHandler {
         // Runtime retirement normally hides its notification first. Publishing
         // idle twice can call an audio_service instance already destroyed by the
         // first update, while the cached Flutter engine is detaching.
-        if (playbackState.value.processingState != audio.AudioProcessingState.idle) {
+        // A grace timeout is not native retirement. The runtime keeps the
+        // service alive until its resource tracker completes and hides it.
+        if (retired && playbackState.value.processingState != audio.AudioProcessingState.idle) {
           playbackState.add(
             playbackState.value.copyWith(playing: false, processingState: audio.AudioProcessingState.idle),
           );
@@ -1026,8 +1030,9 @@ class RoomBackgroundPolicy with WidgetsBindingObserver {
     }
   }
 
-  /// Stops following; releases the locks and the notification.
-  void dispose() {
+  /// Stops following and releases locks. The runtime can retain the
+  /// engine-owning notification until its native video textures are released.
+  void dispose({bool hideNotification = true}) {
     if (_disposed) return;
     _pauseTimer?.cancel();
     _awayTimer?.cancel();
@@ -1045,7 +1050,7 @@ class RoomBackgroundPolicy with WidgetsBindingObserver {
     unawaited(_states?.cancel());
     unawaited(_network?.cancel());
     unawaited(BackgroundKeepAlive.set(enabled: false));
-    unawaited(RoomMediaNotification.hide(this));
+    if (hideNotification) unawaited(RoomMediaNotification.hide(this));
     PictureInPicture.unbindPlayback(this);
   }
 }
