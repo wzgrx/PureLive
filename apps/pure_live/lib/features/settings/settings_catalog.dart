@@ -1280,6 +1280,15 @@ List<SettingsEntry> _build() {
       when: _android,
     )
     ..choice<String>(
+      'portrait_chat_layout',
+      'portrait_fullscreen_danmaku_layout',
+      Settings.portraitFullscreenDanmakuLayout,
+      AppIcons.portraitDanmaku,
+      () => _keyed({'rolling': 'portrait_danmaku_rolling', 'stacked': 'portrait_danmaku_stacked'}),
+      desc: 'portrait_fullscreen_danmaku_layout_desc',
+      keywords: ['竖屏', 'portrait', '弹幕', '上滚', 'chat'],
+    )
+    ..choice<String>(
       'portrait_danmaku',
       'portrait_danmaku_mode',
       Settings.portraitDanmakuMode,
@@ -2250,6 +2259,7 @@ const List<Setting<Object>> portraitSettings = [
   Settings.portraitFullscreenDisplayMode,
   Settings.portraitPipFollowSource,
   Settings.portraitDanmakuMode,
+  Settings.portraitFullscreenDanmakuLayout,
   Settings.rememberPortraitRoomOverride,
   Settings.portraitFullscreenSwipeSwitch,
   Settings.showPortraitDiagnostics,

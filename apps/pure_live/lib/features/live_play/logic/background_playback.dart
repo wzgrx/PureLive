@@ -334,6 +334,7 @@ class _RoomAudioHandler extends audio.BaseAudioHandler {
   Future<void> onTaskRemoved() => _taskRemoval ??= _finishTaskRemoval();
 
   Future<void> _finishTaskRemoval() async {
+    final owner = RoomMediaNotification._owner;
     try {
       // Closing a task must not wait forever for a driver or metadata write.
       // The runtime still owns any retirement continuing after this grace.
@@ -341,8 +342,14 @@ class _RoomAudioHandler extends audio.BaseAudioHandler {
     } on Object catch (error, stackTrace) {
       developer.log('Task playback retirement failed', name: 'LivePlay', error: error, stackTrace: stackTrace);
     } finally {
-      playbackState.add(playbackState.value.copyWith(playing: false, processingState: audio.AudioProcessingState.idle));
-      await PictureInPicture.closeTask();
+      // A new playback owner can appear while the old native resources retire.
+      // Its notification and newly opened task must not be closed by this callback.
+      if (RoomMediaNotification._owner == null || identical(RoomMediaNotification._owner, owner)) {
+        playbackState.add(
+          playbackState.value.copyWith(playing: false, processingState: audio.AudioProcessingState.idle),
+        );
+        await PictureInPicture.closeTask();
+      }
     }
   }
 

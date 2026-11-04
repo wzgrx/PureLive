@@ -392,10 +392,16 @@ class MainActivity : AudioServiceActivity() {
                     }
 
                     "closeTask" -> {
+                        val closePip = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode
                         setAutoEnterPictureInPicture(false)
                         FloatingOverlay.onTaskRemoved()
                         result.success(null)
-                        mainHandler.post { if (!isFinishing) finishAndRemoveTask() }
+                        // A late cleanup callback must never finish a newly
+                        // reopened normal activity. The removed task is gone;
+                        // only its surviving PiP activity needs an explicit close.
+                        if (closePip) mainHandler.post {
+                            if (!isFinishing && isInPictureInPictureMode) finishAndRemoveTask()
+                        }
                     }
                     "openSettings" -> result.success(openPictureInPictureSettings())
                     "setPlaying" -> {

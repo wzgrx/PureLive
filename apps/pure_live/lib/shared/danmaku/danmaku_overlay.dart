@@ -233,7 +233,21 @@ class DanmakuOverlay extends StatefulWidget {
 
 /// The overlay's state: what is on screen, and the danmaku at a point
 /// ([messageAt], c9).
-class DanmakuOverlayState extends State<DanmakuOverlay> with SingleTickerProviderStateMixin {
+abstract interface class DanmakuHitTarget {
+  /// Message at the layer-local point, or null.
+  LiveMessage? messageAt(Offset position);
+
+  /// Holds the message at a point until the player releases the pointer.
+  LiveMessage? pinAt(Offset position);
+
+  /// Releases the held message.
+  void unpin();
+}
+
+/// Canvas presentation and hit testing of the horizontal flying layer.
+class DanmakuOverlayState extends State<DanmakuOverlay>
+    with SingleTickerProviderStateMixin
+    implements DanmakuHitTarget {
   /// 3.x's waiting line: at most 120 messages, none older than 5 s.
   static const int maxPending = 120;
 
@@ -323,6 +337,7 @@ class DanmakuOverlayState extends State<DanmakuOverlay> with SingleTickerProvide
 
   /// The danmaku drawn at [position] (the overlay's own coordinates), the
   /// one on top first; null for none (3.x `triggerItemAt`).
+  @override
   LiveMessage? messageAt(Offset position) {
     for (final item in _items.reversed) {
       if (item.rect(_clockOf(item), _size.width).inflate(4).contains(position)) return item.message;
@@ -336,6 +351,7 @@ class DanmakuOverlayState extends State<DanmakuOverlay> with SingleTickerProvide
   /// over the others, which fly on and may pass under it; no new danmaku
   /// enters its lane meanwhile. A danmaku pinned before is let go first.
   /// Returns the pinned message; null when none is there.
+  @override
   LiveMessage? pinAt(Offset position) {
     unpin();
     for (final item in _items.reversed) {
@@ -354,6 +370,7 @@ class DanmakuOverlayState extends State<DanmakuOverlay> with SingleTickerProvide
   /// speed, and its lane takes new ones again. It moves to the end of the
   /// list: the ones that passed under it are ahead of it now, and a lane's
   /// last one is the one a new danmaku must keep clear of ([_place]).
+  @override
   void unpin() {
     final item = _pinned;
     if (item == null) return;
