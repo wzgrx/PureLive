@@ -34,7 +34,16 @@ class Http implements LiveHttp {
   }
 
   @override
-  Future<LiveStreamedResponse> open(LiveRequest r) => throw UnimplementedError();
+  Future<LiveStreamedResponse> open(LiveRequest r) async {
+    final response = await send(r);
+    return LiveStreamedResponse(
+      status: response.status,
+      url: r.url,
+      headers: response.headers,
+      body: Stream.value(response.bytes),
+    );
+  }
+
   @override
   void close() {}
 }
