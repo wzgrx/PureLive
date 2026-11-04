@@ -30,3 +30,7 @@ AudioService任务移除原本没有应用处理，增加当前播放所有者�
 参考：https://github.com/flutter/flutter/issues/174859
 
 仅调整当前房间的释放顺序还不足：9250复验中当前纹理已先释放，旧导航栈房间的另一条纹理仍在，媒体插件onDetachedFromEngine原来仅删除MethodChannel处理器、未释放管理器所有输出。最终补上插件detach时先断开回调，再幂等disposeAll所有剩余SurfaceProducer（包括旧房间/空闲输出），拒绝迟到create。FlutterEngine.destroy源码明确plugins.destroy先于JNI detach；利用已有生命周期修复，不补丁SDK、不改解码内核或强行杀应用。8个相关生产文件SHA与最终源一一核对。两次真实崩溃及只改顺序仍失败的反证保留。
+
+5.6.4+5143已正式交付。构建源码`d4bdcf962cfe9753e0c23d731dd246e970b306c7`，源PR[#199](https://github.com/wzgrx/PureLive/pull/199)；最终完整all/14、十个同源包及SHA256SUMS本地/远端摘要/匿名完整下载一致，历史更新条目保留。最终双源结果以Y01.44记录为准；未将原机和礼物剩余项冒充全部完成。
+
+分层证据与剩余边界见[Y01.44发布验证](https://github.com/wzgrx/PureLive/blob/master/docs/Y-发布和运营/Y01-版本签名和发布/Y01.44-5.6.4竖屏弹幕与礼物小窗发布/verify.md)。
