@@ -102,7 +102,7 @@
 属于 [E 直播平台](../README.md)。
 
 - 代码：`packages/live_core/lib/src/sites/`
-- 进度：`███████████████████░` 93%
+- 进度：`████████████████████` 98%
 
 
 | 编号 | 任务 | 类型 | 状态 | 日期 | 提交 | 资料 |
@@ -128,18 +128,7 @@
 | E03.19 | BIGO 请求头换成完整浏览器形态：只带 Mozilla/5.0 会被平台防火墙降级（接口 418、详情回 needLogin 空壳） | 平台 | 完成 | 2026-10-08 | — | [设计或说明](E03.19-BIGO请求头/README.md)、[记录](E03.19-BIGO请求头/record.md) |
 | E03.20 | Kick 改用 HTTP/2 和新的聊天密钥（API 不再接受 HTTP/1.1，Pusher 应用换了） | 平台 | 完成 | 2026-10-15 | — | [设计或说明](E03.20-Kick改用HTTP2和新的聊天密钥/README.md)、[记录](E03.20-Kick改用HTTP2和新的聊天密钥/record.md) |
 | E03.21 | 接 E03.20：Windows 复用 Kick HTTP2 通道与桌面验收 | 平台 | 待真机 | 2026-10-24 | 7a823612a836d04a774a575d1e6dee5ff16b18b1 | [设计或说明](E03.21-Windows的Kick适配/README.md)、[任务书](E03.21-Windows的Kick适配/brief.md)、[记录](E03.21-Windows的Kick适配/record.md)、[真机验证](E03.21-Windows的Kick适配/verify.md)、[合并审查](E03.21-Windows的Kick适配/review.md) |
-| E03.22 | SOOP多CDN播放线路 | 平台 | 开发中 | 2026-11-04 | — | [设计或说明](E03.22-SOOP多CDN播放线路/README.md)、[任务书](E03.22-SOOP多CDN播放线路/brief.md)、[记录](E03.22-SOOP多CDN播放线路/record.md)、[真机验证](E03.22-SOOP多CDN播放线路/verify.md)、[合并审查](E03.22-SOOP多CDN播放线路/review.md) |
-| E03.23 | SOOP公开直播回放 | 平台 | 开发中 | 2026-11-04 | — | [设计或说明](E03.23-SOOP公开直播回放/README.md)、[任务书](E03.23-SOOP公开直播回放/brief.md)、[记录](E03.23-SOOP公开直播回放/record.md)、[真机验证](E03.23-SOOP公开直播回放/verify.md)、[合并审查](E03.23-SOOP公开直播回放/review.md) |
-
-## 还没完成的
-
-- **E03.22 SOOP多CDN播放线路**（开发中，第一档，规模 大）
-  - 接着做：5.6.4源码冻结；完整门禁、同源构建与发布验证后追加，原机和礼物边界保留。
-  - 分支：ai/Y01.44-stable-564
-  - 来源：GitHub #195及本轮用户要求新旧issue新回复一起处理
-- **E03.23 SOOP公开直播回放**（开发中，第一档，规模 大）
-  - 接着做：5.6.4源码冻结；完整门禁、同源构建与发布验证后追加，原机和礼物边界保留。
-  - 分支：ai/Y01.44-stable-564
-  - 来源：GitHub #196及本轮用户要求新旧issue新回复一起处理
+| E03.22 | SOOP多CDN播放线路 | 平台 | 待真机 | 2026-11-05 | e10e50f4f7c6be46fbc9e475235e91acbef62c7e | [设计或说明](E03.22-SOOP多CDN播放线路/README.md)、[任务书](E03.22-SOOP多CDN播放线路/brief.md)、[记录](E03.22-SOOP多CDN播放线路/record.md)、[真机验证](E03.22-SOOP多CDN播放线路/verify.md)、[合并审查](E03.22-SOOP多CDN播放线路/review.md) |
+| E03.23 | SOOP公开直播回放 | 平台 | 待真机 | 2026-11-05 | e10e50f4f7c6be46fbc9e475235e91acbef62c7e | [设计或说明](E03.23-SOOP公开直播回放/README.md)、[任务书](E03.23-SOOP公开直播回放/brief.md)、[记录](E03.23-SOOP公开直播回放/record.md)、[真机验证](E03.23-SOOP公开直播回放/verify.md)、[合并审查](E03.23-SOOP公开直播回放/review.md) |
 
 <!-- docs:生成结束 -->
