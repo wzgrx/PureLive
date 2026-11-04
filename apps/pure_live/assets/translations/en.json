@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "Use the real source ratio in PiP",
     "portrait_pip_follow_source_desc": "Applies the stable ratio before PiP and clamps it to Android's supported range",
     "portrait_presentation_group": "Fullscreen, PiP and danmaku",
+    "portrait_remember_room_menu": "Remember this room",
     "portrait_remember_room_override": "Remember room orientation",
     "portrait_remember_room_override_desc": "Reuse a manual orientation when this room is opened again",
     "portrait_reset_settings": "Reset portrait adaptation",

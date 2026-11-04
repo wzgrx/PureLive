@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "Dùng tỷ lệ thật của nguồn trong PiP",
     "portrait_pip_follow_source_desc": "Áp dụng tỷ lệ ổn định trước khi vào PiP và giới hạn trong phạm vi Android hỗ trợ",
     "portrait_presentation_group": "Toàn màn hình, PiP và danmaku",
+    "portrait_remember_room_menu": "Nhớ phòng này",
     "portrait_remember_room_override": "Nhớ hướng của phòng",
     "portrait_remember_room_override_desc": "Dùng lại hướng chọn thủ công khi mở lại phòng này",
     "portrait_reset_settings": "Đặt lại thích ứng dọc",

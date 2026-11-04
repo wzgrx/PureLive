@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "Usa le proporzioni reali della sorgente in PiP",
     "portrait_pip_follow_source_desc": "Applica le proporzioni stabili prima del PiP e le limita all’intervallo supportato da Android",
     "portrait_presentation_group": "Schermo intero, PiP e danmaku",
+    "portrait_remember_room_menu": "Ricorda questa stanza",
     "portrait_remember_room_override": "Ricorda l’orientamento della stanza",
     "portrait_remember_room_override_desc": "Riusa un orientamento manuale quando questa stanza viene riaperta",
     "portrait_reset_settings": "Ripristina l’adattamento verticale",

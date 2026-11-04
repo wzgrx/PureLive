@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "PIP에서 실제 소스 비율 사용",
     "portrait_pip_follow_source_desc": "PIP 전에 안정된 비율을 적용하고 Android 지원 범위로 제한합니다",
     "portrait_presentation_group": "전체 화면, PIP 및 탄막",
+    "portrait_remember_room_menu": "이 방송 기억",
     "portrait_remember_room_override": "방 방향 기억",
     "portrait_remember_room_override_desc": "이 방을 다시 열 때 수동으로 정한 방향을 다시 사용합니다",
     "portrait_reset_settings": "세로 대응 초기화",

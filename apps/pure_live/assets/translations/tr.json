@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "PiP’te gerçek kaynak oranını kullan",
     "portrait_pip_follow_source_desc": "PiP’ten önce kararlı oranı uygular ve Android’in desteklediği aralıkla sınırlar",
     "portrait_presentation_group": "Tam ekran, PiP ve danmaku",
+    "portrait_remember_room_menu": "Bu odayı hatırla",
     "portrait_remember_room_override": "Oda yönünü hatırla",
     "portrait_remember_room_override_desc": "Bu oda yeniden açıldığında elle seçilen yönü tekrar kullanır",
     "portrait_reset_settings": "Dikey uyarlamayı sıfırla",

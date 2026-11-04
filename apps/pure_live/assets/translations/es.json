@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "Usar la proporción real de la fuente en PiP",
     "portrait_pip_follow_source_desc": "Aplica la proporción estable antes del PiP y la limita al rango admitido por Android",
     "portrait_presentation_group": "Pantalla completa, PiP y danmaku",
+    "portrait_remember_room_menu": "Recordar esta sala",
     "portrait_remember_room_override": "Recordar la orientación de la sala",
     "portrait_remember_room_override_desc": "Reutiliza una orientación manual al volver a abrir esta sala",
     "portrait_reset_settings": "Restablecer adaptación vertical",

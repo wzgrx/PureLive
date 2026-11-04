@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "PiP で実際のソース比率を使う",
     "portrait_pip_follow_source_desc": "PiP の前に安定した比率を適用し、Android の対応範囲内に収めます",
     "portrait_presentation_group": "全画面、PiP と弾幕",
+    "portrait_remember_room_menu": "この配信を記憶",
     "portrait_remember_room_override": "ルームの向きを記憶",
     "portrait_remember_room_override_desc": "このルームを再び開いたとき、手動で設定した向きを再利用します",
     "portrait_reset_settings": "縦長対応をリセット",

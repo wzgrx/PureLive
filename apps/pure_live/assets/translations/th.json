@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "ใช้อัตราส่วนจริงของแหล่งใน PiP",
     "portrait_pip_follow_source_desc": "ใช้อัตราส่วนที่เสถียรก่อนเข้า PiP และจำกัดในช่วงที่ Android รองรับ",
     "portrait_presentation_group": "เต็มจอ PiP และ danmaku",
+    "portrait_remember_room_menu": "จำห้องนี้ไว้",
     "portrait_remember_room_override": "จำการวางแนวของห้อง",
     "portrait_remember_room_override_desc": "ใช้การวางแนวที่ตั้งเองอีกครั้งเมื่อเปิดห้องนี้ใหม่",
     "portrait_reset_settings": "รีเซ็ตการปรับแนวตั้ง",

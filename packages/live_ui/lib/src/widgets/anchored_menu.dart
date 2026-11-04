@@ -53,6 +53,7 @@ Future<T?> showAnchoredMenu<T>(
   required BoxConstraints constraints,
   bool preferAbove = false,
   GlobalKey? current,
+  String? semanticLabel,
 }) {
   final navigator = Navigator.of(anchor);
   final overlay = navigator.overlay!.context.findRenderObject()! as RenderBox;
@@ -68,7 +69,7 @@ Future<T?> showAnchoredMenu<T>(
       menu: _MenuSurface(
         constraints: constraints,
         current: current,
-        semanticLabel: localizations.popupMenuLabel,
+        semanticLabel: semanticLabel ?? localizations.popupMenuLabel,
         children: children,
       ),
     ),

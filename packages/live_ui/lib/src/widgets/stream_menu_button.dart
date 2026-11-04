@@ -178,13 +178,15 @@ class _StreamMenuButtonState extends State<StreamMenuButton> {
 /// bold, with a tick, and scrolled into view in a long list. A [footer]
 /// (a switch that applies at once) sits under a line after the entries and
 /// does not close the menu. The picture is not dimmed. Returns the chosen
-/// index, or null.
+/// index, or null. [semanticLabel] names the menu for screen readers
+/// without adding a visible title row.
 Future<int?> showSmallMenu(
   BuildContext anchor, {
   required List<String> entries,
   required int current,
   List<String>? descriptions,
   String? title,
+  String? semanticLabel,
   String entryKey = 'stream-menu-item',
   bool preferAbove = false,
   double? width,
@@ -200,6 +202,7 @@ Future<int?> showSmallMenu(
     anchor,
     preferAbove: preferAbove,
     current: currentRow,
+    semanticLabel: semanticLabel,
     constraints: width == null
         ? const BoxConstraints(minWidth: streamMenuMinWidth, maxWidth: 280)
         : BoxConstraints.tightFor(width: width),

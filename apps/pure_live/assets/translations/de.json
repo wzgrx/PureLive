@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "Echtes Quellverhältnis im PiP verwenden",
     "portrait_pip_follow_source_desc": "Wendet das stabile Verhältnis vor dem PiP an und begrenzt es auf den von Android unterstützten Bereich",
     "portrait_presentation_group": "Vollbild, PiP und Danmaku",
+    "portrait_remember_room_menu": "Für diesen Raum merken",
     "portrait_remember_room_override": "Raumausrichtung merken",
     "portrait_remember_room_override_desc": "Nutzt eine manuelle Ausrichtung erneut, wenn dieser Raum wieder geöffnet wird",
     "portrait_reset_settings": "Hochformat-Anpassung zurücksetzen",

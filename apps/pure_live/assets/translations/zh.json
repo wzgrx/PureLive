@@ -1890,6 +1890,7 @@
     "portrait_pip_follow_source": "小窗跟随真实画面比例",
     "portrait_pip_follow_source_desc": "进入画中画前应用稳定比例，并限制在 Android 支持范围内",
     "portrait_presentation_group": "全屏、小窗与弹幕",
+    "portrait_remember_room_menu": "记住本直播间",
     "portrait_remember_room_override": "记住单个直播间方向",
     "portrait_remember_room_override_desc": "在播放器中手动指定方向后，下次进入同一直播间继续使用",
     "portrait_reset_settings": "恢复竖屏适配默认设置",

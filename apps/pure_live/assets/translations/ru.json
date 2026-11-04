@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "Использовать реальные пропорции источника в PiP",
     "portrait_pip_follow_source_desc": "Применяет стабильные пропорции перед PiP и ограничивает их допустимым в Android диапазоном",
     "portrait_presentation_group": "Полный экран, PiP и danmaku",
+    "portrait_remember_room_menu": "Запомнить комнату",
     "portrait_remember_room_override": "Запоминать ориентацию комнаты",
     "portrait_remember_room_override_desc": "Повторно использует ручную ориентацию при новом открытии комнаты",
     "portrait_reset_settings": "Сбросить адаптацию вертикальных",

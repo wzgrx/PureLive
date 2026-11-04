@@ -75,9 +75,10 @@ String roomOrientationDescription(RoomOrientation orientation) => i18n(switch (o
 
 /// "本直播间画面方向" (3.x `PortraitOrientationPickerDialog`, U.2b change 10;
 /// docs/A-界面设计/A07-直播间界面/A07.12-直播间子弹窗统一 c6): a small menu next to [anchor] (the
-/// orientation button, on a bar along the bottom: above it), titled, each
-/// option with its line, the current one in the primary colour with a
-/// tick; a tap applies it and closes the menu. "记住单个直播间方向" under a
+/// orientation button, on a bar along the bottom: above it), using the
+/// same compact rows and intrinsic width as quality/line selection. The
+/// current option has a primary-colour tick; a tap applies and closes it.
+/// A one-line "记住本直播间" switch under a
 /// line applies the moment it is switched and leaves the menu open (3.x
 /// kept it as a draft until an option was tapped).
 Future<void> showRoomOrientationMenu(
@@ -88,13 +89,11 @@ Future<void> showRoomOrientationMenu(
   const options = RoomOrientation.values;
   final chosen = await showSmallMenu(
     anchor,
-    title: i18n('portrait_room_override'),
+    semanticLabel: i18n('portrait_room_override'),
     entries: [for (final orientation in options) roomOrientationName(orientation)],
-    descriptions: [for (final orientation in options) roomOrientationDescription(orientation)],
     current: options.indexOf(choice.value),
     entryKey: 'room-orientation',
     preferAbove: preferAbove,
-    width: 320,
     footer: _RememberOrientation(choice: choice),
   );
   if (chosen == null) return;
@@ -123,21 +122,9 @@ class _RememberOrientation extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        i18n('portrait_remember_room_override'),
-                        style: theme.textTheme.bodyMedium?.regular.copyWith(fontSize: 14, color: scheme.onSurface),
-                      ),
-                      Text(
-                        i18n('portrait_remember_room_override_desc'),
-                        style: theme.textTheme.bodySmall?.regular.copyWith(
-                          fontSize: 12,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    i18n('portrait_remember_room_menu'),
+                    style: theme.textTheme.bodyMedium?.regular.copyWith(fontSize: 14, color: scheme.onSurface),
                   ),
                 ),
                 const SizedBox(width: 12),

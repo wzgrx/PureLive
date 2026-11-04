@@ -868,17 +868,19 @@ void main() {
       await _close(tester, room);
     });
 
-    testWidgets('orientation: a titled small menu, each with its line, a tick; 记住 applies when switched', (
+    testWidgets('orientation: compact rows and a tick like quality selection; remember applies when switched', (
       tester,
     ) async {
       final room = await _pump(tester, portrait: true);
       await _tap(tester, 'live-play-orientation');
       // U.2n c6: next to the button like the picture mode, not a dialog.
       expect(find.byType(Dialog), findsNothing);
-      expect(_key('small-menu-title'), findsOneWidget);
-      expect(find.text('本直播间画面方向'), findsOneWidget);
-      expect(find.text('按画面的实际尺寸判断是竖屏还是横屏直播'), findsOneWidget);
-      expect(find.text('当作竖屏直播：画面加高、下面是可拖的面板，能进竖屏全屏'), findsOneWidget);
+      expect(_key('small-menu-title'), findsNothing);
+      expect(find.text('自动识别'), findsOneWidget);
+      expect(find.text('强制竖屏'), findsOneWidget);
+      expect(find.text('强制横屏'), findsOneWidget);
+      expect(find.text('记住本直播间'), findsOneWidget);
+      expect(find.text('按画面的实际尺寸判断是竖屏还是横屏直播'), findsNothing);
       expect(find.descendant(of: _key('room-orientation-0'), matching: find.byIcon(AppIcons.selected)), findsOneWidget);
       await tester.tap(_key('room-orientation-remember'));
       await _settle(tester);

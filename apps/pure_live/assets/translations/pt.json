@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "Usar a proporção real da fonte no PiP",
     "portrait_pip_follow_source_desc": "Aplica a proporção estável antes do PiP e a limita ao intervalo suportado pelo Android",
     "portrait_presentation_group": "Tela cheia, PiP e danmaku",
+    "portrait_remember_room_menu": "Lembrar esta sala",
     "portrait_remember_room_override": "Lembrar a orientação da sala",
     "portrait_remember_room_override_desc": "Reutiliza uma orientação manual quando esta sala for aberta de novo",
     "portrait_reset_settings": "Redefinir adaptação vertical",

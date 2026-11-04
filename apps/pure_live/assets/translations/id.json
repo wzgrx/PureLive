@@ -1891,6 +1891,7 @@
     "portrait_pip_follow_source": "Gunakan rasio sumber asli di PiP",
     "portrait_pip_follow_source_desc": "Menerapkan rasio stabil sebelum PiP dan membatasinya ke rentang yang didukung Android",
     "portrait_presentation_group": "Layar penuh, PiP, dan danmaku",
+    "portrait_remember_room_menu": "Ingat ruang ini",
     "portrait_remember_room_override": "Ingat orientasi ruang",
     "portrait_remember_room_override_desc": "Memakai lagi orientasi manual saat ruang ini dibuka kembali",
     "portrait_reset_settings": "Atur ulang adaptasi vertikal",
