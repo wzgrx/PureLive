@@ -10,12 +10,26 @@ import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/app/ui_mode.dart';
 import 'package:pure_live/app/vod.dart';
+import 'package:pure_live/features/replay/replay_query.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/rooms/archive/archive_player_page.dart';
 import 'package:pure_live/shared/rooms/archive/archive_recording.dart';
 import 'package:pure_live/shared/rooms/archive/archive_time.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
+
+/// Literal translation keys keep all date presets visible to locale audits.
+const replayDatePresetLabels = {
+  'all': 'replay_date_all',
+  'today': 'replay_date_today',
+  'yesterday': 'replay_date_yesterday',
+  'three': 'replay_date_three',
+  'week': 'replay_date_week',
+  'month': 'replay_date_month',
+  'quarter': 'replay_date_quarter',
+  'year': 'replay_date_year',
+  'custom': 'replay_date_custom',
+};
 
 /// Platforms with an implemented, official creator archive contract.
 const replayPlatforms = <String>[SiteIds.huya, SiteIds.douyu, SiteIds.bilibili];
@@ -58,10 +72,17 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
   ReplayCollection? _collection;
   Map<String, Duration> _positions = const {};
   final Map<String, int> _partNumbers = {};
-  String? _dateFilter;
+  final _keyword = TextEditingController();
+  ReplayCatalogQuery _query = ReplayCatalogQuery();
+  String _datePreset = 'all';
+  Timer? _scanNext;
+  bool _fillQueued = false;
+  int _emptyPages = 0;
+  bool _repeatedPageStop = false;
   @override
   void initState() {
     super.initState();
+    _scroll.addListener(_onScroll);
     if (widget.room != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) unawaited(_submit());
@@ -74,6 +95,9 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
     _generation++;
     _cancel?.cancel();
     _input.dispose();
+    _keyword.dispose();
+    _cancelScan();
+    _scroll.removeListener(_onScroll);
     _scroll.dispose();
     super.dispose();
   }
@@ -81,6 +105,7 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
   String _label(String site) => i18n('site_$site');
 
   Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
     final g = ++_generation;
     _cancel?.cancel();
     final cancel = _cancel = CancelToken();
@@ -94,7 +119,12 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
       _positions = const {};
       _collections = const [];
       _collection = null;
-      _dateFilter = null;
+      _query = ReplayCatalogQuery();
+      _datePreset = 'all';
+      _keyword.clear();
+      _emptyPages = 0;
+      _repeatedPageStop = false;
+      _cancelScan();
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
     try {
@@ -176,7 +206,10 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
     } on Object catch (e) {
       if (mounted && g == _generation) setState(() => _error = e);
     } finally {
-      if (mounted && g == _generation) setState(() => _busy = false);
+      if (mounted && g == _generation) {
+        setState(() => _busy = false);
+        _scheduleLoad();
+      }
     }
   }
 
@@ -218,16 +251,22 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
       }
       if (!mounted || g != _generation) return;
       final seen = _entries.map((e) => e.id).toSet();
+      final fresh = next.where((entry) => seen.add(entry.id)).toList();
       setState(() {
-        _entries = [..._entries, ...next.where((v) => seen.add(v.id))];
+        _entries = [..._entries, ...fresh];
         _page = page;
-        _more = more && _entries.length < 1000;
+        _emptyPages = fresh.isEmpty && more ? _emptyPages + 1 : 0;
+        _repeatedPageStop = _emptyPages >= 3;
+        _more = more && !_repeatedPageStop;
       });
       await _readPositions(g);
     } on Object catch (e) {
       if (mounted && g == _generation) setState(() => _error = e);
     } finally {
-      if (mounted && g == _generation) setState(() => _busy = false);
+      if (mounted && g == _generation) {
+        setState(() => _busy = false);
+        _scheduleLoad();
+      }
     }
   }
 
@@ -294,7 +333,111 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
     }
   }
 
-  String _day(DateTime date) => '${date.year}-${date.month}-${date.day}';
+  List<ArchiveRecording> get _visible => _entries.where(_query.matches).toList();
+
+  void _onScroll() {
+    if (_scroll.hasClients && _scroll.position.extentAfter < 500) _scheduleLoad();
+  }
+
+  void _scheduleLoad() {
+    if (_fillQueued || !mounted || _busy || !_more || _error != null || _scanNext != null) return;
+    _fillQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fillQueued = false;
+      if (!mounted || _busy || !_more || _error != null || !_scroll.hasClients) return;
+      final needsPage = _scroll.position.extentAfter < 500 || (_query.active && _visible.length < 30);
+      if (!needsPage) return;
+      final generation = _generation;
+      // Cooperative search extends to subsequent pages, at most once a second.
+      // Its progress labels state the examined range, never a whole-site claim.
+      _scanNext = Timer(const Duration(seconds: 1), () {
+        _scanNext = null;
+        if (mounted && generation == _generation && !_busy && _more && _error == null) unawaited(_load());
+      });
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _cancelScan() {
+    _scanNext?.cancel();
+    _scanNext = null;
+  }
+
+  void _keywordChanged(String value) {
+    _cancelScan();
+    setState(() => _query = ReplayCatalogQuery(keyword: value, from: _query.from, through: _query.through));
+    _scheduleLoad();
+  }
+
+  Future<void> _pickDates(BuildContext anchor) async {
+    final options = replayDatePresetLabels.keys.toList();
+    final index = await showSmallMenu(
+      anchor,
+      entries: [for (final id in options) i18n(replayDatePresetLabels[id]!)],
+      current: options.indexOf(_datePreset),
+      semanticLabel: i18n('replay_date_range'),
+    );
+    final selected = index == null ? null : options[index];
+    if (!mounted || selected == null) return;
+    ReplayCatalogQuery query;
+    if (selected == 'custom') {
+      final range = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(2000),
+        lastDate: DateTime.now(),
+        initialDateRange: _query.from == null || _query.through == null
+            ? null
+            : DateTimeRange(start: _query.from!, end: _query.through!),
+      );
+      if (!mounted || range == null) return;
+      query = ReplayCatalogQuery(keyword: _keyword.text, from: range.start, through: range.end);
+    } else {
+      query = _query.preset(selected, DateTime.now());
+    }
+    _cancelScan();
+    setState(() {
+      _query = query;
+      _datePreset = selected;
+    });
+    _scheduleLoad();
+  }
+
+  String get _dateLabel {
+    if (_datePreset != 'custom') return i18n(replayDatePresetLabels[_datePreset] ?? 'replay_date_all');
+    final localizations = MaterialLocalizations.of(context);
+    return '${localizations.formatShortDate(_query.from!)} – ${localizations.formatShortDate(_query.through!)}';
+  }
+
+  Widget _catalogList({
+    required bool tv,
+    required List<ArchiveRecording> visible,
+    required List<Widget> header,
+    required List<Widget> footer,
+  }) => ListView.builder(
+    key: const ValueKey('replay-catalog-list'),
+    controller: _scroll,
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+    itemCount: header.length + visible.length + footer.length,
+    itemBuilder: (context, index) {
+      if (index < header.length) return header[index];
+      final row = index - header.length;
+      if (row >= visible.length) return footer[row - visible.length];
+      final entry = visible[row];
+      return Column(
+        key: ValueKey('replay-result-${entry.id}'),
+        children: [
+          _ArchiveRow(
+            entry: entry,
+            position: _positions[entry.id],
+            onTap: _opening ? null : () => unawaited(_play(entry)),
+            tv: tv,
+            autofocus: tv && row == 0,
+          ),
+          const Divider(height: 12),
+        ],
+      );
+    },
+  );
   Future<void> _other() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
@@ -328,14 +471,11 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
   Widget build(BuildContext context) {
     final tv = UiMode.parse(watchSetting(ref, Settings.uiMode))
         .showsTv(television: ref.watch(televisionDeviceProvider));
-    final resume = _entries.where((e) => (_positions[e.id] ?? Duration.zero) > Duration.zero).firstOrNull;
-    final dates = <String, DateTime>{
-      for (final entry in _entries)
-        if (entry.date != null) _day(entry.date!): entry.date!,
-    };
-    final visible = _dateFilter == null
-        ? _entries
-        : _entries.where((e) => e.date != null && _day(e.date!) == _dateFilter).toList();
+    final resume = _entries
+        .where(_query.matches)
+        .where((e) => (_positions[e.id] ?? Duration.zero) > Duration.zero)
+        .firstOrNull;
+    final visible = _visible;
     return Scaffold(
       key: const ValueKey('replay-catalog-page'),
       appBar: AppBar(
@@ -354,11 +494,10 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1000),
-            child: ListView(
-              key: const ValueKey('replay-catalog-list'),
-              controller: _scroll,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              children: [
+            child: _catalogList(
+              tv: tv,
+              visible: visible,
+              header: [
                 if (widget.room == null) ...[
                   Wrap(
                     spacing: 8,
@@ -383,7 +522,12 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
                                     _page = 0;
                                     _more = false;
                                     _error = null;
-                                    _dateFilter = null;
+                                    _query = ReplayCatalogQuery();
+                                    _datePreset = 'all';
+                                    _keyword.clear();
+                                    _emptyPages = 0;
+                                    _repeatedPageStop = false;
+                                    _cancelScan();
                                     _input.clear();
                                   });
                                 },
@@ -460,7 +604,12 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
                                 _positions = const {};
                                 _page = 0;
                                 _more = false;
-                                _dateFilter = null;
+                                _query = ReplayCatalogQuery();
+                                _datePreset = 'all';
+                                _keyword.clear();
+                                _emptyPages = 0;
+                                _repeatedPageStop = false;
+                                _cancelScan();
                               });
                               unawaited(_load());
                             },
@@ -486,32 +635,59 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
                       onTap: _opening ? null : () => unawaited(_play(resume)),
                     ),
                   ),
-                if (dates.length > 1)
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        children: [
-                          ChoiceChip(
-                            label: Text(i18n('archive_all_dates')),
-                            selected: _dateFilter == null,
-                            onSelected: (_) => setState(() => _dateFilter = null),
-                          ),
-                          for (final item in dates.entries.take(6))
-                            Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: ChoiceChip(
-                                label: Text('${item.value.month}.${item.value.day}'),
-                                selected: _dateFilter == item.key,
-                                onSelected: (_) => setState(() => _dateFilter = item.key),
+                if (_author.isNotEmpty) ...[
+                  if (tv)
+                    TvInputField(
+                      key: const ValueKey('replay-keyword'),
+                      text: _keyword.text,
+                      hint: i18n('replay_search_hint'),
+                      title: i18n('replay_search_hint'),
+                      icon: AppIcons.search,
+                      onSubmitted: (text) {
+                        _keyword.text = text;
+                        _keywordChanged(text);
+                      },
+                    )
+                  else
+                    TextField(
+                      key: const ValueKey('replay-keyword'),
+                      controller: _keyword,
+                      onChanged: _keywordChanged,
+                      decoration: InputDecoration(
+                        labelText: i18n('replay_search_label'),
+                        hintText: i18n('replay_search_hint'),
+                        helperMaxLines: 6,
+                        helperText: i18n('replay_search_scope'),
+                        prefixIcon: const Icon(AppIcons.search),
+                        suffixIcon: _keyword.text.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: i18n('replay_clear_search'),
+                                icon: const Icon(AppIcons.close),
+                                onPressed: () {
+                                  _keyword.clear();
+                                  _keywordChanged('');
+                                },
                               ),
-                            ),
-                        ],
+                      ),
+                    ),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Builder(
+                      builder: (anchor) => TextButton.icon(
+                        key: const ValueKey('replay-date-range'),
+                        onPressed: () => unawaited(_pickDates(anchor)),
+                        icon: const Icon(AppIcons.guideTitle),
+                        label: Text(_dateLabel),
                       ),
                     ),
                   ),
-                if (_busy)
+                  Text(
+                    i18n('replay_scan_progress', args: {'count': '${_entries.length}', 'matches': '${visible.length}'}),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (_busy && _entries.isEmpty)
                   const Padding(
                     padding: EdgeInsets.all(24),
                     child: Center(child: CircularProgressIndicator()),
@@ -534,7 +710,7 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () => unawaited(_page == 0 ? _submit() : _load()),
+                          onPressed: () => unawaited(_author.isEmpty ? _submit() : _load()),
                           child: Text(i18n('retry')),
                         ),
                       ],
@@ -545,16 +721,30 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
                     padding: const EdgeInsets.symmetric(vertical: 32),
                     child: Text(i18n(_author.isEmpty ? 'replay_enter' : 'replay_empty')),
                   ),
-                for (final entry in visible) ...[
-                  _ArchiveRow(
-                    entry: entry,
-                    position: _positions[entry.id],
-                    onTap: _opening ? null : () => unawaited(_play(entry)),
-                    tv: tv,
-                    autofocus: tv && identical(entry, visible.first),
+              ],
+              footer: [
+                if (_busy && _entries.isNotEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
-                  const Divider(height: 12),
-                ],
+                if (_author.isNotEmpty && !_more && !_busy && _error == null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(i18n(_repeatedPageStop ? 'replay_catalog_paused' : 'replay_catalog_end')),
+                  ),
+                if (_repeatedPageStop)
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _emptyPages = 0;
+                        _repeatedPageStop = false;
+                        _more = true;
+                      });
+                      unawaited(_load());
+                    },
+                    child: Text(i18n('retry')),
+                  ),
                 if (_more)
                   Center(
                     child: OutlinedButton(

@@ -17,9 +17,9 @@ import 'package:pure_live/features/replay/replay_catalog_page.dart';
 import 'package:pure_live/shared/rooms/archive/archive_player_page.dart';
 import 'package:pure_live/shared/rooms/archive/archive_recording.dart';
 import 'package:pure_live/tv/tv_app.dart';
-import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
 
+import '../../qa_capture.dart';
 import '../../support.dart';
 import '../douyu_vod/vod_support.dart';
 import '../huya_replay/huya_archive_support.dart';
@@ -41,17 +41,19 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
   bool tv = false,
   PlaybackSession Function()? playbackFactory,
   FakeBiliReplay? biliSource,
+  FakeHuyaArchive? huyaSource,
 }) async {
   tester.view
     ..physicalSize = size
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+  await prepareQaFonts(tester);
   final services = (await tester.runAsync(testServices))!;
   addTearDown(() => tester.runAsync(services.close));
   final strings = (await tester.runAsync(loadStrings))!;
   if (tv) await tester.runAsync(() => services.store.settings.set(Settings.uiMode, 'tv'));
   final engine = FakeEngine();
-  final huya = FakeHuyaArchive();
+  final huya = huyaSource ?? FakeHuyaArchive();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -82,6 +84,122 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
 }
 
 void main() {
+  testWidgets('a list failure stops automatic requests and retry preserves the keyword', (tester) async {
+    final source = FakeHuyaArchive()..failList = true;
+    await page(tester, platform: SiteIds.huya, huyaSource: source);
+    await tester.enterText(find.byKey(const ValueKey('replay-keyword')), '第一');
+    await tester.pump(const Duration(seconds: 5));
+    expect(source.calls, ['list:123:1']);
+    source.failList = false;
+    await tester.ensureVisible(find.text('重试'));
+    await tester.tap(find.text('重试'));
+    for (var n = 0; n < 5; n++) {
+      await settle(tester);
+    }
+    expect(tester.widget<TextField>(find.byKey(const ValueKey('replay-keyword'))).controller!.text, '第一');
+    expect(source.calls, ['list:123:1', 'list:123:1', 'list:123:2']);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
+  testWidgets('closing the catalog cancels continuation and discards a late page', (tester) async {
+    final source = FakeHuyaArchive();
+    final pending = Completer<HuyaArchiveList>();
+    source.lists['123:2'] = pending;
+    await page(tester, platform: SiteIds.huya, huyaSource: source);
+    for (var n = 0; n < 5 && source.calls.length < 2; n++) {
+      await settle(tester);
+    }
+    expect(source.calls, ['list:123:1', 'list:123:2']);
+    await tester.pumpWidget(const SizedBox.shrink());
+    pending.complete(const HuyaArchiveList(videos: [secondArchive], hasMore: true));
+    await settle(tester);
+    await tester.pump(const Duration(seconds: 5));
+    expect(source.calls, ['list:123:1', 'list:123:2']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ordinary downward scrolling loads further pages without tapping more', (tester) async {
+    final source = FakeHuyaArchive();
+    for (var n = 1; n <= 3; n++) {
+      source.lists['123:$n'] = Completer<HuyaArchiveList>()
+        ..complete(
+          HuyaArchiveList(
+            videos: [
+              for (var i = 0; i < 12; i++)
+                HuyaArchiveVideo(id: '${300000000 + n * 100 + i}', title: '滚动第$n页录像$i', authorId: '123'),
+            ],
+            hasMore: n < 3,
+          ),
+        );
+    }
+    await page(tester, platform: SiteIds.huya, huyaSource: source);
+    for (var i = 0; i < 12 && source.calls.length < 3; i++) {
+      await tester.drag(find.byKey(const ValueKey('replay-catalog-list')), const Offset(0, -650));
+      await settle(tester);
+    }
+    expect(source.calls, ['list:123:1', 'list:123:2', 'list:123:3']);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
+  for (final size in [const Size(393, 852), const Size(740, 360), const Size(280, 640)]) {
+    testWidgets('catalog browsing stays bounded at $size with large text', (tester) async {
+      await page(tester, platform: SiteIds.huya, size: size, scale: 1.5);
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      await captureQaFrame(tester, 'replay-browse-${size.width.toInt()}x${size.height.toInt()}');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await settle(tester);
+    });
+  }
+
+  testWidgets('continuous scrolling prefetches once and keyword search continues across later pages', (tester) async {
+    final source = FakeHuyaArchive();
+    for (var n = 1; n <= 3; n++) {
+      final videos = [
+        for (var i = 0; i < 10; i++)
+          HuyaArchiveVideo(
+            id: '${200000000 + n * 10 + i}',
+            title: n == 3 && i == 9 ? '目标复盘录像' : '第$n页场次$i',
+            authorId: '123',
+            date: '2026-11-0$n',
+          ),
+      ];
+      source.lists['123:$n'] = Completer<HuyaArchiveList>()..complete(HuyaArchiveList(videos: videos, hasMore: n < 3));
+    }
+    await page(tester, platform: SiteIds.huya, huyaSource: source);
+    await tester.enterText(find.byKey(const ValueKey('replay-keyword')), '目标');
+    for (var n = 0; n < 12 && source.calls.length < 3; n++) {
+      await settle(tester);
+    }
+    await settle(tester);
+    expect(source.calls, ['list:123:1', 'list:123:2', 'list:123:3']);
+    expect(find.text('目标复盘录像'), findsOneWidget);
+    expect(find.textContaining('已检索 30 条'), findsOneWidget);
+    expect(find.text('第1页场次0'), findsNothing);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    await captureQaFrame(tester, 'replay-search-portrait');
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
+  testWidgets('date presets are an anchored choice and filtering has an explicit progress range', (tester) async {
+    await page(tester, platform: SiteIds.huya);
+    await tester.tap(find.byKey(const ValueKey('replay-date-range')));
+    await tester.pumpAndSettle();
+    expect(find.text('近90天'), findsOneWidget);
+    expect(find.text('自定义日期范围'), findsOneWidget);
+    await captureQaFrame(tester, 'replay-date-presets');
+    await tester.tap(find.text('近90天'));
+    await settle(tester);
+    expect(find.text('近90天'), findsOneWidget);
+    expect(find.textContaining('已检索'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
   testWidgets('late recording metadata enables actions and fills parts without another user action', (tester) async {
     final source = FakeBiliReplay()..pending = Completer<VodArchive>();
     await page(tester, platform: SiteIds.bilibili, biliSource: source);
@@ -149,7 +267,8 @@ void main() {
 
   testWidgets('TV replay rows have the standard visible focus target and OK opens on-demand playback', (tester) async {
     final (engine, _) = await page(tester, platform: SiteIds.huya, size: const Size(1280, 720), tv: true);
-    expect(find.byType(TvInputField), findsNothing);
+    expect(find.byKey(const ValueKey('replay-room-input')), findsNothing);
+    expect(find.byKey(const ValueKey('replay-keyword')), findsOneWidget);
     final row = find.byKey(ValueKey('replay-recording-${firstArchive.id}'));
     expect(find.descendant(of: row, matching: find.byType(TvFocusable)), findsOneWidget);
     bool focused() =>
@@ -205,6 +324,8 @@ void main() {
   for (final size in [const Size(393, 852), const Size(740, 360), const Size(1280, 800)]) {
     testWidgets('v5 player and panel remain bounded at $size with 200 percent type', (tester) async {
       await page(tester, platform: SiteIds.bilibili, size: size, scale: 2);
+      await tester.ensureVisible(find.byKey(ValueKey('replay-recording-${archive.bvid}')));
+      await settle(tester);
       await tester.tap(find.byKey(ValueKey('replay-recording-${archive.bvid}')));
       await settle(tester);
       expect(find.byType(ArchivePlayerPage), findsOneWidget);
@@ -258,9 +379,10 @@ void main() {
     await tester.enterText(find.byKey(const ValueKey('replay-room-input')), 'https://www.huya.com/video/u/123');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await settle(tester);
-    expect(source.calls, ['list:123:1']);
-    await tester.ensureVisible(find.byKey(const ValueKey('replay-more')));
-    await tester.tap(find.byKey(const ValueKey('replay-more')));
+    // A short page fills itself without the old mandatory next-page tap.
+    for (var n = 0; n < 4 && source.calls.length < 2; n++) {
+      await settle(tester);
+    }
     await settle(tester);
     expect(source.calls, ['list:123:1', 'list:123:2']);
     expect(find.byKey(const ValueKey('replay-more')), findsNothing);
@@ -279,8 +401,8 @@ void main() {
         return fakeSession(engine);
       },
     );
-    await tester.tap(find.byKey(const ValueKey('replay-more')));
     await settle(tester);
+    await tester.ensureVisible(find.byKey(ValueKey('replay-recording-${firstArchive.id}')));
     await tester.tap(find.byKey(ValueKey('replay-recording-${firstArchive.id}')));
     await settle(tester);
     final target = find.byKey(ValueKey('archive-related-${secondArchive.id}'));

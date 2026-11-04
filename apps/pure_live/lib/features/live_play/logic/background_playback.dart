@@ -231,6 +231,9 @@ abstract final class PictureInPicture {
   static Future<void> closeTask() async {
     if (!_android) return;
     _autoOwner = null;
+    // A cached Flutter engine can outlive the removed PiP Activity. Some
+    // devices never deliver its final mode callback before detaching it.
+    active.value = false;
     try {
       await _channel.invokeMethod<void>('closeTask');
     } on Object catch (error) {

@@ -944,6 +944,9 @@ class MainActivity : AudioServiceActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Reconcile a cached engine after Activity/task recreation, including
+        // vendors that omit the old Activity's final PiP mode callback.
+        pipChannel?.invokeMethod("changed", Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && isInPictureInPictureMode)
         // Volume keys control media while this window is in front.
         volumeControlStream = AudioManager.STREAM_MUSIC
         scheduleDisplayModeRefresh(delayMillis = 0)
