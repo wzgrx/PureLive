@@ -330,6 +330,10 @@ const Map<String, Object> newInV4 = {
   'blockEmoteOnlyDanmaku': false, // D02.2 (V03.6 E11; off as before, D-040)
   'blockLongDanmaku': false, // D02.2
   'blockLongDanmakuLength': 30, // D02.2
+  'danmakuColoredOnly': false, // D02.4: compatibility default
+  'danmakuMinUserLevel': 0, // D02.4: no level restriction
+  'danmakuMinFansLevel': 0, // D02.4: no level restriction
+  'showCellularWarning': true, // V02.84: preserve the existing warning
   'youtubeShowAllChat': false, // UPGRADES B-13
   'enableLocalLog': false, // I01.3
   'logLevel': 'info', // I01.3
@@ -414,6 +418,8 @@ const Map<String, (num?, num?)> ranges = {
   'danmakuSimilarityCacheDuration': (1, 60),
   'danmakuSimilarityMaxCacheSize': (20, 1000),
   'blockLongDanmakuLength': (10, 100), // D02.2
+  'danmakuMinUserLevel': (0, 999), // D02.4
+  'danmakuMinFansLevel': (0, 999), // D02.4
   'defaultMobileVolume': (0, 1),
   'defaultDesktopVolume': (0, 1),
   'volumeBoostDb': (0, 12),
