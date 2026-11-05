@@ -594,7 +594,7 @@ void main() {
         expect(resolution.qualityUnconfirmed, resolved['qualityUnconfirmed']);
         final line = resolution.lines.single;
         expect(line.format, StreamFormat.flv);
-        expect(line.lineId, cdn, reason: 'the line is its CDN code, never an index');
+        expect(line.lineId, '${cdn}_0');
         expect(line.headers, {
           'origin': 'https://www.douyu.com',
           'referer': 'https://www.douyu.com/24422',

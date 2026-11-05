@@ -450,6 +450,10 @@ final class DouyuSite extends LiveSite
   /// Every CDN of [quality] signed at its rate, in line order; the lines of
   /// one confirmed rate are kept ([DouyuApi.resolution]). A failing CDN is
   /// skipped; when all fail, the last failure is thrown.
+  ///
+  /// Each CDN requests once with `hevc=1`, which returns both AVC and HEVC
+  /// URLs in a single response; [DouyuApi.answers] splits them into separate
+  /// lines tagged by codec.
   @override
   Future<LivePlayUrlResolution> resolvePlayUrlsRaw({required LiveRoom detail, required LivePlayQuality quality}) async {
     final data = quality.data;
@@ -457,14 +461,20 @@ final class DouyuSite extends LiveSite
     final rid = _rid(detail);
     final answers = <({LivePlayLine line, int? rate})>[];
     SiteError? last;
-    for (final cdn in data.cdns) {
-      try {
-        answers.add(await _answer(rid, data.rate, cdn));
-      } on SiteError catch (error) {
-        last = error;
-      }
+    final results = await Future.wait(
+      data.cdns.map((cdn) async {
+        try {
+          return await _answer(rid, data.rate, cdn);
+        } on SiteError catch (error) {
+          last = error;
+          return null;
+        }
+      }),
+    );
+    for (final result in results) {
+      if (result != null) answers.addAll(result);
     }
-    if (answers.isEmpty && last != null) throw last;
+    if (answers.isEmpty && last != null) throw last!;
     return DouyuApi.resolution(answers, requestedRate: data.rate);
   }
 
@@ -505,13 +515,15 @@ final class DouyuSite extends LiveSite
     if (data is! DouyuPlayData || lineIndex < 0 || lineIndex >= data.cdns.length) {
       return LivePlayUrlResolution(urls: const []);
     }
-    final answer = await _answer(_rid(detail), data.rate, data.cdns[lineIndex]);
-    return DouyuApi.resolution([answer], requestedRate: data.rate);
+    final results = await _answer(_rid(detail), data.rate, data.cdns[lineIndex]);
+    return DouyuApi.resolution(results, requestedRate: data.rate);
   }
 
-  Future<({LivePlayLine line, int? rate})> _answer(String rid, int rate, String cdn) async {
+  /// Signs one CDN for [rid] at [rate] with `hevc='1'`, returning all codec
+  /// lines (AVC + HEVC) from the response. A failing CDN throws [SiteError].
+  Future<List<({LivePlayLine line, int? rate})>> _answer(String rid, int rate, String cdn) async {
     final play = await _play(rid, rate: rate, cdn: cdn);
-    final answer = DouyuApi.answer(
+    final results = DouyuApi.answers(
       play.data,
       roomId: rid,
       cdn: cdn,
@@ -519,13 +531,15 @@ final class DouyuSite extends LiveSite
       issuedAt: play.issuedAt,
       forceRenewal: _forceRenewal(),
     );
-    final lease = answer.line.lease;
-    if (lease != null) {
-      _leases.remove(answer.line.url);
-      _leases[answer.line.url] = lease;
-      if (_leases.length > 64) _leases.remove(_leases.keys.first);
+    for (final result in results) {
+      final lease = result.line.lease;
+      if (lease != null) {
+        _leases.remove(result.line.url);
+        _leases[result.line.url] = lease;
+      }
     }
-    return answer;
+    if (_leases.length > 64) _leases.remove(_leases.keys.first);
+    return results;
   }
 
   /// One signed `getH5PlayV1` for (rate, cdn), at most twice: after a failed
