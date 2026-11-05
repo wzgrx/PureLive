@@ -6,7 +6,7 @@
   "route": "direct",
   "request": {
     "method": "GET",
-    "url": "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo?protocol=0,1&format=0,1,2&platform=web&ptype=8&dolby=5&panorama=1&mask=0&no_playurl=0&room_id=5440&codec=0&qn=0",
+    "url": "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo?protocol=0,1&format=0,1,2&platform=web&ptype=8&dolby=5&panorama=1&mask=0&no_playurl=0&room_id=5440&codec=0,1,2&qn=0",
     "headers": {
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
       "Referer": "https://live.bilibili.com/",

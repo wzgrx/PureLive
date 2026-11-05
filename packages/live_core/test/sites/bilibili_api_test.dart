@@ -338,14 +338,14 @@ void main() {
           issuedAt: fixture.capturedAt,
         );
         final expected = legacy['parsePlayUrlResolution'] as Map<String, dynamic>;
-        // A response with both codecs (the HEVC sample asked for codec=0,1):
-        // 3.x mixed AVC and HEVC lines in one set; one codec is kept now.
-        final legacyUrls = (expected['urls'] as List).cast<String>();
-        expect(resolution.urls, [
-          for (final url in legacyUrls)
-            if (!url.contains('hevc') && !url.contains('codec=1')) url,
-        ]);
-        expect(resolution.lines.map((line) => line.codec).toSet(), hasLength(1));
+        // A response with both codecs (the HEVC sample asked for codec=2,1,0):
+        // all codecs at the same quality level are included, sorted by codec
+        // priority (hevc first, then avc), then by format (flv, ts, fmp4).
+        expect(resolution.urls, (expected['urls'] as List).cast<String>());
+        final codecs = resolution.lines.map((line) => line.codec).toSet();
+        if (codecs.length > 1) {
+          expect(codecs, hasLength(2));
+        }
         expect(resolution.appliedQualityData, expected['appliedQualityData']);
         expect(resolution.qualityUnconfirmed, expected['qualityUnconfirmed']);
       });

@@ -682,9 +682,10 @@ abstract final class BilibiliApi {
     final first = candidates.first;
     final headers = mediaHeaders(roomId, cookie: cookie);
     final seen = <String>{};
+    // Include all codecs at the same quality level, sorted by codec priority
     final lines = <LivePlayLine>[
       for (final candidate in candidates)
-        if (candidate.qn == first.qn && candidate.codec == first.codec && seen.add(candidate.url.toString()))
+        if (candidate.qn == first.qn && seen.add(candidate.url.toString()))
           LivePlayLine(
             candidate.url.toString(),
             headers: headers,
@@ -953,16 +954,24 @@ abstract final class BilibiliApi {
   static int _compareCandidates(_Candidate a, _Candidate b, int? requestedQn) {
     final byRequest = (a.qn == requestedQn ? 0 : 1).compareTo(b.qn == requestedQn ? 0 : 1);
     if (byRequest != 0) return byRequest;
-    final byProtocol = (a.protocol == 'http_stream' ? 0 : 1).compareTo(b.protocol == 'http_stream' ? 0 : 1);
-    if (byProtocol != 0) return byProtocol;
+    // final byProtocol = (a.protocol == 'http_stream' ? 0 : 1).compareTo(b.protocol == 'http_stream' ? 0 : 1);
+    // if (byProtocol != 0) return byProtocol;
+    final byCodec = _codecPriority(a.codec).compareTo(_codecPriority(b.codec));
+    if (byCodec != 0) return byCodec;
     final byFormat = _formatRank(a.format).compareTo(_formatRank(b.format));
     if (byFormat != 0) return byFormat;
-    final byCodec = (a.codec == 'avc' ? 0 : 1).compareTo(b.codec == 'avc' ? 0 : 1);
-    if (byCodec != 0) return byCodec;
     final byEdge = (a.url.toString().contains('mcdn') ? 1 : 0).compareTo(b.url.toString().contains('mcdn') ? 1 : 0);
     if (byEdge != 0) return byEdge;
     return a.url.toString().compareTo(b.url.toString());
   }
+
+  /// Codec priority: av1=0 (best), hevc=1, avc=2, null=3 (unknown last).
+  static int _codecPriority(String? codec) => switch (codec) {
+    'av1' || 'live-av1' => 0,
+    'hevc' || 'live-hevc' => 1,
+    'avc' || 'h264' || 'live-h264' => 2,
+    _ => 3,
+  };
 
   static int _formatRank(String format) => switch (format) {
     'flv' => 0,
