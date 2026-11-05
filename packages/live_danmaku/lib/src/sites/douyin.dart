@@ -7,6 +7,7 @@ import 'package:live_core/live_core.dart';
 import 'package:live_danmaku/src/codec/protobuf.dart';
 import 'package:live_danmaku/src/connection.dart';
 import 'package:live_danmaku/src/connection_base.dart';
+import 'package:live_danmaku/src/gift_progress.dart';
 import 'package:live_danmaku/src/socket_connection.dart';
 import 'package:live_net/live_net.dart';
 import 'package:meta/meta.dart';
@@ -171,6 +172,7 @@ abstract final class DouyinDanmakuProtocol {
         }
         final message = switch (envelope.string(1)) {
           'WebcastChatMessage' => _chat(payload, envelope.integer(3) ?? 0, roomId),
+          'WebcastGiftMessage' => _gift(payload, envelope.integer(3) ?? 0, roomId),
           'WebcastRoomUserSeqMessage' => _online(payload),
           'WebcastRoomDataSyncMessage' => _broadcastInfo(payload, roomId),
           _ => null,
@@ -224,6 +226,81 @@ abstract final class DouyinDanmakuProtocol {
       color: LiveMessageColor.white,
       messageId: messageId.isEmpty ? '' : 'douyin:$messageId',
       sentAt: sentAt,
+    );
+  }
+
+  /// GiftMessage/GiftStruct field numbers: wwengg/douyin message.proto at
+  /// 268d5d8 (gift 15, user 7, receiver 8; unit price 12/name 16/image 1).
+  /// An explicit group is a cumulative snapshot; the connection gate removes
+  /// equal/lower snapshots before the UI's shared combo merger sees them.
+  static LiveMessage? _gift(Uint8List bytes, int envelopeId, String roomId) {
+    if (bytes.length > 262144) throw const FormatException('Douyin gift payload too large');
+    final payload = ProtoMessage.decode(bytes);
+    final common = payload.message(1);
+    final actualRoom = ProtoMessage.unsigned(common?.integer(3) ?? 0);
+    if (actualRoom != '0' && actualRoom != roomId) return null;
+    final item = payload.message(15);
+    final id = ProtoMessage.unsigned(item?.integer(5) ?? payload.integer(2) ?? 0);
+    final name = (item?.string(16) ?? '').trim();
+    if (id == '0' && name.isEmpty) return null;
+    if (name.length > 512) throw const FormatException('Douyin gift name too long');
+    int count(int? value) {
+      if (value == null) return 0;
+      if (value < 0 || value > 1000000) throw const FormatException('Douyin gift quantity out of range');
+      return value;
+    }
+
+    final repeat = count(payload.integer(5));
+    final groupCount = count(payload.integer(4));
+    final combo = count(payload.integer(6));
+    final quantity = repeat > 0
+        ? repeat
+        : groupCount > 0
+        ? groupCount
+        : combo > 0
+        ? combo
+        : 1;
+    final sender = payload.message(7);
+    final receiver = payload.message(8);
+    final from = ProtoMessage.unsigned(sender?.integer(1) ?? 0);
+    final to = ProtoMessage.unsigned(receiver?.integer(1) ?? 0);
+    final group = ProtoMessage.unsigned(payload.integer(11) ?? 0);
+    final key = group == '0' ? '' : 'douyin:$roomId:$from:$to:$id:$group';
+    final rawPrice = item?.integer(12);
+    final price = rawPrice != null && rawPrice >= 0 && rawPrice <= 1000000000 ? rawPrice : null;
+    final image = normalizeImageUrl(item?.message(1)?.string(1));
+    final uri = Uri.tryParse(image);
+    final amount = quantity;
+    final gift = LiveGift(
+      id: id == '0' ? '' : id,
+      name: name,
+      count: amount,
+      comboKey: key,
+      comboTotal: key.isNotEmpty ? quantity : null,
+      unitPrice: price,
+      totalValue: price == null ? null : price * amount,
+      unit: LiveGiftUnit.douyinCoin,
+      free: price == 0,
+      iconUrl: uri != null && uri.isScheme('https') && uri.host.isNotEmpty ? uri : null,
+      receiverName: receiver?.string(3) ?? '',
+    );
+    final rawId = ProtoMessage.unsigned(common?.integer(2) ?? envelopeId);
+    final time = common?.integer(4) ?? 0;
+    final millis = time > 0 ? _milliseconds(time) : null;
+    return LiveMessage(
+      type: LiveMessageType.gift,
+      userId: from,
+      userName: sender?.string(3) ?? '',
+      message: gift.plainText,
+      data: gift,
+      color: LiveMessageColor.white,
+      messageId: key.isNotEmpty
+          ? '$key:$quantity'
+          : rawId == '0'
+          ? ''
+          : 'douyin:gift:$rawId',
+      sourceRoomId: roomId,
+      sentAt: millis != null && millis <= _maxEpochMilliseconds ? DateTime.fromMillisecondsSinceEpoch(millis) : null,
     );
   }
 
@@ -477,7 +554,9 @@ final class DouyinDanmakuConnection extends DanmakuSocketConnection<DouyinDanmak
     final frame = DouyinDanmakuProtocol.decode(data, roomId: broadcast.args.roomId);
     if (frame.envelopes > 0) broadcast.heard = true;
     if (frame.ack case final ack?) session.send(ack);
-    frame.messages.forEach(session.message);
+    for (final message in frame.messages) {
+      if (broadcast.gifts.accept(message)) session.message(message);
+    }
   }
 
   /// B-5: before giving up, one check of the room's broadcast; a new one is
@@ -525,6 +604,7 @@ final class DouyinDanmakuConnection extends DanmakuSocketConnection<DouyinDanmak
     if (!session.isActive) return false;
     if (broadcast.moves != moves) return true;
     if (next == null || next.roomId.isEmpty || next.roomId == broadcast.args.roomId) return false;
+    broadcast.gifts.clear();
     broadcast
       ..args = next
       ..moves += 1
@@ -553,6 +633,7 @@ final class _Broadcast {
   new(this.run, this.args);
 
   final DanmakuRun run;
+  final gifts = GiftSnapshotGate();
   DouyinDanmakuArgs args;
   DanmakuSocketSession? session;
   bool heard = false;

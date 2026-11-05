@@ -8,6 +8,7 @@ import 'package:pure_live/shared/rooms/archive/bilibili_archive_controller.dart'
 import 'package:pure_live/shared/rooms/archive/douyu_archive_controller.dart';
 import 'package:pure_live/shared/rooms/archive/douyu_archive_progress.dart';
 import 'package:pure_live/shared/rooms/archive/huya_archive_controller.dart';
+import 'package:pure_live/shared/rooms/archive/soop_archive_controller.dart';
 import 'package:pure_live/shared/rooms/archive_playback.dart';
 
 /// The Bilibili video-on-demand plumbing (M14.0 `live_vod`): the app's HTTP
@@ -77,6 +78,22 @@ final Provider<HuyaArchiveProgress> bilibiliReplayProgressProvider = Provider((r
   );
 });
 
+/// Public SOOP replay metadata and permitted playback files.
+final Provider<SoopArchiveSource> soopArchiveProvider = Provider((ref) {
+  final services = ref.watch(appServicesProvider);
+  return SoopArchiveApi(services.http, cookies: services.cookies);
+});
+
+/// Per-part positions; never includes temporary CDN URLs.
+final Provider<HuyaArchiveProgress> soopArchiveProgressProvider = Provider((ref) {
+  final meta = ref.watch(storeProvider).meta;
+  return HuyaArchiveProgress(
+    read: () => meta.get('soop-archive-progress-v1'),
+    write: (value) => meta.set('soop-archive-progress-v1', value),
+    idPattern: r'^[1-9][0-9]{0,18}:[1-9][0-9]{0,5}$',
+  );
+});
+
 /// Stops an existing floating decoder before a standalone catalog starts another.
 final beforeArchivePlaybackProvider = Provider<Future<void> Function()>((ref) => FloatingRoom.instance.close);
 
@@ -92,12 +109,22 @@ ArchivePlaybackController Function(ArchiveRecording) roomArchiveFactory(
   final douyuProgress = ref.read(douyuVodProgressProvider);
   final bili = ref.read(bilibiliReplayProvider);
   final biliProgress = ref.read(bilibiliReplayProgressProvider);
+  final soop = ref.read(soopArchiveProvider);
+  final soopProgress = ref.read(soopArchiveProgressProvider);
   final proxy = ref.read(appServicesProvider).proxy;
   var initial = firstVolume;
   return (recording) {
     final volume = initial ?? session.state.volume;
     initial = null;
     return switch (recording.video) {
+      final SoopArchiveVideo video => SoopArchiveController(
+        source: soop,
+        session: session,
+        recording: video,
+        progress: soopProgress,
+        initialVolume: volume,
+        ownsSession: false,
+      ),
       final HuyaArchiveVideo video => HuyaArchiveController(
         source: huya,
         proxy: proxy,

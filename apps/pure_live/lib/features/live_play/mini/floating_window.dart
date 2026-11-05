@@ -509,9 +509,9 @@ class _FloatingWindowState extends ConsumerState<_FloatingWindow> with TickerPro
     if (!mounted || defaultTargetPlatform != TargetPlatform.android) return;
     final runtime = widget.runtime;
     final status = runtime.session.state.status;
-    final choice = miniWindowKind(runtime.controller.store.settings);
+    final choice = leaveAppWindow(runtime.controller.store.settings);
     final armed = shouldAutoEnterPip(
-      enabled: true,
+      enabled: choice != LeaveAppWindow.none,
       onTop: widget.route != RoutePath.kLivePlay,
       stage: runtime.controller.stage,
       status: status,

@@ -731,20 +731,38 @@ void main() {
           expect(line['vector'], name);
           final bytes = _bytes(line);
           final decoded = DouyinDanmakuProtocol.decode(bytes, roomId: args.roomId);
+          // D07.9 deliberately implements the gift that 3.x ignored. Keep
+          // the frozen 3.x vector and still compare its ack/chat subset.
+          if (name == 'other-methods-ignored') {
+            expect(
+              decoded.messages
+                  .where((message) => message.type == LiveMessageType.gift)
+                  .map((message) => message.gift!.id),
+              ['1'],
+            );
+          }
+          final parity = name == 'other-methods-ignored'
+              ? (
+                  ack: decoded.ack,
+                  messages: decoded.messages.where((message) => message.type != LiveMessageType.gift).toList(),
+                  envelopes: decoded.envelopes,
+                  errors: decoded.errors,
+                )
+              : decoded;
           final legacy = _legacy(frame);
           final difference = differences[name];
           final replacement = replaced[name];
           // B-5 applies to every vector: chat times and exact audience.
           if (replacement != null) {
             expect(frames, hasLength(1));
-            expect(_effects(decoded), replacement(legacy));
+            expect(_effects(parity), replacement(legacy));
           } else if (difference == null) {
-            expect(_effects(decoded), _upgraded(bytes, legacy), reason: 'line ${frame['line']}');
+            expect(_effects(parity), _upgraded(bytes, legacy), reason: 'line ${frame['line']}');
             expect(decoded.errors.isNotEmpty, _legacyFailed(frame), reason: 'errors of line ${frame['line']}');
           } else {
             expect(frames, hasLength(1));
-            expect(_effects(decoded), _upgraded(bytes, difference(legacy)));
-            expect(_effects(decoded), isNot(legacy));
+            expect(_effects(parity), _upgraded(bytes, difference(legacy)));
+            expect(_effects(parity), isNot(legacy));
           }
         }
       });

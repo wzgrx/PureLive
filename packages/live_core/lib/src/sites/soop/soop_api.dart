@@ -706,8 +706,20 @@ abstract final class SoopApi {
 
   static String _token(String name) => name.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '');
 
+  /// Public web CDN assignment types, checked independently of host aliases.
+  static const List<String> webCdns = [
+    'gcp_cdn',
+    'gs_cdn_mobile_web',
+    'gs_cdn_pc_web',
+    'lg_cdn_pc_web',
+    'lg_cdn_mobile_web',
+    'azure_cdn',
+    'aws_cf',
+  ];
+
   /// The `return_type` of the stream assignment for CDN code [cdn].
   static String returnType(String cdn) {
+    if (webCdns.contains(cdn)) return cdn;
     if (cdn.contains('gs_cdn')) return 'gs_cdn_pc_web';
     if (cdn.contains('lg_cdn')) return 'lg_cdn_pc_web';
     return cdn;

@@ -1,7 +1,11 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:live_core/src/links.dart';
 import 'package:live_core/src/live_area.dart';
 import 'package:live_core/src/live_room.dart';
 import 'package:live_core/src/live_site.dart';
+import 'package:live_core/src/play_line.dart';
 import 'package:live_core/src/site_error.dart';
 import 'package:live_core/src/sites/soop/soop_api.dart';
 import 'package:live_net/live_net.dart';
@@ -57,13 +61,18 @@ final class SoopSite extends LiveSite
     implements LiveSiteRoomRefresher, LiveSiteRecordRoomResolver, LivePlayUrlResolver, LivePlayRecoveryResolver {
   /// Creates the adapter. [_cookies] holds the user's cookie, if any; [now]
   /// (the cover's cache buster) is injectable for tests.
-  new(this.http, {this._cookies, DateTime Function()? now}) : _now = now ?? DateTime.now;
+  new(this.http, {this._cookies, DateTime Function()? now, this.cdnCandidates = SoopApi.webCdns})
+    : _now = now ?? DateTime.now;
 
   /// Transport.
   final LiveHttp http;
 
   final CookieVault? _cookies;
   final DateTime Function() _now;
+
+  /// Additional official CDN types to resolve (bounded, three requests at once).
+  /// An empty list preserves the single-assignment fixture contract.
+  final List<String> cdnCandidates;
 
   @override
   String get id => _site;
@@ -341,18 +350,129 @@ final class SoopSite extends LiveSite
   Future<LivePlayUrlResolution> _resolve(String roomId, LivePlayQuality quality, SoopRoomData data) async {
     if (data.bno.isEmpty || data.rmd.isEmpty) throw const ApiChanged(_site, 'player_live_api: no BNO or RMD');
     final name = '${quality.selectionId}';
-    final assign = await _get(SoopApi.assignUrl(rmd: data.rmd, cdn: data.cdn, bno: data.bno, quality: name));
-    final playlist = SoopApi.assignedPlaylist(assign.text, status: assign.status);
+    final primary = SoopApi.returnType(data.cdn);
+    final urls = <String, String>{};
+    SiteError? firstFailure;
+    Future<void> assign(String cdn) async {
+      try {
+        urls[cdn] = await _assignment(SoopApi.assignUrl(rmd: data.rmd, cdn: cdn, bno: data.bno, quality: name));
+      } on SiteError catch (failure) {
+        firstFailure ??= failure;
+      }
+    }
+
+    await assign(primary);
     final key = await _player(roomId, type: 'aid', bno: data.bno, quality: name);
-    return SoopApi.resolution(
-      playlist: playlist,
-      aid: SoopApi.aid(key.text, status: key.status, password: data.password),
-      roomId: roomId,
-      quality: name,
-      cdn: data.cdn,
-      codec: data.codecOf(name),
-      cookie: _cookie(),
+    final aid = SoopApi.aid(key.text, status: key.status, password: data.password);
+    final candidates = {
+      for (final cdn in cdnCandidates.take(7))
+        if (SoopApi.webCdns.contains(cdn) && cdn != primary) cdn,
+    }.toList();
+    for (var start = 0; start < candidates.length; start += 3) {
+      await Future.wait(candidates.skip(start).take(3).map(assign));
+    }
+    final lines = <LivePlayLine>[];
+    final seen = <String>{};
+    for (final cdn in [primary, ...candidates]) {
+      final playlist = urls[cdn];
+      if (playlist == null) continue;
+      final line = SoopApi.resolution(
+        playlist: playlist,
+        aid: aid,
+        roomId: roomId,
+        quality: name,
+        cdn: cdn,
+        codec: data.codecOf(name),
+        cookie: _cookie(),
+      ).lines.single;
+      if (seen.add(line.url)) lines.add(line);
+    }
+    if (lines.isEmpty) throw firstFailure ?? const StreamUnavailable(_site, 'No CDN assignment');
+    return LivePlayUrlResolution.lines(lines, appliedQualityData: name);
+  }
+
+  // RMD sends a small complete JSON object without a Content-Length or
+  // transfer framing, then leaves the connection alive about ten seconds.
+  // A buffered HTTP send waits for that EOF. Read only this endpoint's
+  // bounded object and cancel its stream as soon as it is complete.
+  Future<String> _assignment(Uri url) async {
+    final cancel = CancelToken();
+    try {
+      return await _assignmentBody(url, cancel).timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {
+          cancel.cancel();
+          throw const NetworkFailure(_site, 'Stream assignment timed out');
+        },
+      );
+    } on TransportFailure catch (failure) {
+      if (failure.reason == TransportReason.cancelled) rethrow;
+      throw const NetworkFailure(_site, 'Stream assignment transport failed');
+    } finally {
+      cancel.cancel();
+    }
+  }
+
+  Future<String> _assignmentBody(Uri url, CancelToken cancel) async {
+    final response = await http.open(
+      LiveRequest(
+        site: _site,
+        url: url,
+        headers: SoopApi.apiHeaders(cookie: _cookie()),
+        timeout: const Duration(seconds: 8),
+        cancel: cancel,
+      ),
     );
+    if (!response.isSuccess) {
+      await response.body.listen((_) {}).cancel();
+      return SoopApi.assignedPlaylist('', status: response.status);
+    }
+    final bytes = BytesBuilder(copy: false);
+    var depth = 0;
+    var started = false;
+    var quoted = false;
+    var escaped = false;
+    await for (final chunk in response.body) {
+      if (bytes.length + chunk.length > 65536) throw const ApiChanged(_site, 'Stream assignment exceeds JSON bound');
+      bytes.add(chunk);
+      for (var i = 0; i < chunk.length; i++) {
+        final value = chunk[i];
+        if (!started) {
+          if (value == 32 || value == 9 || value == 10 || value == 13) continue;
+          if (value != 123) throw const ApiChanged(_site, 'Stream assignment is not an object');
+          started = true;
+          depth = 1;
+          continue;
+        }
+        if (quoted) {
+          if (escaped) {
+            escaped = false;
+          } else if (value == 92) {
+            escaped = true;
+          } else if (value == 34) {
+            quoted = false;
+          }
+          continue;
+        }
+        if (value == 34) {
+          quoted = true;
+          continue;
+        }
+        if (value == 123 || value == 91) {
+          if (++depth > 16) throw const ApiChanged(_site, 'Stream assignment nesting');
+        } else if (value == 125 || value == 93) {
+          depth--;
+          if (depth == 0) {
+            try {
+              return SoopApi.assignedPlaylist(utf8.decode(bytes.takeBytes()), status: response.status);
+            } on FormatException {
+              throw const ApiChanged(_site, 'Stream assignment encoding');
+            }
+          }
+        }
+      }
+    }
+    throw const ApiChanged(_site, 'Stream assignment ended before complete JSON');
   }
 
   // Links ---------------------------------------------------------------------

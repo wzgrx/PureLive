@@ -35,6 +35,10 @@ public class MediaKitVideoPlugin implements FlutterPlugin, MethodCallHandler {
 
     @Override
     public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+        if (videoOutputManager == null) {
+            result.error("unavailable", "Video output is detached from its engine.", null);
+            return;
+        }
         switch (call.method) {
             case "VideoOutputManager.Create": {
                 final long handle = Long.parseLong(call.argument("handle"));
@@ -42,7 +46,10 @@ public class MediaKitVideoPlugin implements FlutterPlugin, MethodCallHandler {
                 videoOutputManager.create(
                         handle,
                         enableSurfaceProducer == null || enableSurfaceProducer,
-                        (id, wid, width, height) -> channel.invokeMethod("VideoOutput.Resize", new HashMap<String, Object>() {{
+                        (id, wid, width, height) -> {
+                            final MethodChannel attachedChannel = channel;
+                            if (attachedChannel == null) return;
+                            attachedChannel.invokeMethod("VideoOutput.Resize", new HashMap<String, Object>() {{
                             put("handle", handle);
                             put("id", id);
                             put("wid", wid);
@@ -52,7 +59,8 @@ public class MediaKitVideoPlugin implements FlutterPlugin, MethodCallHandler {
                                 put("width", width);
                                 put("height", height);
                             }});
-                        }})
+                            }});
+                        }
                 );
                 result.success(null);
                 break;
@@ -84,6 +92,13 @@ public class MediaKitVideoPlugin implements FlutterPlugin, MethodCallHandler {
 
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
-        channel.setMethodCallHandler(null);
+        final MethodChannel oldChannel = channel;
+        channel = null;
+        if (oldChannel != null) oldChannel.setMethodCallHandler(null);
+        final VideoOutputManager outputs = videoOutputManager;
+        videoOutputManager = null;
+        // FlutterEngine.destroy detaches plugins before destroying FlutterJNI.
+        // Release every remaining SurfaceProducer while JNI is still attached.
+        if (outputs != null) outputs.disposeAll();
     }
 }

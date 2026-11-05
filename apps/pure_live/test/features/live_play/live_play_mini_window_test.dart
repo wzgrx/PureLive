@@ -83,6 +83,7 @@ Future<_App> _app(
   Size size = const Size(393, 852),
   bool floatPlay = true,
   FakeSite? site,
+  FakeEngine Function()? createEngine,
   List<Override> overrides = const [],
 }) async {
   tester.view
@@ -148,7 +149,7 @@ Future<_App> _app(
           }),
         ),
         playbackSessionFactoryProvider.overrideWithValue(({config}) {
-          final engine = FakeEngine();
+          final engine = createEngine?.call() ?? FakeEngine();
           engines.add(engine);
           return fakeSession(engine);
         }),
@@ -249,6 +250,33 @@ final class _FakeHost implements MiniWindowHost {
 }
 
 void main() {
+  testWidgets('issue 194: keep the engine-owning notification until native video retirement completes', (tester) async {
+    final gate = Completer<void>();
+    final engine = FakeEngine()..onDispose = () => gate.future;
+    final app = await _app(tester, createEngine: () => engine);
+    await _openRoom(tester);
+    await _leaveRoom(tester, app);
+    final runtime = FloatingRoom.instance.runtime!;
+    final events = <String>[];
+    RoomMediaNotification.debugLog = events.add;
+    addTearDown(() => RoomMediaNotification.debugLog = null);
+    final retirement = runtime.retireTask();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await _settle(tester);
+    await tester.pump(const Duration(seconds: 5));
+    await _settle(tester);
+    final hiddenBeforeVideoReleased = events.contains('hide');
+    gate.complete();
+    await tester.pump();
+    await _settle(tester);
+    await retirement;
+    expect(hiddenBeforeVideoReleased, isFalse, reason: 'audio_service may destroy the Flutter engine at idle');
+    expect(engine.disposed, isTrue);
+    expect(events, contains('hide'), reason: 'the notification must still be removed after actual retirement');
+    await _close(tester, app);
+  });
+
   testWidgets('replay floats and restores the original session with pause, position and rate', (tester) async {
     final app = await _app(tester, overrides: [bilibiliReplayProvider.overrideWithValue(replay.FakeBiliReplay())]);
     await _openRoom(tester);
@@ -1832,6 +1860,9 @@ void main() {
       expect(rect.right, 393 - 16);
       expect(rect.bottom, closeTo(852 - 80 - 16, 0.01));
 
+      // External behavior is opt-in, even after the inside-app mini button.
+      await tester.runAsync(() => app.services.store.settings.set(Settings.autoPipOnLeave, true));
+      await _settle(tester);
       // c9: not allowed, leaving the app arms nothing; back, a toast says
       // the window can stay over other apps, once ever.
       await tester.pump();
@@ -1860,7 +1891,7 @@ void main() {
       expect(shown, hasLength(1), reason: 'once ever');
 
       // c8: allowed, leaving the app takes this window along where it is,
-      // whatever "离开应用时自动小窗" says (it is off).
+      // while "离开应用时自动小窗" is enabled.
       permitted = true;
       // Given in the system settings; looked at again on the way back.
       OverlayWindow.permitted.value = true;
@@ -1966,6 +1997,45 @@ void main() {
       expect(controller.volume, volume);
       PictureInPicture.active.value = false;
       await _settle(tester);
+      await _close(tester, app);
+    });
+
+    testWidgets('issue 194: the in-app mini respects the external auto-window switch and hot updates', (tester) async {
+      final app = await _app(tester);
+      final settings = app.services.store.settings;
+      expect(settings.get(Settings.autoPipOnLeave), isFalse);
+      await _openRoom(tester);
+      await _leaveRoom(tester, app);
+      await _settle(tester);
+      bool armed() => calls
+          .where((call) => call.method == 'setAutoEnter')
+          .any((call) => (call.arguments as Map)['enabled'] == true);
+      expect(find.byType(MiniPlayerSurface), findsOneWidget);
+      expect(armed(), isFalse, reason: 'inside-app mini must not opt into external picture-in-picture');
+      calls.clear();
+      await tester.runAsync(() => settings.set(Settings.autoPipOnLeave, true));
+      await _settle(tester);
+      expect((calls.lastWhere((call) => call.method == 'setAutoEnter').arguments as Map)['enabled'], isTrue);
+      calls.clear();
+      await tester.runAsync(() => settings.set(Settings.autoPipOnLeave, false));
+      await _settle(tester);
+      expect((calls.lastWhere((call) => call.method == 'setAutoEnter').arguments as Map)['enabled'], isFalse);
+      expect(app.engine.opens, hasLength(1), reason: 'a policy change never reopens the stream');
+      final runtime = FloatingRoom.instance.runtime!;
+      expect(runtime.background.onTaskRemoved, isNotNull);
+      final first = runtime.background.onTaskRemoved!();
+      final duplicate = runtime.background.onTaskRemoved!();
+      expect(identical(first, duplicate), isTrue, reason: 'task removal retires the native owner once');
+      // Stream done events are delivered in the widget test's fake zone.
+      // Pump that zone before awaiting the real retirement future.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 5));
+      await _settle(tester);
+      await first;
+      await runtime.retirement;
+      expect(runtime.disposed, isTrue);
+      expect(app.engine.disposed, isTrue);
+      expect(app.danmaku.isConnected, isFalse);
       await _close(tester, app);
     });
 

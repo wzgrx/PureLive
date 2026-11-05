@@ -12,6 +12,34 @@ import 'package:meta/meta.dart';
 
 const _site = 'cc';
 
+/// Public channel identities for the anonymous CC chat connection.
+@immutable
+final class CcDanmakuArgs {
+  /// Room number is distinct from the presenter's public ccid.
+  const new({
+    required this.roomId,
+    required this.channelId,
+    required this.gameType,
+    required this.publicRoomId,
+    this.anchorId = 0,
+  });
+
+  /// Internal room routing number.
+  final int roomId;
+
+  /// Current channel number.
+  final int channelId;
+
+  /// Game routing type.
+  final int gameType;
+
+  /// Public presenter id used to guard app-side messages.
+  final String publicRoomId;
+
+  /// Public broadcaster uid, required to reject other rooms' gift broadcasts.
+  final int anchorId;
+}
+
 /// What 3.x's streams are made of, apart from the room's identity (3.x kept
 /// them in `data` and `link`): the live channel's tier list and the redirect
 /// playlist its signatures are appended to. Rooms without a live channel
@@ -402,10 +430,25 @@ abstract final class CcApi {
       restriction: _restriction(room, liveStatus),
       introduction: label.isEmpty ? null : label,
       notice: label.isEmpty ? null : label,
+      danmakuData: _chatArgs(room, ccid),
       data: CcRoomData(
         streams: _object(room['quickplay']) ?? _object(room['stream_list']),
         playlist: jsonString(room['m3u8']),
       ),
+    );
+  }
+
+  static CcDanmakuArgs? _chatArgs(Map<String, dynamic> room, String ccid) {
+    final channel = jsonInt(room['channel_id'] ?? room['channelid'] ?? room['cid']);
+    final rid = jsonInt(room['room_id'] ?? room['roomid']);
+    final game = jsonInt(room['gametype']);
+    if (channel == null || rid == null || game == null || channel <= 0 || rid <= 0 || game < 0) return null;
+    return CcDanmakuArgs(
+      roomId: rid,
+      channelId: channel,
+      gameType: game,
+      publicRoomId: ccid,
+      anchorId: jsonInt(room['uid']) ?? 0,
     );
   }
 

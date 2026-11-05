@@ -36,7 +36,7 @@ final class KuaishouFeedBatch {
   /// missing).
   final Duration pullDelay;
 
-  /// The comments, in feed order.
+  /// The comments and server-provided gift notices, in feed order.
   final List<LiveMessage> messages;
 
   /// `currentWatchingCount` as a number; null when the feed left it empty.
@@ -114,8 +114,8 @@ abstract final class KuaishouDanmakuProtocol {
   /// unwrapped.
   ///
   /// Throws [FormatException] when no object results and
-  /// [KuaishouFeedRejected] when `result` is not 1. Only `comment` entries
-  /// (any case) with text become messages; an entry that cannot be read (a
+  /// [KuaishouFeedRejected] when `result` is not 1. Only `comment` and `gift` entries
+  /// (any case) with text become messages; gift text has no guessed metadata. an entry that cannot be read (a
   /// time out of range) is skipped without losing the others. A comment's
   /// codes found in [emotes] (the room page's emoji table, `[笑哭]` → its
   /// picture) are its [LiveMessage.emotes] (M13.16; the feed itself has no
@@ -151,7 +151,9 @@ abstract final class KuaishouDanmakuProtocol {
   /// text, or has a time no `DateTime` can hold (3.x failed the whole answer
   /// on such an entry, and every retry of it, as the cursor stayed put).
   static LiveMessage? _comment(Object? feed, Map<String, String> emotes) {
-    if (feed is! Map<Object?, Object?> || feed['type']?.toString().toLowerCase() != 'comment') return null;
+    if (feed is! Map<Object?, Object?>) return null;
+    final kind = feed['type']?.toString().toLowerCase();
+    if (kind != 'comment' && kind != 'gift') return null;
     final content = feed['content']?.toString().trim() ?? '';
     if (content.isEmpty) return null;
     final time = feed['time'];
@@ -166,11 +168,11 @@ abstract final class KuaishouDanmakuProtocol {
     final rawId = feed['id']?.toString().trim() ?? '';
     final id = rawId.isNotEmpty ? rawId : sha1.convert(utf8.encode('$timestamp\u0000$userId\u0000$content')).toString();
     return LiveMessage(
-      type: LiveMessageType.chat,
+      type: kind == 'gift' ? LiveMessageType.gift : LiveMessageType.chat,
       userName: userName.isEmpty ? anonymousUserName : userName,
       userId: userId,
       message: content,
-      messageId: 'kuaishou:$id',
+      messageId: kind == 'gift' ? 'kuaishou:gift:$id' : 'kuaishou:$id',
       sentAt: timestamp == null ? null : DateTime.fromMillisecondsSinceEpoch(timestamp),
       color: LiveMessageColor.white,
       emotes: emotes.isEmpty ? const [] : codeEmotes(content, emotes),

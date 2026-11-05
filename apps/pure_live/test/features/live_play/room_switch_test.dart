@@ -228,6 +228,36 @@ int _whole(double height, double card, int columns) {
 }
 
 void main() {
+  testWidgets('issue 202: outside tap consumes the gesture and only closes the fullscreen side panel', (tester) async {
+    final room = await _pump(tester, width: 1024, height: 768, follows: [_room('5'), _room('7')]);
+    await _tap(tester, 'live-play-fullscreen');
+    await _tap(tester, 'live-play-switch-room');
+    await _settle(tester);
+    await captureQaFrame(tester, 'issue202-fullscreen-side-panel');
+    final player = tester.widget<RoomPlayer>(find.byType(RoomPlayer));
+    final session = player.controller.session;
+    final beforePlaying = session.state.status;
+    final beforeOpens = room.engine.opens.length;
+    await tester.tap(_key('room-panel-title'));
+    await _settle(tester);
+    expect(_key('live-play-switch-panel'), findsOneWidget, reason: 'inside stays open');
+    await tester.tapAt(const Offset(200, 300));
+    await _settle(tester);
+    await tester.pump(const Duration(seconds: 1));
+    expect(_key('live-play-switch-panel'), findsNothing);
+    expect(_key('live-play-panel-dismiss'), findsNothing);
+    final after = tester.widget<RoomPlayer>(find.byType(RoomPlayer));
+    expect(after.display, RoomDisplay.fullscreen);
+    expect(after.controller.session, same(session));
+    expect(session.state.status, beforePlaying, reason: 'closing must not pass a pause tap to the player');
+    expect(room.engine.opens.length, beforeOpens);
+    expect(_shown(tester), '6');
+    await _tap(tester, 'live-play-switch-room');
+    await _tap(tester, 'room-panel-close');
+    expect(_key('live-play-switch-panel'), findsNothing);
+    await _close(tester, room);
+  });
+
   testWidgets('desktop room groups are fully visible without horizontal scrolling', (tester) async {
     final room = await _pump(
       tester,

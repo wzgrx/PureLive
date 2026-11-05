@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>Download 5.6.3</b></a>
-  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.6.3.md">Release notes (Chinese)</a>
+  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>Download 5.6.4</b></a>
+  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.6.4.md">Release notes (Chinese)</a>
   &nbsp;·&nbsp; <a href="#features">Features</a>
   &nbsp;·&nbsp; <a href="#supported-platforms">Platforms</a>
   &nbsp;·&nbsp; <a href="#building-from-source">Build</a>
@@ -99,6 +99,8 @@ Pure Live (纯粹直播) is a third-party live-stream aggregator. It brings Chin
 5.6.2 restores feature requests and public replay maintenance in the existing room and mini-player UI, with sessions, resume and 0.25–4× speed. It fixes Huya seeks across HLS timestamp resets, Windows upgrade shutdown, IPTV selection borders and medal level colors, and adds local font import and legacy Android loader compatibility.
 
 5.6.3 adds Xiaohongshu guest categories, directory pagination and native chat; improves wide-screen chat boundaries and the video footer; adds color/level chat filters, unified blocked-message counts and a persistent mobile-data warning switch. Compact orientation and portrait-fullscreen menus reveal explanations on long press or hover.
+
+5.6.4 adds optional upward portrait chat, continuous replay browsing with scoped search and calendar ranges, public SOOP recordings and multiple CDNs, and native CC guest chat. It fixes mini-window task cleanup and overlaps initial Xiaohongshu chat/video startup; remaining gift catalog and original-device gaps stay documented.
 
 > The app's interface comes in 15 languages: Simplified and Traditional Chinese, English, Japanese, Korean, Spanish, French, German, Portuguese, Russian, Italian, Vietnamese, Thai, Indonesian and Turkish (switch in Settings → Appearance; until you pick one it follows the system). The foreign languages were machine-assisted and not yet reviewed by native speakers; corrections are welcome. Release notes and in-depth docs are written in Chinese.
 
@@ -474,7 +476,7 @@ Plans and progress: [docs/PLAN.md](docs/PLAN.md); UI design: [docs/specs/UI.md](
 
 Feature requests and development are open under [D-092 / maintenance policy](MAINTENANCE.md). The table records shipped scope; further work depends on feasibility and validation.
 
-| Client | 5.6.3 (now) | Later |
+| Client | 5.6.4 (now) | Later |
 |---|---|---|
 | **Android phones and tablets** | Stable: liquid-glass bottom bar, damped and spring motion, official sign-in for eight platforms, 15 interface languages | Keep up with platform changes |
 | **Android TV** | Stable: Live, Video (Bilibili VOD) and Music modes, wallpapers, TV-style settings, type on your phone via QR code | Verify and tune on more TVs |

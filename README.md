@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>下载 5.6.3</b></a>
-  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.6.3.md">更新说明</a>
+  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>下载 5.6.4</b></a>
+  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.6.4.md">更新说明</a>
   &nbsp;·&nbsp; <a href="#功能详解">功能</a>
   &nbsp;·&nbsp; <a href="#支持的平台">支持的平台</a>
   &nbsp;·&nbsp; <a href="#从源码构建">从源码构建</a>
@@ -99,6 +99,8 @@
 5.6.2恢复功能需求和公开回放维护，回放沿用原直播间横竖屏与小窗，支持场次、续看及0.25～4×倍速。修复虎牙跨时间戳断点拖动、Windows安装升级退出、IPTV多列表边框和粉丝牌分色，新增本地字体导入及旧安卓播放器加载兼容修复。
 
 5.6.3新增小红书游客分类、目录分页和原生弹幕，优化宽屏聊天边界及视频底栏，增加彩色/等级弹幕过滤、完整屏蔽计数和移动数据提醒持久开关。画面方向与竖屏全屏模式使用紧凑菜单，长说明改为长按或悬停查看。
+
+5.6.4增加竖屏上滚弹幕选项、回放自动续页/关键词/日期、SOOP公开回放与多CDN、CC原生游客弹幕，修复小窗任务退出及小红书首连等待；真实礼物目录和原TV等边界继续跟进。
 
 > 从 5.0.0 起项目搬到这个独立仓库 [wzgrx/PureLive](https://github.com/wzgrx/PureLive)。原来的 [wzgrx/pure_live](https://github.com/wzgrx/pure_live)（[liuchuancong/pure_live](https://github.com/liuchuancong/pure_live) 的分支）保留不删，装着 3.x、4.x 的设备会照常收到更新提示并下载到这里的新版本。
 
@@ -472,7 +474,7 @@ docs/                   开发计划、模块记录、界面设计和功能清�
 
 按 [D-092 / 维护方针](MAINTENANCE.md) 恢复功能需求与开发；下表列出已交付范围，后续需求按可行性和验证结果推进。
 
-| 客户端 | 5.6.3（现在） | 以后 |
+| 客户端 | 5.6.4（现在） | 以后 |
 |---|---|---|
 | **Android 手机和平板** | 正式版：液态玻璃底栏、阻尼和弹簧动效，八个平台的官方登录，15 种界面语言 | 持续修平台变化 |
 | **Android 电视** | 正式版：直播、视频（哔哩哔哩点播）、音乐三个模式，壁纸，电视样式的设置目录，扫码用手机输入 | 在更多电视真机上验证和调整 |

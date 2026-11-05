@@ -21,6 +21,7 @@ public class VideoOutputManager {
     private final HashMap<Long, VideoOutput> videoOutputs = new HashMap<>();
     private final TextureRegistry textureRegistryReference;
     private final Object lock = new Object();
+    private boolean disposed = false;
 
     VideoOutputManager(TextureRegistry textureRegistryReference) {
         this.textureRegistryReference = textureRegistryReference;
@@ -28,6 +29,7 @@ public class VideoOutputManager {
 
     public void create(long handle, boolean enableSurfaceProducer, TextureUpdateCallback textureUpdateCallback) {
         synchronized (lock) {
+            if (disposed) return;
             Log.i(TAG, String.format(Locale.ENGLISH, "com.alexmercerind.media_kit_video.VideoOutputManager.create: %d", handle));
             if (!videoOutputs.containsKey(handle)) {
                 final VideoOutput videoOutput = new VideoOutput(textureRegistryReference, enableSurfaceProducer, textureUpdateCallback);
@@ -43,6 +45,23 @@ public class VideoOutputManager {
                 Objects.requireNonNull(videoOutputs.get(handle)).dispose();
                 videoOutputs.remove(handle);
             }
+        }
+    }
+
+    /** Releases all textures before Flutter detaches its JNI, including hidden room outputs. */
+    public void disposeAll() {
+        synchronized (lock) {
+            if (disposed) return;
+            disposed = true;
+            Log.i(TAG, "VideoOutputManager.disposeAll: " + videoOutputs.size());
+            for (VideoOutput output : videoOutputs.values()) {
+                try {
+                    output.dispose();
+                } catch (Throwable error) {
+                    Log.e(TAG, "Unable to release detached video output", error);
+                }
+            }
+            videoOutputs.clear();
         }
     }
 

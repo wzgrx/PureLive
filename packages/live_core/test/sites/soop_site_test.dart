@@ -77,6 +77,7 @@ _Setup _setup(
           }),
     cookies: cookies,
     now: () => _now,
+    cdnCandidates: const [], // Frozen 3.x single-CDN contract; multi-CDN tested separately.
   );
   return (site: site, http: http);
 }

@@ -511,6 +511,14 @@ abstract final class Settings {
     defaultValue: 'followGlobal',
   );
 
+  /// New (A08.17): optional upward chat only in portrait fullscreen.
+  static const portraitFullscreenDanmakuLayout = StringSetting(
+    'portraitFullscreenDanmakuLayout',
+    section: 'player',
+    defaultValue: 'rolling',
+    allowed: {'rolling', 'stacked'},
+  );
+
   /// Remember per-room portrait overrides.
   static const rememberPortraitRoomOverride = BoolSetting(
     'rememberPortraitRoomOverride',
@@ -2143,6 +2151,7 @@ abstract final class Settings {
     portraitFullscreenDisplayMode,
     portraitPipFollowSource,
     portraitDanmakuMode,
+    portraitFullscreenDanmakuLayout,
     rememberPortraitRoomOverride,
     portraitFullscreenSwipeSwitch,
     showPortraitDiagnostics,

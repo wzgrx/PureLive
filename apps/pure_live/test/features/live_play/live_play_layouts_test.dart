@@ -30,6 +30,7 @@ import 'package:pure_live/features/live_play/player/player_view.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
+import 'package:pure_live/shared/danmaku/portrait_chat_overlay.dart';
 
 import '../../qa_capture.dart';
 import '../../support.dart';
@@ -194,6 +195,44 @@ const _bottomKeys = [
 ];
 
 void main() {
+  testWidgets('issue 193: upward chat is opt-in portrait fullscreen and never reopens playback or chat', (
+    tester,
+  ) async {
+    final room = await _pump(tester, portrait: true, settings: {Settings.portraitFullscreenDanmakuLayout: 'stacked'});
+    expect(find.byType(PortraitChatOverlay), findsNothing);
+    await _tap(tester, 'live-play-fullscreen');
+    expect(find.byType(PortraitChatOverlay), findsOneWidget);
+    final controller = tester.widget<RoomPlayer>(find.byType(RoomPlayer)).controller;
+    final chat = controller.danmaku as FakeDanmaku;
+    for (var n = 0; n < 4; n++) {
+      chat.chat('竖屏全屏上滚弹幕 $n', user: '观众$n', id: 'portrait:$n');
+    }
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('竖屏全屏上滚弹幕 3'), findsOneWidget);
+    // Let the entry hint retire, then reveal controls for a clean UI review.
+    await tester.pump(const Duration(seconds: 3));
+    await tester.tapAt(tester.getCenter(find.byType(RoomPlayer)));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    await captureQaFrame(tester, 'issue193-portrait-fullscreen');
+    await tester.runAsync(() => room.services.store.settings.set(Settings.portraitFullscreenDanmakuLayout, 'rolling'));
+    for (var n = 0; n < 10 && find.byType(PortraitChatOverlay).evaluate().isNotEmpty; n++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump();
+    }
+    expect(find.byType(PortraitChatOverlay), findsNothing);
+    expect(chat.connects, hasLength(1));
+    expect(room.engine.opens, hasLength(1));
+    await _tap(tester, 'live-play-fullscreen');
+    await tester.runAsync(() => room.services.store.settings.set(Settings.portraitFullscreenDanmakuLayout, 'stacked'));
+    for (var n = 0; n < 3; n++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump();
+    }
+    expect(find.byType(PortraitChatOverlay), findsNothing);
+    await _close(tester, room);
+  });
+
   group('U.2c landscape fullscreen', () {
     testWidgets('phone: the bars in order with their icons; the lock at the right; the composer in the middle', (
       tester,

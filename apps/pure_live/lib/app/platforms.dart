@@ -261,6 +261,7 @@ DanmakuRegistry buildDanmakuRegistry(PlatformDeps deps, SiteRegistry sites) {
     // B-6: SOOP's chat follows the app proxy (CONNECT tunnel). Its own
     // case-preserving handshake: its edge does not answer dart:io's
     // lower-case headers (Q03.1), so never the generic connector.
+    SiteIds.cc: () => CcDanmakuConnection(proxy: proxy, connector: generic),
     SiteIds.soop: () => SoopDanmakuConnection(proxy: proxy),
     SiteIds.yy: YyDanmakuConnection.new,
     SiteIds.acfun: () => AcfunDanmakuConnection(proxy: proxy, connector: connector(SiteIds.acfun)),
@@ -304,6 +305,7 @@ const bool plainDanmakuUserAgent = bool.fromEnvironment('PURE_LIVE_PLAIN_WS_UA')
 /// handshake, `exact_websocket.dart`), FC2 (its own socket), and Kuaishou,
 /// niconico, YouTube, Steam and Baidu (no WebSocket of ours to shake).
 const Set<String> genericDanmakuHandshakeSites = {
+  SiteIds.cc,
   SiteIds.bilibili,
   SiteIds.douyu,
   SiteIds.huya,

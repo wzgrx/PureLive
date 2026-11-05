@@ -137,6 +137,26 @@ void main() {
 
   Future<void> settle() => Future<void>.delayed(const Duration(milliseconds: 20));
 
+  test(
+    'issue177: anonymous chat initialization overlaps a slow first video open and is not repeated afterwards',
+    () async {
+      final held = Completer<void>();
+      engine.onOpen = (_) => held.future;
+      final controller = controllerFor(FakeSite(liveRoom()));
+      final starting = controller.start();
+      try {
+        await pumpEventQueue();
+        expect(danmaku.connects, hasLength(1), reason: 'visitor bootstrap must not wait for the video driver');
+      } finally {
+        held.complete();
+        await starting;
+      }
+      await pumpEventQueue();
+      expect(danmaku.connects, hasLength(1), reason: 'finishing video startup must not restart a ready visitor socket');
+      controller.dispose();
+    },
+  );
+
   test('D01.34: the VIP count is an audience figure labelled 贵宾, not a chat line; a human chat is retained', () async {
     final controller = controllerFor(FakeSite(liveRoom(platform: SiteIds.douyu)));
     await controller.start();
