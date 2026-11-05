@@ -871,7 +871,7 @@ abstract final class DouyuApi {
             : path.endsWith('.m3u8')
             ? StreamFormat.hls
             : null,
-        lineId: cdn.isEmpty ? null : cdn,
+        lineId: cdn.isEmpty ? null : '${cdn}_0',
         lease: lease(url, issuedAt, forceRenewal: forceRenewal),
       ),
       rate: confirmedRate(data),
@@ -924,8 +924,11 @@ abstract final class DouyuApi {
     for (var i = 0; i < urls.length; i++) {
       final url = urls[i];
       final path = Uri.tryParse(url)?.path.toLowerCase() ?? '';
-      // First URL is AVC, remaining are HEVC (player_1 comes after rtmp combo)
-      final codec = i == 0 ? 'avc' : 'hevc';
+      final codec = RegExp(r'_\d+h\.(flv|m3u8)').hasMatch(path)
+          ? 'hevc'
+          : RegExp(r'_\d+\.(flv|m3u8)').hasMatch(path)
+          ? 'avc'
+          : null;
       results.add((
         line: LivePlayLine(
           url,
@@ -936,7 +939,7 @@ abstract final class DouyuApi {
               : path.endsWith('.m3u8')
               ? StreamFormat.hls
               : null,
-          lineId: cdn.isEmpty ? null : cdn,
+          lineId: '${cdn}_$i',
           lease: lease(url, issuedAt, forceRenewal: forceRenewal),
         ),
         rate: confirmedRate(data),
@@ -944,6 +947,12 @@ abstract final class DouyuApi {
     }
     return results;
   }
+
+  static int _codecPriority(String? codec) => switch (codec) {
+    'hevc' => 1,
+    'avc' => 2,
+    _ => 3,
+  };
 
   /// The lines for one requested rate from the CDNs' [answers] (in CDN
   /// order). CDNs may confirm different rates, and one label must never
@@ -964,11 +973,9 @@ abstract final class DouyuApi {
     }
     final applied = groups.containsKey(requestedRate) ? requestedRate : groups.keys.whereType<int>().firstOrNull;
     final lines = groups[applied]!;
-    // All HEVC before all AVC globally
-    final hevcLines = lines.where((line) => line.codec == 'hevc').toList();
-    final avcLines = lines.where((line) => line.codec != 'hevc').toList();
+    lines.sort((a, b) => _codecPriority(a.codec).compareTo(_codecPriority(b.codec)));
     return LivePlayUrlResolution.lines(
-      [...hevcLines, ...avcLines],
+      lines,
       appliedQualityData: applied,
       qualityUnconfirmed: applied == null,
     );

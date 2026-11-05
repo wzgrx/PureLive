@@ -461,14 +461,20 @@ final class DouyuSite extends LiveSite
     final rid = _rid(detail);
     final answers = <({LivePlayLine line, int? rate})>[];
     SiteError? last;
-    for (final cdn in data.cdns) {
-      try {
-        answers.addAll(await _answer(rid, data.rate, cdn));
-      } on SiteError catch (error) {
-        last = error;
-      }
+    final results = await Future.wait(
+      data.cdns.map((cdn) async {
+        try {
+          return await _answer(rid, data.rate, cdn);
+        } on SiteError catch (error) {
+          last = error;
+          return null;
+        }
+      }),
+    );
+    for (final result in results) {
+      if (result != null) answers.addAll(result);
     }
-    if (answers.isEmpty && last != null) throw last;
+    if (answers.isEmpty && last != null) throw last!;
     return DouyuApi.resolution(answers, requestedRate: data.rate);
   }
 
