@@ -982,6 +982,14 @@ List<SettingsEntry> _build() {
       desc: 'portrait_live_settings_desc',
       keywords: ['竖屏', 'portrait'],
     )
+    ..toggle(
+      'live_play_wide_footer',
+      'enable_live_play_wide_footer',
+      Settings.livePlayWideFooter,
+      AppIcons.homeBottomBar,
+      desc: 'enable_live_play_wide_footer_subtitle',
+      keywords: ['底栏', '信息栏', '人数', '画质', '线路', '宽屏', '布局', 'footer', 'bottom bar'],
+    )
     ..link(
       'audience',
       'audience_metric_settings',
