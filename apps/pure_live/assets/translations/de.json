@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "Auf Tablets und aufgeklappten Foldables nutzt die Startseite die untere Leiste statt der Seitenleiste",
     "enable_liquid_glass": "Flüssiges Glas",
     "enable_liquid_glass_subtitle": "Die untere Leiste schwebt als flüssiges Glas, das die Seite an den Rändern bricht; gedrückt halten und ziehen zum Wechseln. Telefone mit 4 GB oder weniger erhalten eine einfache Tönung",
+    "enable_live_play_wide_footer": "Leiste unter dem Video",
+    "enable_live_play_wide_footer_subtitle": "Breite Ansichten zeigen Zuschauer, Sendedauer sowie Qualitäts- und Leitungsauswahl unter dem Video; ohne Leiste stehen sie über dem Chat",
     "enable_local_log": "Lokales Protokoll aktivieren",
     "enable_player_proxy": "Player-Proxy aktivieren",
     "enable_player_proxy_desc": "Steuert das Netzwerk, wenn der media_kit-/mpv-Kern Live-Videostreams abruft",

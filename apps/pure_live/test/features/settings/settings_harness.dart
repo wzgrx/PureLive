@@ -137,14 +137,66 @@ Future<void> settleSettings(WidgetTester tester) async {
   }
 }
 
-/// Lets a local directory read finish between fake-clock frames.
-Future<void> settleSettingsFiles(WidgetTester tester) async {
+/// Lets a local directory read finish between fake-clock frames. [where]
+/// names the page being waited on, so a stall says which one and how.
+Future<void> settleSettingsFiles(WidgetTester tester, {String? where}) async {
+  var spinners = 0;
   for (var attempt = 0; attempt < 10; attempt++) {
     await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
     await tester.pump(const Duration(seconds: 1));
-    if (find.byType(CircularProgressIndicator).evaluate().isEmpty && !tester.binding.hasScheduledFrame) return;
+    spinners = find.byType(CircularProgressIndicator).evaluate().length;
+    if (spinners == 0 && !tester.binding.hasScheduledFrame) return;
   }
-  fail('the generated-data settings page did not finish its local reads');
+  fail(
+    'the generated-data settings page did not finish its local reads'
+    '${where == null ? '' : ' ($where)'}: $spinners spinner(s), '
+    'a frame still scheduled: ${tester.binding.hasScheduledFrame}, '
+    'status views: ${_statusTypes(tester)}, holders: ${_spinnerHolders(tester)}',
+  );
+}
+
+/// The status cards on screen, by their type.
+String _statusTypes(WidgetTester tester) {
+  final views = tester.widgetList<AppStatusView>(find.byType(AppStatusView)).toList();
+  return views.isEmpty ? 'none' : views.map((view) => view.type.name).join('+');
+}
+
+/// The public widget classes above each spinner, with the keys on the way and
+/// the words of the row that holds it, so a stall names the exact busy row.
+String _spinnerHolders(WidgetTester tester) {
+  final spinner = find.byType(CircularProgressIndicator);
+  if (spinner.evaluate().isEmpty) return 'none';
+  final names = <String>[];
+  final keys = <String>[];
+  Element? row;
+  for (final element in tester.elementList(spinner)) {
+    var depth = 0;
+    element.visitAncestorElements((ancestor) {
+      final name = ancestor.widget.runtimeType.toString();
+      if (!name.startsWith('_')) names.add(name);
+      final key = ancestor.widget.key;
+      if (key is ValueKey<String>) keys.add(key.value);
+      if (row == null && ancestor.widget is Row) row = ancestor;
+      // Enough to name the page; the chain goes on up to the app root.
+      return ++depth < 14;
+    });
+  }
+  final words = row == null ? '' : ' words: ${_words(row!).join('/')}';
+  return '${keys.isEmpty ? 'no keys' : keys.join('+')}$words < ${names.take(8).join(' < ')}';
+}
+
+/// The words below [root], a bounded walk, so a busy row can be read back.
+List<String> _words(Element root, {int limit = 4}) {
+  final found = <String>[];
+  void walk(Element node) {
+    if (found.length >= limit) return;
+    final widget = node.widget;
+    if (widget is Text && widget.data?.isNotEmpty == true) found.add(widget.data!);
+    node.visitChildren(walk);
+  }
+
+  walk(root);
+  return found;
 }
 
 /// The row of a catalogue entry.
