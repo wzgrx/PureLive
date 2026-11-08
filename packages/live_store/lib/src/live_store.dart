@@ -7,6 +7,7 @@ import 'package:live_store/src/database.dart';
 import 'package:live_store/src/legacy/legacy_rules.dart';
 import 'package:live_store/src/local_events.dart';
 import 'package:live_store/src/rooms.dart';
+import 'package:live_store/src/saved_room_queue.dart';
 import 'package:live_store/src/secrets.dart';
 import 'package:live_store/src/settings/settings.dart';
 import 'package:live_store/src/settings/settings_store.dart';
@@ -102,7 +103,8 @@ final class LiveStore {
       webdav = WebDavStore(database, secrets),
       accounts = AccountRoster(secrets, now: now),
       localEvents = LocalEventStore(database),
-      meta = MetaStore(database);
+      meta = MetaStore(database),
+      savedRoomQueue = SavedRoomQueueStore(database);
 
   /// Opens (or creates) the store in [directory] (`<directory>/pure_live.db`)
   /// with the platform's [cipher]. Settings and secrets are loaded before
@@ -228,6 +230,9 @@ final class LiveStore {
 
   /// Internal records.
   final MetaStore meta;
+
+  /// Rooms saved explicitly for cross-platform viewing.
+  final SavedRoomQueueStore savedRoomQueue;
 
   /// Closes the database.
   Future<void> close() async {

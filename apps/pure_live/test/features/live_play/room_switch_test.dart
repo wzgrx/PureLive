@@ -228,6 +228,41 @@ int _whole(double height, double card, int columns) {
 }
 
 void main() {
+  testWidgets('saved room list adds, reorders and removes rooms without switching the player', (tester) async {
+    final room = await _pump(
+      tester,
+      platform: TargetPlatform.windows,
+      width: 1280,
+      height: 800,
+      settings: {Settings.roomSwitcherLayout: 'list'},
+    );
+    final queue = room.services.store.savedRoomQueue;
+    await tester.runAsync(() async {
+      await queue.add(_room('7'));
+      await queue.add(_room('8'));
+    });
+    Future<List<String>> order() async => (await tester.runAsync(queue.all))!.map((r) => r.roomId).toList();
+    await _openFromMenu(tester);
+    await _tap(tester, 'switch-group-saved');
+    await _tap(tester, 'switch-saved-toggle-current');
+    expect(await order(), ['7', '8', '6']);
+    final other = _key('switch-room-bilibili-8');
+    await tester.ensureVisible(other);
+    await tester.longPress(other);
+    await _settle(tester);
+    await tester.tap(find.text('上移'));
+    await _settle(tester);
+    expect(await order(), ['8', '7', '6']);
+    await tester.longPress(other);
+    await _settle(tester);
+    await tester.tap(find.text('从房间列表移除'));
+    await _settle(tester);
+    expect(await order(), ['7', '6']);
+    expect(room.engine.opens, hasLength(1));
+    expect(tester.takeException(), isNull);
+    await _close(tester, room);
+  });
+
   testWidgets('issue 202: outside tap consumes the gesture and only closes the fullscreen side panel', (tester) async {
     final room = await _pump(tester, width: 1024, height: 768, follows: [_room('5'), _room('7')]);
     await _tap(tester, 'live-play-fullscreen');
