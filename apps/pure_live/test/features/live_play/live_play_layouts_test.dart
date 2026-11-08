@@ -513,6 +513,28 @@ void main() {
     await _close(tester, room);
   });
 
+  testWidgets('A07.46 narrow player can scroll to and open the stream selector', (tester) async {
+    final room = await _pump(tester, width: 320, height: 700, settings: {Settings.livePlayPickersInVideo: true});
+    final line = _key('live-play-line');
+    expect(line, findsOneWidget);
+    await tester.ensureVisible(line);
+    await tester.pump();
+    expect(line.hitTestable(), findsOneWidget);
+    await tester.tap(line);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(
+      find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> && key.value.startsWith('live-play-line-item');
+      }).hitTestable(),
+      findsWidgets,
+    );
+    expect(tester.takeException(), isNull);
+    await captureQaFrame(tester, 'pr220-phone-narrow-line');
+    await _close(tester, room);
+  });
+
   group('U.2d wide room', () {
     testWidgets('issue180: iPad landscape keeps title with chat and source selectors below the player', (tester) async {
       final room = await _pump(tester, width: 1180, height: 820, platform: TargetPlatform.iOS);
@@ -641,11 +663,13 @@ void main() {
       expect(find.descendant(of: bar, matching: _key('live-play-quality')), findsOneWidget);
       expect(find.descendant(of: bar, matching: _key('live-play-line')), findsOneWidget);
       expect(_key('live-play-quality'), findsOneWidget, reason: 'one host only');
+      await captureQaFrame(tester, 'pr220-wide-on');
       // Off again: the footer hosts them, still without reopening the room.
       await tester.runAsync(() => room.services.store.settings.set(Settings.livePlayPickersInVideo, false));
       await _settle(tester);
       expect(find.descendant(of: footer, matching: _key('live-play-quality')), findsOneWidget);
       expect(find.descendant(of: bar, matching: _key('live-play-quality')), findsNothing);
+      await captureQaFrame(tester, 'pr220-wide-off');
       await _close(tester, room);
     });
     testWidgets('A07.46: with the footer off the setting still keeps them on the picture', (tester) async {

@@ -22,3 +22,15 @@
 ## 停在哪 / 下一步
 
 - 待 `Test` workflow 通过后合并审查并做真机检查（手机竖屏、竖屏流、手机横屏、宽屏底栏开/关、聊天栏折叠、宽屏回放）。
+
+维护者复验：贡献提交 b50092b 已纳入本地候选。320px 窄屏滚动后实际打开线路菜单；宽屏开关切回原入口；折叠聊天的回放验证选档、倍速、目录及原会话。下列是合成媒体下的生产组件图，不是手机真机。
+
+- [pr220-phone-narrow-line.png](verify/pr220-phone-narrow-line.png)
+
+- [pr220-replay-folded-false.png](verify/pr220-replay-folded-false.png)
+
+- [pr220-replay-folded-true.png](verify/pr220-replay-folded-true.png)
+
+- [pr220-wide-off.png](verify/pr220-wide-off.png)
+
+- [pr220-wide-on.png](verify/pr220-wide-on.png)

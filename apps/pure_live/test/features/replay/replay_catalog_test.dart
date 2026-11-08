@@ -70,6 +70,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
   double scale = 1,
   bool standalone = false,
   bool tv = false,
+  bool pickersInVideo = false,
   PlaybackSession Function()? playbackFactory,
   FakeBiliReplay? biliSource,
   FakeHuyaArchive? huyaSource,
@@ -83,6 +84,9 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
   addTearDown(() => tester.runAsync(services.close));
   final strings = (await tester.runAsync(loadStrings))!;
   if (tv) await tester.runAsync(() => services.store.settings.set(Settings.uiMode, 'tv'));
+  if (pickersInVideo) {
+    await tester.runAsync(() => services.store.settings.set(Settings.livePlayPickersInVideo, true));
+  }
   final engine = FakeEngine();
   final huya = huyaSource ?? FakeHuyaArchive();
   await tester.pumpWidget(
@@ -136,6 +140,40 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);
   });
+
+  for (final pickersInVideo in [false, true]) {
+    testWidgets('A07.46 wide replay keeps reachable actions after folding chat (pickers=$pickersInVideo)', (
+      tester,
+    ) async {
+      final (engine, _) = await page(
+        tester,
+        platform: SiteIds.soop,
+        size: const Size(1280, 800),
+        pickersInVideo: pickersInVideo,
+      );
+      final entry = find.byKey(const ValueKey('replay-recording-1234567'));
+      await tester.ensureVisible(entry);
+      await tester.tap(entry);
+      await settle(tester);
+      final rate = find.byKey(const ValueKey('archive-rate')).hitTestable();
+      final catalog = find.byKey(const ValueKey('archive-catalog')).hitTestable();
+      expect(rate, findsOneWidget);
+      expect(catalog, findsOneWidget);
+      final handle = find.byKey(const ValueKey('live-play-chat-handle')).hitTestable();
+      expect(handle, findsOneWidget);
+      await tester.tap(handle);
+      await settle(tester);
+      expect(tester.getSize(find.byKey(const ValueKey('live-play-chat-box'))).width, 0);
+      expect(rate, findsOneWidget);
+      expect(catalog, findsOneWidget);
+      expect(find.byKey(const ValueKey('live-play-quality')).hitTestable(), findsOneWidget);
+      expect(engine.opens, hasLength(1));
+      expect(tester.takeException(), isNull);
+      await captureQaFrame(tester, 'pr220-replay-folded-$pickersInVideo');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await settle(tester);
+    });
+  }
 
   testWidgets('a list failure stops automatic requests and retry preserves the keyword', (tester) async {
     final source = FakeHuyaArchive()..failList = true;

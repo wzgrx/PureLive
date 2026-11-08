@@ -1833,29 +1833,29 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     final collapsed = settings.collapsed;
     final chatWidth = chatColumnWidth(constraints.maxWidth);
     final still = MediaQuery.disableAnimationsOf(context);
-    final player = _player(
-      controller,
-      settings,
-      arrangement: ControlsArrangement.inline,
-      presentation: portrait ? PicturePresentation.ambient : PicturePresentation.plain,
-      wide: WideBarActions(chatCollapsed: collapsed, onToggleChat: () => _toggleChat(collapsed)),
-      // B09 c5 (audit B-19): the handle shows and hides with the controls;
-      // standing on the picture's right edge it took the volume drag and
-      // the taps on the danmaku there.
-      edge: _ColumnHandle(
-        key: const ValueKey('live-play-chat-handle'),
-        folded: collapsed,
-        tooltip: i18n(collapsed ? 'live_play_show_chat' : 'live_play_hide_chat'),
-        onPressed: () => _toggleChat(collapsed),
+    final player = ListenableSelector<bool>(
+      listenable: controller,
+      selector: () => controller.isArchive,
+      builder: (_, archive, _) => _player(
+        controller,
+        settings,
+        arrangement: ControlsArrangement.inline,
+        presentation: portrait ? PicturePresentation.ambient : PicturePresentation.plain,
+        wide: WideBarActions(chatCollapsed: collapsed, onToggleChat: () => _toggleChat(collapsed)),
+        // B09 c5 (audit B-19): the handle shows and hides with the controls;
+        // standing on the picture's right edge it took the volume drag and
+        // the taps on the danmaku there.
+        edge: _ColumnHandle(
+          key: const ValueKey('live-play-chat-handle'),
+          folded: collapsed,
+          tooltip: i18n(collapsed ? 'live_play_show_chat' : 'live_play_hide_chat'),
+          onPressed: () => _toggleChat(collapsed),
+        ),
+        // A replay never renders the wide footer. The chat being folded
+        // must not hide both its source pickers and its replay actions.
+        pickersInBar: settings.pickersInVideo || (collapsed && (archive || !settings.wideFooter)),
+        replayActionsInBar: collapsed,
       ),
-      // A07.46: the pickers follow the setting; with it off and no footer, a
-      // folded chat would take them off screen, so the bar hosts them then,
-      // as on a phone held sideways (A07.17 c2).
-      pickersInBar: settings.pickersInVideo || (!settings.wideFooter && collapsed),
-      // The replay strip rides the chat column; the transport carries its
-      // actions when the column is folded (A07.44's condition while the
-      // pickers setting is off).
-      replayActionsInBar: collapsed && (settings.pickersInVideo || !settings.wideFooter),
     );
     final video = ColoredBox(
       color: OnVideoColors.ground,
