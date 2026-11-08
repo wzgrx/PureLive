@@ -534,7 +534,7 @@ final class BilibiliSite extends LiveSite
         'room_id': longId,
         'protocol': '0,1',
         'format': '0,1,2',
-        'codec': '0',
+        'codec': '0,1,2',
         'qn': '${qn ?? 0}',
         'platform': 'web',
         'ptype': '8',
