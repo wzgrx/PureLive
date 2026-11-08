@@ -16,6 +16,7 @@ import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/rooms/room_cards.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
 import 'package:pure_live/shared/rooms/room_rotation_dialog.dart';
+import 'package:pure_live/shared/rooms/room_schedule_dialog.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 
 /// What the panel needs from the follows: set by the app (`app/app.dart`),
@@ -406,6 +407,13 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
                             : 'room_switch_saved_add_current',
                       ),
                     ),
+                  ),
+                  TextButton(
+                    key: const ValueKey('switch-saved-schedule'),
+                    onPressed: () => unawaited(
+                      showRoomAppointmentMenu(context, ref.read(storeProvider).roomSchedules, widget.controller.room),
+                    ),
+                    child: Text(i18n('room_schedule_title')),
                   ),
                   if (widget.onStartRotation != null)
                     TextButton(

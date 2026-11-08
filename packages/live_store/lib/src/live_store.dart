@@ -6,6 +6,7 @@ import 'package:live_store/src/block_lists.dart';
 import 'package:live_store/src/database.dart';
 import 'package:live_store/src/legacy/legacy_rules.dart';
 import 'package:live_store/src/local_events.dart';
+import 'package:live_store/src/room_schedule.dart';
 import 'package:live_store/src/rooms.dart';
 import 'package:live_store/src/saved_room_queue.dart';
 import 'package:live_store/src/secrets.dart';
@@ -104,7 +105,8 @@ final class LiveStore {
       accounts = AccountRoster(secrets, now: now),
       localEvents = LocalEventStore(database),
       meta = MetaStore(database),
-      savedRoomQueue = SavedRoomQueueStore(database);
+      savedRoomQueue = SavedRoomQueueStore(database),
+      roomSchedules = RoomScheduleStore(database);
 
   /// Opens (or creates) the store in [directory] (`<directory>/pure_live.db`)
   /// with the platform's [cipher]. Settings and secrets are loaded before
@@ -233,6 +235,9 @@ final class LiveStore {
 
   /// Rooms saved explicitly for cross-platform viewing.
   final SavedRoomQueueStore savedRoomQueue;
+
+  /// Scheduled room opens and reminders.
+  final RoomScheduleStore roomSchedules;
 
   /// Closes the database.
   Future<void> close() async {

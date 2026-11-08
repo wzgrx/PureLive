@@ -29,6 +29,7 @@ import 'package:pure_live/shared/rooms/playback_hud.dart';
 import 'package:pure_live/shared/rooms/playback_lines.dart';
 import 'package:pure_live/shared/rooms/room_gain.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
+import 'package:pure_live/shared/rooms/room_schedule_dialog.dart';
 import 'package:pure_live/shared/rooms/timed_room_rotation.dart';
 import 'package:pure_live/tv/room/tv_room_overlays.dart';
 import 'package:pure_live/tv/room/tv_room_settings_panel.dart';
@@ -82,7 +83,7 @@ class TvLivePlayPage extends ConsumerStatefulWidget {
   ConsumerState<TvLivePlayPage> createState() => TvLivePlayPageState();
 }
 
-enum _QueueAction { toggleCurrent, start, stop, open, up, down, remove }
+enum _QueueAction { toggleCurrent, start, stop, open, up, down, remove, schedule }
 
 /// The TV room's state (tests read [index] and [controller]).
 class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
@@ -329,6 +330,52 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
     _hide();
   }
 
+  Future<void> _roomAppointment(LiveRoom room) async {
+    final store = ref.read(storeProvider).roomSchedules;
+    final saved = (await store.all()).where((item) => item.room.hasSameIdentity(room)).toList();
+    if (!mounted) return;
+    final choice = await showTvChoice<Object>(
+      context,
+      title: i18n('room_schedule_title'),
+      subtitle: i18n('room_schedule_foreground_hint'),
+      options: [
+        TvChoice(value: RoomScheduleInput.daily, label: i18n('room_schedule_daily')),
+        TvChoice(value: RoomScheduleInput.countdown, label: i18n('room_schedule_countdown')),
+        for (final item in saved) TvChoice(value: item, label: roomAppointmentLabel(item)),
+      ],
+    );
+    if (!mounted || choice == null) return;
+    if (choice is RoomOpenSchedule) {
+      final remove = await showTvChoice<bool>(
+        context,
+        title: i18n('room_schedule_remove'),
+        options: [
+          TvChoice(value: true, label: i18n('confirm')),
+          TvChoice(value: false, label: i18n('cancel')),
+        ],
+      );
+      if (remove ?? false) await store.remove(choice.id);
+      return;
+    }
+    if (choice is! RoomScheduleInput) return;
+    final daily = choice == RoomScheduleInput.daily;
+    final input = await showTvInput(
+      context,
+      title: i18n(daily ? 'room_schedule_daily_input' : 'room_schedule_countdown_input'),
+      text: daily ? '0800' : '60',
+      numeric: true,
+      maxLength: 5,
+    );
+    if (!mounted || input == null) return;
+    final task = parseRoomAppointment(room, choice, input, DateTime.now());
+    if (task == null) {
+      AppNavigator.toast(i18n('room_schedule_invalid'));
+      return;
+    }
+    final stored = await store.put(task);
+    if (mounted) AppNavigator.toast(i18n(stored ? 'room_schedule_saved' : 'room_schedule_edit_failed'));
+  }
+
   Future<void> _queueRoomAction(LiveRoom room, List<LiveRoom> rooms) async {
     final index = rooms.indexWhere(room.hasSameIdentity);
     if (index < 0) return;
@@ -337,6 +384,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       title: room.nick.isEmpty ? room.roomId : room.nick,
       options: [
         TvChoice(value: _QueueAction.open, label: i18n('switch_live_room')),
+        TvChoice(value: _QueueAction.schedule, label: i18n('room_schedule_title')),
         if (index > 0) TvChoice(value: _QueueAction.up, label: i18n('room_switch_saved_move_up')),
         if (index + 1 < rooms.length) TvChoice(value: _QueueAction.down, label: i18n('room_switch_saved_move_down')),
         TvChoice(value: _QueueAction.remove, label: i18n('room_switch_saved_remove')),
@@ -344,6 +392,10 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
     );
     if (!mounted || action == null) return;
     final store = ref.read(storeProvider).savedRoomQueue;
+    if (action == _QueueAction.schedule) {
+      await _roomAppointment(room);
+      return;
+    }
     if (action == _QueueAction.open) {
       final available = _availableQueue(rooms);
       final target = available.indexWhere(room.hasSameIdentity);
@@ -385,6 +437,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
             TvChoice(value: _QueueAction.stop, label: i18n('room_rotation_stop'))
           else if (rooms.length > 1 && saved)
             TvChoice(value: _QueueAction.start, label: i18n('room_rotation_start')),
+          TvChoice(value: _QueueAction.schedule, label: i18n('room_schedule_title')),
           for (final room in rooms) TvChoice(value: room, label: room.nick.isEmpty ? room.roomId : room.nick),
         ],
       );
@@ -398,6 +451,8 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
           _rotationRooms = const [];
         case _QueueAction.start:
           await _startQueueRotation(rooms);
+        case _QueueAction.schedule:
+          await _roomAppointment(current);
         case final LiveRoom room:
           await _queueRoomAction(room, rooms);
         default:

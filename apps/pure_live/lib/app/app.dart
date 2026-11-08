@@ -32,10 +32,12 @@ import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/platform_services.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/app_router.dart';
+import 'package:pure_live/routes/route_observer.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/routes/tv_router.dart';
 import 'package:pure_live/shared/background/custom_background.dart';
 import 'package:pure_live/shared/images.dart';
+import 'package:pure_live/shared/rooms/foreground_room_scheduler.dart';
 import 'package:pure_live/tv/tv_app.dart';
 
 /// The app (3.x `MyApp`): theme, language, text size and the shared
@@ -83,6 +85,7 @@ class _PureLiveAppState extends ConsumerState<PureLiveApp> with WidgetsBindingOb
   VoidCallback? _stopPageToasts;
   late final FontLibrary _fonts;
   VoidCallback? _stopHomeWatch;
+  ForegroundRoomScheduler? _roomScheduler;
 
   @override
   void initState() {
@@ -113,6 +116,7 @@ class _PureLiveAppState extends ConsumerState<PureLiveApp> with WidgetsBindingOb
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       ref.read(appStartupProvider).start();
+      _startRoomSchedules();
       unawaited(TvDevice.detect());
     });
     _stopHomeWatch = _watchHome(_router);
@@ -163,8 +167,30 @@ class _PureLiveAppState extends ConsumerState<PureLiveApp> with WidgetsBindingOb
     }
   }
 
+  void _startRoomSchedules() {
+    final store = ref.read(storeProvider).roomSchedules;
+    final state = WidgetsBinding.instance.lifecycleState;
+    _roomScheduler =
+        ForegroundRoomScheduler(
+            schedules: store.watch(),
+            claim: store.claimDue,
+            canOpen: () {
+              if (!mounted || liveRouteObserver.openPopups.value != 0) return false;
+              final path = _router.routeInformationProvider.value.uri.path;
+              return path == RoutePath.kInitial || path == RoutePath.kLivePlay;
+            },
+            openRoom: (room) async {
+              if (!mounted || ref.read(sitesProvider).maybeOf(room.platform) == null) return;
+              await AppNavigator.toNamed<void>(RoutePath.kLivePlay, arguments: room);
+            },
+          )
+          ..setForeground(value: state == null || state == AppLifecycleState.resumed)
+          ..start();
+  }
+
   @override
   void dispose() {
+    _roomScheduler?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _stopPageToasts?.call();
     _stopHomeWatch?.call();
@@ -184,6 +210,7 @@ class _PureLiveAppState extends ConsumerState<PureLiveApp> with WidgetsBindingOb
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _roomScheduler?.setForeground(value: state == AppLifecycleState.resumed);
     if (state == AppLifecycleState.resumed) unawaited(TvDevice.detect());
   }
 

@@ -228,6 +228,21 @@ int _whole(double height, double card, int columns) {
 }
 
 void main() {
+  testWidgets('room appointment accepts a daily time and keeps the current room untouched', (tester) async {
+    final room = await _pump(tester, platform: TargetPlatform.windows, width: 1280, height: 800);
+    await _openFromMenu(tester);
+    await _tap(tester, 'switch-group-saved');
+    await _tap(tester, 'switch-saved-schedule');
+    await _tap(tester, 'room-schedule-daily');
+    await tester.enterText(_key('room-schedule-value'), '0910');
+    await _tap(tester, 'room-schedule-save');
+    final appointments = (await tester.runAsync(room.services.store.roomSchedules.all))!;
+    expect(appointments.single.room.roomId, '6');
+    expect(appointments.single.dailyMinute, 550);
+    expect(room.engine.opens, hasLength(1));
+    await _close(tester, room);
+  });
+
   testWidgets('saved rotation is explicit and advances the existing room player', (tester) async {
     final room = await _pump(tester, platform: TargetPlatform.windows, width: 1280, height: 800);
     final queue = room.services.store.savedRoomQueue;
