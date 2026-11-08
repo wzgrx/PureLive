@@ -277,6 +277,7 @@ const Map<String, Object> newInV4 = {
   'roomVolumeGains': <String, Object?>{}, // V01.17: independent signed room gain overrides.
   'autoSwitchLiveFollows': false, // G02.9: existing recovery stays opt-in and unchanged.
   'multiviewMixAudio': false,
+  'multiviewProjectionDisplay': 'unset',
   'homeNavigationAutoHide': false,
   'mobileNavigationLabels': true,
   'desktopNavigationLabels': true,

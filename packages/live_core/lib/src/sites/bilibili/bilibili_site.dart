@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
+import 'package:live_core/src/audience.dart';
+import 'package:live_core/src/json.dart';
 import 'package:live_core/src/links.dart';
 import 'package:live_core/src/live_area.dart';
 import 'package:live_core/src/live_message.dart';
@@ -44,7 +46,7 @@ final class BilibiliRoomData {
 /// Failures are `SiteError`s; nothing is disguised as an offline room.
 final class BilibiliSite extends LiveSite
     with LiveSiteLinks
-    implements LiveSiteRoomRefresher, LiveSiteRecordRoomResolver, LivePlayUrlResolver {
+    implements LiveSiteRoomRefresher, LiveSiteFollowBatchRefresher, LiveSiteRecordRoomResolver, LivePlayUrlResolver {
   /// Creates the adapter. [_cookies] holds the user's login cookie, if any;
   /// [storedUid] is the uid saved with it (the danmaku uid when the cookie
   /// has no `DedeUserID`). [now] and [sleep] are injectable for tests.
@@ -398,6 +400,56 @@ final class BilibiliSite extends LiveSite
   /// Follow-card refresh: metadata only, no short-lived danmaku credentials.
   @override
   Future<LiveRoom> getRoomDetailForRefresh({required String roomId}) => _detail(roomId);
+
+  @override
+  Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async {
+    final eligible = rooms.where((room) => RegExp(r'^[1-9][0-9]{0,17}$').hasMatch(room.userId ?? ''));
+    final uids = {for (final room in eligible) room.userId!};
+    if (uids.length < 2 || uids.length > 20) return const {};
+    final response = await http.postJson(
+      _site,
+      Uri.https(_liveApi, '/room/v1/Room/get_status_info_by_uids'),
+      json: {'uids': uids.toList()},
+      timeout: const Duration(seconds: 3),
+      headers: const {'User-Agent': BilibiliApi.userAgent, 'Referer': 'https://live.bilibili.com/'},
+    );
+    if (response is! Map || jsonInt(response['code']) != 0 || response['data'] is! Map) {
+      throw const ApiChanged(_site, 'Batch follow status');
+    }
+    final data = response['data'] as Map;
+    final updates = <String, LiveRoom>{};
+    for (final room in eligible) {
+      final row = data[room.userId];
+      if (row is! Map || jsonInt(row['uid'])?.toString() != room.userId) continue;
+      final canonical = jsonInt(row['room_id'])?.toString();
+      final short = jsonInt(row['short_id']);
+      if (canonical == null || (canonical != room.roomId && (short == null || short <= 0 || '$short' != room.roomId))) {
+        continue;
+      }
+      if (row['lock_till'] != '0000-00-00 00:00:00' || row['hidden_till'] != '0000-00-00 00:00:00') continue;
+      final state = jsonInt(row['live_status']);
+      if (state != 0 && state != 1) continue;
+      final started = jsonInt(row['live_time']);
+      final heat = jsonInt(row['online']);
+      updates[room.identityKey] = LiveRoom(
+        roomId: room.roomId,
+        platform: _site,
+        userId: room.userId,
+        title: jsonString(row['title']) ?? '',
+        nick: jsonString(row['uname']) ?? '',
+        avatar: normalizeImageUrl(row['face']),
+        cover: normalizeImageUrl(row['cover_from_user']),
+        area: jsonString(row['area_v2_name']),
+        liveStatus: state == 1 ? LiveStatus.live : LiveStatus.offline,
+        audienceMetricType: AudienceMetricType.popularity,
+        popularity: heat == null || heat < 0 ? '' : '$heat',
+        startedAt: state == 1 && started != null && started > 0 && started < 4102444800
+            ? DateTime.fromMillisecondsSinceEpoch(started * 1000, isUtc: true)
+            : null,
+      );
+    }
+    return updates;
+  }
 
   /// The stream is resolved from the long id by a separate API, so the
   /// strict metadata-only room holds everything the recorder needs.

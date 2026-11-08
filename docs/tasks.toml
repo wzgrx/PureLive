@@ -8357,3 +8357,87 @@ size = "小"
 tier = 2
 from = "GitHub Actions 的 Test workflow：settings_page_test 的 overview 回退链在 settleSettingsFiles 失败，两次同一处"
 note = "两件事。一是设置页总览：诊断信息（新增的 where、转圈数、待画帧、途经 ValueKey 与该行文字）把它定位到 record-used-space 行的 busy；同一轮还在 runAsync 窗口里给 recordDirectory() 与递归 list 各加了 3 秒上限的探测。此后 Targeted tests 与 Full gate 的 apps/pure_live 全量都连续绿，但「探测顺带推进了事件循环」这一可能没被排除，等待逻辑本身没有放宽，若日后重现，storage: 字段会直接给出目录与条目数。二是 CI 环境缺口：live_player 的原生测试之所以红，是 media_kit build hook 放进 build/native_assets/linux 的 libmpv.so.2 缺系统依赖，按 ldd 报告的名单补齐（libva-drm、libva-x11、libva-wayland、libvdpau、libXv 等，逐个安装以容忍 t64 改名），并把基于错判的 $HOME libmpv 下载步骤撤掉。run 42200886546 为 gate: passed (all, 14 members)"
+
+[[task]]
+id = "Y01.45"
+title = "5.6.5更新兼容与桌面交互发布"
+type = "发布"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #204–#217、#177 与贡献 PR"
+branch = "ai/Y01.45-stable-565"
+next = "完整门禁、同源包和发布验证"
+note = "冻结同一源码，完整门禁、十包、公开下载、双更新源和 issue 结案分层核对。原设备与平台未验证项保持开放。"
+
+[[task]]
+id = "X01.7"
+title = "安装更新保留已有桌面快捷方式"
+type = "功能"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #205"
+branch = "ai/Y01.45-stable-565"
+next = "完整门禁、同源包和发布验证"
+note = "安装器反复写同目标 .lnk 会使桌面重新放置。读取目标并比较规范路径，同目标跳过 Save，不同目标按用户选中的任务更新。独立 AppId 和测试桌面验证缺失创建、同目标字节不变、不同目标更新；未写正式安装和真实桌面。"
+
+[[task]]
+id = "A13.8"
+title = "多屏联动记住默认显示器"
+type = "界面"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #214"
+branch = "ai/Y01.45-stable-565"
+next = "完整门禁、同源包和发布验证"
+note = "沿用现有工具按钮与屏幕选择器。首次选择后保存逻辑显示器身份；主键切换开关，右键重新选择；显示器断开时重新询问目标，避免选错。组件回归覆盖默认保存、关闭、再次启用与右键。"
+
+[[task]]
+id = "A07.45"
+title = "全屏醒目留言入口随控制栏"
+type = "界面"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #207"
+branch = "ai/Y01.45-stable-565"
+next = "完整门禁、同源包和发布验证"
+note = "原播放器在全屏控制栏隐藏时仍显示入口。入口跟随 _controls，隐藏时不接受点击，未读数仍保存在原控制器。目标回归在真实超时隐藏后再次点画面，核对未读数。手势换房和虎牙卡片一小时需独立验证，issue 保持开放。"
+
+[[task]]
+id = "E01.14"
+title = "关注列表已知身份批量刷新"
+type = "平台"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #204"
+branch = "ai/Y01.45-stable-565"
+next = "完整门禁、同源包和发布验证"
+note = "B 站公开批量接口一次 POST 返三条。只批量使用已知 UID，以 UID 加长/短房号双重验证，最多 20 组，异常、锁房、回放、缺项或无 UID 回落原详情，保持原并发上限和失败语义。协议回归覆盖同 UID 换房、锁房和缺 UID。"
+
+[[task]]
+id = "E03.24"
+title = "CHZZK公开回放播放验证"
+type = "平台"
+status = "暂停"
+size = "中"
+tier = 1
+from = "GitHub #208"
+branch = "ai/E03.24-chzzk-replay-research"
+next = "先复核公开DASH初始化和分片，再用现有播放会话验证"
+note = "目录与公开 HLS 有实测；同一个录像从 UPLOAD 转 ABR_HLS 后不再给 HLS。Accept: application/dash+xml 可取得 XML，远端 FFmpeg 读 MPD 失败，本地 MPD 的端到端解码仍未通过。HLS 试验提交 de5219d5 保留本地研究分支；不进入 5.6.5，后续核对分片和本地代理后再验收。"
+
+[[task]]
+id = "V02.90"
+title = "5.6.5新反馈与旧帖复核"
+type = "验证"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #177、#207、#209–#213、#215、#217；PR #201/#206/#216"
+branch = "ai/Y01.45-stable-565"
+next = "完整门禁、同源包和发布验证"
+note = "详见下方证据与版本范围。"

@@ -20,7 +20,7 @@ final class FollowRefreshResult {
 }
 
 /// Refreshes followed rooms (3.x `FavoriteController._refreshRoomDetails`):
-/// one request per room, at most `concurrency` at a time, one adapter per
+/// bounded batches where supported, at most `concurrency` workers, one adapter per
 /// platform, a time limit per request, and a pause of [cooldown] for a room
 /// whose last request failed unless the caller bypasses it.
 ///
@@ -68,6 +68,35 @@ final class FollowRefresher {
             (bypassCooldown || !(now.difference(_failedAt[room.identityKey] ?? DateTime(0)) < cooldown)))
           room,
     ];
+    final batches = <List<LiveRoom>>[];
+    final groups = <String, List<LiveRoom>>{};
+    for (final room in queue) {
+      if (sites.maybeOf(room.platform) is! LiveSiteFollowBatchRefresher) continue;
+      final group = groups.putIfAbsent(room.platform, () => []);
+      group.add(room);
+      if (group.length == 20) {
+        batches.add(group);
+        groups.remove(room.platform);
+      }
+    }
+    batches.addAll(groups.values.where((group) => group.length > 1));
+    final parallel = concurrency.clamp(1, 20);
+    final confirmed = <String, LiveRoom>{};
+    var nextBatch = 0;
+    Future<void> batchWorker() async {
+      while (nextBatch < batches.length && !(cancelled?.call() ?? false)) {
+        final group = batches[nextBatch++];
+        final site = sites.maybeOf(group.first.platform);
+        if (site is! LiveSiteFollowBatchRefresher) continue;
+        try {
+          confirmed.addAll(await (site! as LiveSiteFollowBatchRefresher).refreshFollowBatch(group).timeout(timeout));
+        } on Object {
+          // The normal worker pool retries unconfirmed rooms individually.
+        }
+      }
+    }
+
+    await Future.wait([for (var i = 0; i < parallel; i++) batchWorker()]);
     final results = <LiveRoom>[];
     var failed = 0;
     var done = 0;
@@ -76,7 +105,11 @@ final class FollowRefresher {
       while (next < queue.length) {
         if (cancelled?.call() ?? false) return;
         final room = queue[next++];
-        final fresh = await _load(room);
+        final answer = confirmed[room.identityKey];
+        final matches = answer != null && answer.hasSameIdentity(room);
+        if (matches) _failedAt.remove(room.identityKey);
+        final fresh = matches ? answer.withAudienceFallbackFrom(room) : await _load(room);
+        if (cancelled?.call() ?? false) return;
         if (fresh == null) {
           failed++;
           results.add(room.pendingAfterError());
@@ -87,7 +120,7 @@ final class FollowRefresher {
       }
     }
 
-    await Future.wait([for (var i = 0; i < concurrency.clamp(1, 20); i++) worker()]);
+    await Future.wait([for (var i = 0; i < parallel; i++) worker()]);
     return FollowRefreshResult(rooms: results, failed: failed);
   }
 

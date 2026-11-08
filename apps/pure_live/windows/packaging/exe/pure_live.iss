@@ -75,7 +75,7 @@ Name: "{app}\UserData"; Flags: uninsneveruninstall
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon; Check: NeedsDesktopShortcut
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
@@ -83,6 +83,30 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; F
 [Code]
 var
   PreviousInstallDirectory: String;
+
+function NeedsDesktopShortcut(): Boolean;
+var
+  LinkPath, TargetPath: String;
+  Shell, Link: Variant;
+begin
+  Result := True;
+  LinkPath := ExpandConstant('{autodesktop}\{#AppName}.lnk');
+  if not FileExists(LinkPath) then
+    exit;
+  try
+    { Read the existing shortcut without calling Save. Recreating it resets
+      the desktop icon's position even when its target has not changed. }
+    Shell := CreateOleObject('WScript.Shell');
+    Link := Shell.CreateShortcut(LinkPath);
+    TargetPath := Shell.ExpandEnvironmentStrings(Link.TargetPath);
+    if TargetPath <> '' then
+      Result := not SameText(ExpandFileName(TargetPath),
+                            ExpandFileName(ExpandConstant('{app}\{#AppExeName}')));
+  except
+    { A malformed link is handled by the user's selected shortcut task. }
+    Result := True;
+  end;
+end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var

@@ -84,6 +84,13 @@ abstract final class Settings {
   /// Opt-in simultaneous audio in multiview; each cell keeps its room volume.
   static const multiviewMixAudio = BoolSetting('multiviewMixAudio', section: 'app', defaultValue: false);
 
+  /// Remembered display, empty for the current screen, unset before selection.
+  static const multiviewProjectionDisplay = StringSetting(
+    'multiviewProjectionDisplay',
+    section: 'app',
+    defaultValue: 'unset',
+  );
+
   /// Show the splash page.
   static const showSplashPage = BoolSetting('showSplashPage', section: 'app', defaultValue: true);
 
@@ -2085,6 +2092,7 @@ abstract final class Settings {
     enableFullScreenDefault,
     autoSwitchLiveFollows,
     multiviewMixAudio,
+    multiviewProjectionDisplay,
     showSplashPage,
     refreshRateMode,
     matchVideoFrameRate,

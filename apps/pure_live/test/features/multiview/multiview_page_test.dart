@@ -172,6 +172,37 @@ void _expectLeftToRight(WidgetTester tester, List<String> keys) {
 }
 
 void main() {
+  testWidgets('issue214: remember projection display, primary tap toggles, secondary opens settings', (tester) async {
+    final (services, _) = await _pump(
+      tester,
+      const Size(1280, 800),
+      rooms: [],
+      overrides: [projectionDisplaysProvider.overrideWithValue(() => [])],
+    );
+    final button = _key('multiview-projection');
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.byType(SimpleDialog), findsOneWidget);
+    await tester.tap(_key('projection-current'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+    await tester.pumpAndSettle();
+    expect(services.store.settings.get(Settings.multiviewProjectionDisplay), '');
+    expect(tester.widget<ToolbarToggle>(button).on, isTrue);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(tester.widget<ToolbarToggle>(button).on, isFalse);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(find.byType(SimpleDialog), findsNothing);
+    expect(tester.widget<ToolbarToggle>(button).on, isTrue);
+    await tester.tap(button, buttons: kSecondaryMouseButton, kind: PointerDeviceKind.mouse);
+    await tester.pumpAndSettle();
+    expect(find.byType(SimpleDialog), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    await _close(tester, services);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
   testWidgets('issue123 F F11 and I toggle display modes and leave text entry alone', (tester) async {
     final (services, _) = await _pump(tester, const Size(1280, 800));
     await _pick(tester, '1');

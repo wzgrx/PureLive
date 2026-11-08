@@ -209,6 +209,12 @@ void main() {
     expect(find.byKey(const ValueKey('super-chat-unread-badge')), findsOneWidget);
     expect(find.descendant(of: entry, matching: find.text('1')), findsOneWidget);
     await captureQaFrame(tester, 'fullscreen-super-chat-entry');
+    await tester.pump(const Duration(seconds: 5));
+    expect(entry, findsNothing, reason: 'issue207: the entry follows the toolbar');
+    await tester.tapAt(tester.getCenter(find.byType(RoomPlayer)));
+    await _settle(tester);
+    expect(entry, findsOneWidget);
+    expect(find.descendant(of: entry, matching: find.text('1')), findsOneWidget);
     final opens = room.engine.opens.length;
     await tester.tap(entry);
     await _settle(tester);
