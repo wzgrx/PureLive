@@ -4,7 +4,7 @@ import 'package:live_player/live_player.dart';
 
 /// A scripted [PlayerEngine]: records every call; [onOpen] decides what an
 /// open does (default: succeed, then report buffering and playing).
-final class FakeEngine implements PlayerEngine {
+final class FakeEngine implements PlayerEngine, LiveRewindCache {
   final StreamController<EngineEvent> _events = StreamController.broadcast(sync: true);
 
   /// Every opened media, in order.
@@ -12,6 +12,12 @@ final class FakeEngine implements PlayerEngine {
 
   /// Calls other than open, in order (`play`, `pause`, `stop`, `seek`, ...).
   final List<String> calls = [];
+
+  /// The current verified ranges or a gated native response for tests.
+  Future<List<LiveRewindRange>> Function()? liveRanges;
+
+  @override
+  Future<List<LiveRewindRange>> readLiveSeekRanges() async => await liveRanges?.call() ?? const [];
 
   /// What the next opens do; null opens and plays.
   Future<void> Function(EngineMedia media)? onOpen;

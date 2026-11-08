@@ -252,3 +252,24 @@ abstract interface class PlaybackRate {
 
 /// Creates an engine on first need.
 typedef EngineFactory = Future<PlayerEngine> Function();
+
+/// An interval that the current live demuxer has already buffered and can seek.
+final class LiveRewindRange {
+  /// Creates a verified interval for one native open.
+  const new(this.start, this.end);
+
+  /// Earliest available timestamp.
+  final Duration start;
+
+  /// Latest confirmed timestamp.
+  final Duration end;
+
+  /// Whether this interval contains [position].
+  bool contains(Duration position) => position >= start && position <= end;
+}
+
+/// Optional native cache information; unsupported engines expose no range.
+abstract interface class LiveRewindCache {
+  /// Intervals owned by the current native open.
+  Future<List<LiveRewindRange>> readLiveSeekRanges();
+}

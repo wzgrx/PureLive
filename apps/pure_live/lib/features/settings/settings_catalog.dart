@@ -1006,6 +1006,14 @@ List<SettingsEntry> _build() {
       desc: 'enable_live_play_long_press_switch_subtitle',
       keywords: ['长按', '切换直播间', '手势', 'long press', 'switch room'],
     )
+    ..toggle(
+      'live_play_rewind',
+      'enable_live_play_rewind',
+      Settings.livePlayRewind,
+      AppIcons.settingsQuality,
+      desc: 'enable_live_play_rewind_subtitle',
+      keywords: ['直播回退', '直播缓存', '回到直播', 'rewind', 'cache'],
+    )
     ..link(
       'audience',
       'audience_metric_settings',

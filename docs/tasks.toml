@@ -8438,13 +8438,13 @@ note = "5.6.5 正式交付；发布与组件验证已记录，继续保留原设
 id = "E03.24"
 title = "CHZZK公开回放播放验证"
 type = "平台"
-status = "暂停"
+status = "开发中"
 size = "中"
 tier = 1
 from = "GitHub #208"
-branch = "ai/E03.24-chzzk-replay-research"
-next = "先复核公开DASH初始化和分片，再用现有播放会话验证"
-note = "目录与公开 HLS 有实测；同一个录像从 UPLOAD 转 ABR_HLS 后不再给 HLS。Accept: application/dash+xml 可取得 XML，远端 FFmpeg 读 MPD 失败，本地 MPD 的端到端解码仍未通过。HLS 试验提交 de5219d5 保留本地研究分支；不进入 5.6.5，后续核对分片和本地代理后再验收。"
+branch = "ai/V02.92-complete-open-scope"
+next = "验收公开视频长播、切换和真实 CDN 失败恢复"
+note = "公开 HLS 与单文件复用播放器回放；可播放变体由已验证的清单或 muxed 媒体字段决定。切换失败时限一次重新签发此前档位，从原位置恢复。原 DASH 探索保留为调查。三种界面布局有公开接口形状的离线回归，真实平台的长播与故障恢复待验。"
 
 [[task]]
 id = "V02.90"
@@ -8493,3 +8493,75 @@ from = "#221、#224、#222、#177、PR #220"
 branch = "ai/Y01.46-stable-566"
 next = "完整门禁与同源包验证"
 note = "最终源码统一验证、十包同源构建、公开完整下载以及新旧更新源比对。#220保留作者提交并补当前源码验证；#201/#206未合入。已验证修复才关闭issue。"
+
+[[task]]
+id = "A07.47"
+title = "房间列表和轮播"
+type = "界面"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #226"
+branch = "ai/V02.92-complete-open-scope"
+next = "多端界面验证和实际设备长播"
+note = "房间列表独立于收藏，仅保存平台、房号和显示名。手机、桌面和 TV 支持保存/排序/删除；轮播默认不自动开启，按序或每轮不重复洗牌，后台、暂停或弹窗时停计时。SQLite 重开和同会话切房测试通过。"
+
+[[task]]
+id = "A07.48"
+title = "长按画面切房及醒目留言"
+type = "界面"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #207"
+branch = "ai/V02.92-complete-open-scope"
+next = "同源门禁及各端正式包验证"
+note = "画面长按开关默认关，开启后复用原切房面板，弹幕长按优先，锁屏、小窗与回放不截获。虎牙倒计时字段显式为零表示过期，不能回退到总时长；补原始协议字段回归。"
+
+[[task]]
+id = "A13.9"
+title = "TV双画面"
+type = "界面"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #223"
+branch = "ai/V02.92-complete-open-scope"
+next = "低端电视盒和长播验收"
+note = "TV 首页独立双画面页，仅两个播放实例，只有一个出声。退出和进入后台释放播放器资源；墙纸保持到播放器完成清理，防止叠加占用解码器。TV 小部件及双会话回归通过，物理设备未测试。"
+
+[[task]]
+id = "O01.4"
+title = "定时打开直播间"
+type = "功能"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #225"
+branch = "ai/V02.92-complete-open-scope"
+next = "补支持范围与后台验证"
+note = "每天本地时间或一次倒计时，数据库原子领取；前台插播使用路由栈，返回原页面，弹窗抢占时归还任务。TV 加定时停止与已有 Android 开播提醒入口。后台拉起和设备通知投递没有验证，应用退出后不执行定时打开。"
+
+[[task]]
+id = "G02.14"
+title = "直播缓存回看"
+type = "功能"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #215"
+branch = "ai/V02.92-complete-open-scope"
+next = "跨平台 native 时间轴和内存验收"
+note = "默认关闭。libmpv 用原生节点返回缓存区间，只允许当前打开会话的连续范围，断档、回放、音频模式或引擎更换不提供缓存回看。测试环境 HTTP-FLV 成功向后拖且未重新请求；仅回看仍在内存的部分，不能承诺从进房开始一直保留。"
+
+[[task]]
+id = "V02.92"
+title = "本轮开放需求和PR复核"
+type = "验证"
+status = "开发中"
+size = "中"
+tier = 1
+from = "GitHub #177 #207 #208 #210 #215 #221–#226；PR #201 #206 #220"
+branch = "ai/V02.92-complete-open-scope"
+next = "全范围及同源包验证完成才允许发布"
+note = "5.6.6 早期较小范围门禁已通过，只作为回归基线。扩大范围后停止远端合并、标签、发布和更新源同步。继续复核原始设备现象和协议；#201、#206 保持待修改，#220 含贡献者精确提交在本地。"

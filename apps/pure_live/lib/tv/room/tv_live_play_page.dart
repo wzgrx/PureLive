@@ -11,6 +11,7 @@ import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/music_player.dart';
 import 'package:pure_live/app/network.dart';
 import 'package:pure_live/app/services.dart';
+import 'package:pure_live/features/live_play/dialogs/room_dialogs.dart' show sleepTimerMaxMinutes, sleepTimerPresets;
 import 'package:pure_live/features/live_play/layout/room_panel.dart';
 import 'package:pure_live/features/live_play/logic/background_playback.dart';
 import 'package:pure_live/features/live_play/logic/room_controller.dart';
@@ -44,7 +45,7 @@ import 'package:pure_live/tv/widgets/tv_status.dart';
 
 /// The player settings (M9) as the engine's configuration (the phone room's
 /// rule, M13.3).
-MpvEngineConfig tvEngineConfig(SettingsStore settings) => MpvEngineConfig(
+MpvEngineConfig tvEngineConfig(SettingsStore settings, {bool allowLiveRewind = true}) => MpvEngineConfig(
   platform: mpvPlatformOf(defaultTargetPlatform) ?? MpvPlatform.linux,
   hardwareDecoding: settings.get(Settings.enableCodec),
   customOutput: settings.get(Settings.customPlayerOutput),
@@ -54,6 +55,7 @@ MpvEngineConfig tvEngineConfig(SettingsStore settings) => MpvEngineConfig(
   androidCompatibility: settings.get(Settings.playerCompatMode),
   rtxVideoSuperResolution: settings.get(Settings.enableRtxVsr),
   volumeGainDb: settings.get(Settings.volumeBoostDb),
+  liveRewindEnabled: allowLiveRewind && settings.get(Settings.livePlayRewind),
 );
 
 /// The basic TV room (pure_live_TV `LivePlayPage` and `PlayerKeyScope`;
@@ -415,6 +417,67 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       _ => Future.value(false),
     };
     if (!changed && mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+  }
+
+  Future<void> _showSleepTimer() async {
+    final controller = _controller;
+    if (controller == null) return;
+    final minutes = await showTvChoice<int>(
+      context,
+      title: i18n('sleep_timer'),
+      subtitle: i18n('room_playback_timer_desc'),
+      current: controller.sleepDeadline == null ? 0 : controller.sleepMinutes,
+      options: [
+        TvChoice(value: 0, label: i18n('disabled')),
+        for (final minutes in sleepTimerPresets) TvChoice(value: minutes, label: '$minutes ${i18n('minutes')}'),
+        TvChoice(value: -1, label: i18n('custom_sleep_minutes')),
+      ],
+    );
+    if (!mounted || minutes == null || !identical(controller, _controller)) return;
+    int? selected = minutes;
+    if (minutes == -1) {
+      final input = await showTvInput(
+        context,
+        title: i18n('room_playback_timer_custom_hint'),
+        text: '${controller.sleepMinutes}',
+        numeric: true,
+        maxLength: 6,
+      );
+      if (!mounted || input == null || !identical(controller, _controller)) return;
+      selected = int.tryParse(input.trim());
+      if (selected == null || selected < 1 || selected > sleepTimerMaxMinutes) {
+        AppNavigator.toast(i18n('custom_sleep_minutes_range'));
+        return;
+      }
+    }
+    controller.setSleepTimer(enabled: selected > 0, minutes: selected > 0 ? selected : controller.sleepMinutes);
+    _hide();
+  }
+
+  Future<void> _showLiveRewind() async {
+    final session = _session;
+    if (session == null) return;
+    final window = await session.liveRewindWindow();
+    if (!mounted || !identical(session, _session)) return;
+    if (window == null) {
+      AppNavigator.toast(i18n('live_rewind_unavailable'));
+      return;
+    }
+    final position = window.position;
+    final range = window.range;
+    final previous = position - const Duration(seconds: 15);
+    final choice = await showTvChoice<Duration>(
+      context,
+      title: i18n('live_rewind_title'),
+      options: [
+        if (position > range.start)
+          TvChoice(value: previous < range.start ? range.start : previous, label: i18n('live_rewind_back')),
+        TvChoice(value: range.end - const Duration(milliseconds: 200), label: i18n('live_rewind_to_live')),
+      ],
+    );
+    if (mounted && identical(session, _session) && choice != null && !await session.seekLiveCache(choice) && mounted) {
+      AppNavigator.toast(i18n('live_rewind_unavailable'));
+    }
   }
 
   Future<void> _showSavedQueue() async {
@@ -909,6 +972,10 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
                           controller: controller,
                           onClose: _hide,
                           onRoomQueue: () => unawaited(_showSavedQueue()),
+                          onSleepTimer: () => unawaited(_showSleepTimer()),
+                          onLiveRewind: ref.read(storeProvider).settings.get(Settings.livePlayRewind)
+                              ? () => unawaited(_showLiveRewind())
+                              : null,
                         ),
                       ),
                   ],

@@ -33,7 +33,14 @@ enum TvRoomSettingsTab {
 /// TV's directional navigation); Back closes it.
 class TvRoomSettingsPanel extends StatefulWidget {
   /// Creates the panel for [controller]'s room.
-  const new({required this.controller, required this.onClose, this.onRoomQueue, super.key});
+  const new({
+    required this.controller,
+    required this.onClose,
+    this.onRoomQueue,
+    this.onSleepTimer,
+    this.onLiveRewind,
+    super.key,
+  });
 
   /// The room.
   final LiveRoomController controller;
@@ -43,6 +50,12 @@ class TvRoomSettingsPanel extends StatefulWidget {
 
   /// Opens the saved queue using the TV's normal remote focus dialog.
   final VoidCallback? onRoomQueue;
+
+  /// Opens the TV countdown for the current room.
+  final VoidCallback? onSleepTimer;
+
+  /// Opens the verified live cache controls, when enabled.
+  final VoidCallback? onLiveRewind;
 
   /// The panel's width in canvas pixels (c2).
   static const double width = 400;
@@ -129,6 +142,14 @@ class _TvRoomSettingsPanelState extends State<TvRoomSettingsPanel> {
                   label: i18n('room_switch_saved'),
                   onTap: widget.onRoomQueue,
                 ),
+              if (widget.onSleepTimer != null)
+                TvOptionRow(
+                  key: const ValueKey('tv-room-sleep-timer'),
+                  label: i18n('sleep_timer'),
+                  onTap: widget.onSleepTimer,
+                ),
+              if (widget.onLiveRewind != null)
+                TvOptionRow(label: i18n('live_rewind_title'), onTap: widget.onLiveRewind),
               Expanded(
                 child: Material(
                   type: MaterialType.transparency,

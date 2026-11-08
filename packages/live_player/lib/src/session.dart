@@ -236,6 +236,7 @@ final class PlaybackSession {
 
   PlaybackTransport _transport = PlaybackTransport();
   PlayerEngine? _engine;
+  Duration? _rewindPosition;
   _EngineCreation? _engineCreating;
   _StoppingEngine? _stoppingEngine;
   Future<void>? _disposing;
@@ -529,6 +530,57 @@ final class PlaybackSession {
     }
   }
 
+  /// A verified, contiguous rewind window for the current live source.
+  /// An absent, discontinuous or stale native cache is never seekable here.
+  Future<({LiveRewindRange range, Duration position})?> liveRewindWindow() async {
+    final engine = _engine;
+    if (_disposed ||
+        engine is! LiveRewindCache ||
+        (_plan?.onDemand ?? true) ||
+        _state.audioOnly ||
+        _state.recovery != 0 ||
+        !const {PlaybackStatus.playing, PlaybackStatus.paused}.contains(_state.status)) {
+      return null;
+    }
+    final epoch = _session;
+    final open = _fence.generation;
+    final ranges = await (engine! as LiveRewindCache).readLiveSeekRanges();
+    if (!_current(epoch) || _fence.generation != open || !identical(engine, _engine) || _state.recovery != 0) {
+      return null;
+    }
+    final position = _rewindPosition;
+    if (position == null) return null;
+    LiveRewindRange? selected;
+    for (final range in ranges) {
+      if (range.end - range.start < const Duration(seconds: 3) || !range.contains(position)) continue;
+      if (selected == null || range.end > selected.end) selected = range;
+    }
+    return selected == null ? null : (range: selected, position: position);
+  }
+
+  /// Seeks within confirmed cache only, independently of normal VOD seek.
+  Future<bool> seekLiveCache(Duration target) async {
+    final engine = _engine;
+    final epoch = _session;
+    final open = _fence.generation;
+    final window = await liveRewindWindow();
+    if (engine == null ||
+        window == null ||
+        !window.range.contains(target) ||
+        !_current(epoch) ||
+        _fence.generation != open ||
+        !identical(engine, _engine)) {
+      return false;
+    }
+    try {
+      await engine.seek(target);
+    } on Exception {
+      // The native cache may evict the target while a seek is pending.
+      return false;
+    }
+    return _current(epoch) && _fence.generation == open;
+  }
+
   /// Plays an on-demand source at [rate] (1 = normal) where the engine can
   /// (V01.8); false when it cannot or the source is live.
   Future<bool> setRate(double rate) async {
@@ -801,6 +853,7 @@ final class PlaybackSession {
     _source = source;
     if (source case LineSource(:final line)) _lines.select(line);
     final generation = _fence.begin(source.url);
+    _rewindPosition = null;
     _errorSignatures.clear();
     _openingError = null;
     _playing = false;
@@ -971,6 +1024,7 @@ final class PlaybackSession {
       case EnginePosition(:final position):
         if (_accepting) _timingMoved(position);
         if (_accepting && _state.onDemand) _emit(_state.copyWith(position: position));
+        if (_accepting && !_state.onDemand) _rewindPosition = position;
         if (_accepting) {
           _onPosition(position, session);
           if (_buffering) _onBufferingPosition(position, session);

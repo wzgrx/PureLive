@@ -8,6 +8,7 @@ import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/rooms/broadcast_information.dart';
+import 'package:pure_live/shared/rooms/room_live_alert.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 import 'package:pure_live/tv/tv_theme.dart';
@@ -189,6 +190,36 @@ class TvRoomDialog extends StatelessWidget {
                   autofocus: true,
                   onTap: () => unawaited(tvEditRoomTags(context, store: store, room: room)),
                 ),
+                if (liveAlertsAvailable && room.platform != SiteIds.iptv && !SiteIds.isRetired(room.platform))
+                  StreamBuilder<bool>(
+                    stream: store.follows.watchContains(room),
+                    builder: (context, followed) => followed.data != true
+                        ? const SizedBox.shrink()
+                        : StreamBuilder<Setting<Object>>(
+                            stream: store.settings.changes,
+                            builder: (context, _) {
+                              final on = roomLiveAlertOn(store.settings, room);
+                              return TvButton(
+                                key: const ValueKey('tv-room-dialog-live-alert'),
+                                icon: on ? AppIcons.liveAlertOff : AppIcons.settingsLiveAlert,
+                                label: i18n(on ? 'room_live_alert_turn_off' : 'room_live_alert_turn_on'),
+                                onTap: () => unawaited(
+                                  toggleRoomLiveAlert(
+                                    context,
+                                    store: store,
+                                    room: room,
+                                    confirmNarrow: () => showTvConfirm(
+                                      context,
+                                      title: i18n('room_live_alert_narrow_title'),
+                                      message: i18n('room_live_alert_narrow_message'),
+                                      confirmLabel: i18n('room_live_alert_narrow_confirm'),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
                 for (final action in actions)
                   TvButton(
                     key: action.key,

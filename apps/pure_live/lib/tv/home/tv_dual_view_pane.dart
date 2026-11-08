@@ -47,7 +47,7 @@ class _TvDualViewPaneState extends ConsumerState<TvDualViewPane> {
     final sites = ref.read(sitesProvider);
     final danmaku = ref.read(danmakuProvider);
     final createSession = ref.read(playbackSessionFactoryProvider);
-    final engine = tvEngineConfig(store.settings);
+    final engine = tvEngineConfig(store.settings, allowLiveRewind: false);
     _controller = MultiviewController(
       siteOf: sites.maybeOf,
       newSession: () => createSession(config: engine),

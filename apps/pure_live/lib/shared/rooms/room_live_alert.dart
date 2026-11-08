@@ -36,7 +36,12 @@ bool liveAlertCoversAll(SettingsStore settings) =>
 /// with their own switch (and the chosen tags) are covered. Off: the room
 /// leaves the list; with none left and no tag chosen, every follow is
 /// covered again (V01.1 L3), so the toast says so.
-Future<void> toggleRoomLiveAlert(BuildContext context, {required LiveStore store, required LiveRoom room}) async {
+Future<void> toggleRoomLiveAlert(
+  BuildContext context, {
+  required LiveStore store,
+  required LiveRoom room,
+  Future<bool> Function()? confirmNarrow,
+}) async {
   final settings = store.settings;
   final keys = settings.get(Settings.liveAlertRoomKeys);
   final name = room.displayNick(platformName(room.platform));
@@ -52,14 +57,16 @@ Future<void> toggleRoomLiveAlert(BuildContext context, {required LiveStore store
     return;
   }
   if (liveAlertCoversAll(settings)) {
-    final narrow = await showAppConfirmDialog(
-      context: context,
-      key: const ValueKey('room-live-alert-narrow'),
-      title: i18n('room_live_alert_narrow_title'),
-      message: i18n('room_live_alert_narrow_message'),
-      confirmLabel: i18n('room_live_alert_narrow_confirm'),
-      confirmKey: const ValueKey('room-live-alert-narrow-confirm'),
-    );
+    final narrow =
+        await (confirmNarrow?.call() ??
+            showAppConfirmDialog(
+              context: context,
+              key: const ValueKey('room-live-alert-narrow'),
+              title: i18n('room_live_alert_narrow_title'),
+              message: i18n('room_live_alert_narrow_message'),
+              confirmLabel: i18n('room_live_alert_narrow_confirm'),
+              confirmKey: const ValueKey('room-live-alert-narrow-confirm'),
+            ));
     if (!narrow) return;
   } else if (!settings.get(Settings.liveAlertEnabled)) {
     if (!context.mounted) return;

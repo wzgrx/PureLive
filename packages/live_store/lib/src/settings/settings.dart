@@ -564,6 +564,9 @@ abstract final class Settings {
   /// (docs/A-界面设计/A07-直播间界面/A07.46-画质线路移入画面开关; off by default).
   static const livePlayPickersInVideo = BoolSetting('livePlayPickersInVideo', section: 'player', defaultValue: false);
 
+  /// Enables a bounded cache window on the next single-room live open.
+  static const livePlayRewind = BoolSetting('livePlayRewind', section: 'player', defaultValue: false);
+
   /// A long press on the live picture opens the room switch panel. A
   /// danmaku item still keeps its own long-press action.
   static const livePlayLongPressSwitchRoom = BoolSetting(
@@ -2186,6 +2189,7 @@ abstract final class Settings {
     livePlayChatCollapsed,
     livePlayWideFooter,
     livePlayPickersInVideo,
+    livePlayRewind,
     livePlayLongPressSwitchRoom,
     roomSwitcherLayout,
     hideDanmaku,

@@ -188,7 +188,7 @@ final class FakeDanmaku implements DanmakuConnection {
 }
 
 /// An engine that plays whatever it opens.
-final class FakeEngine implements PlayerEngine, VolumeGainControl, PlaybackRate {
+final class FakeEngine implements PlayerEngine, VolumeGainControl, PlaybackRate, LiveRewindCache {
   final StreamController<EngineEvent> _events = StreamController.broadcast(sync: true);
 
   /// Opened media, in order.
@@ -257,7 +257,13 @@ final class FakeEngine implements PlayerEngine, VolumeGainControl, PlaybackRate 
   int stops = 0;
 
   @override
-  Future<void> seek(Duration position) async {}
+  Future<void> seek(Duration position) async => seeks.add(position);
+
+  final List<Duration> seeks = [];
+  List<LiveRewindRange> liveSeekRanges = const [];
+
+  @override
+  Future<List<LiveRewindRange>> readLiveSeekRanges() async => liveSeekRanges;
 
   @override
   Future<void> setVolume(double volume) async {}

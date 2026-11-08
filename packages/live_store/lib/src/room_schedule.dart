@@ -55,7 +55,7 @@ final class RoomOpenSchedule {
   String _occurrence(DateTime due) =>
       onceAt != null ? 'once:${due.millisecondsSinceEpoch}' : 'day:${due.year}-${due.month}-${due.day}';
 
-  RoomOpenSchedule _claimed(String occurrence) {
+  RoomOpenSchedule _claimed(String? occurrence) {
     if (onceAt case final at?) {
       return RoomOpenSchedule.once(id: id, room: room, at: at, enabled: enabled, lastOccurrence: occurrence);
     }
@@ -212,5 +212,24 @@ final class RoomScheduleStore {
     schedules[index] = winner._claimed(winner._occurrence(earliest));
     await _write(schedules);
     return winner;
+  });
+
+  /// Releases a claim that could not start while the app was foregrounded.
+  /// A concurrently removed or edited appointment is not recreated.
+  Future<void> releaseClaim(RoomOpenSchedule task, DateTime claimedAt) => _db.write(_tables, () async {
+    final schedules = (await all()).toList();
+    final occurrence = task._occurrence(task.dueAt(claimedAt));
+    final index = schedules.indexWhere(
+      (saved) =>
+          saved.id == task.id &&
+          saved.room.hasSameIdentity(task.room) &&
+          saved.onceAt == task.onceAt &&
+          saved.dailyMinute == task.dailyMinute &&
+          saved.enabled == task.enabled &&
+          saved.lastOccurrence == occurrence,
+    );
+    if (index < 0) return;
+    schedules[index] = schedules[index]._claimed(task.lastOccurrence);
+    await _write(schedules);
   });
 }

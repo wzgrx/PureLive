@@ -26,6 +26,7 @@ import 'package:pure_live/features/live_play/logic/room_status.dart';
 import 'package:pure_live/features/live_play/mini/mini_player.dart';
 import 'package:pure_live/features/live_play/mini/room_mini_window.dart';
 import 'package:pure_live/features/live_play/player/bar_parts.dart';
+import 'package:pure_live/features/live_play/player/live_rewind_bar.dart';
 import 'package:pure_live/features/live_play/player/player_controls.dart';
 import 'package:pure_live/features/live_play/player/player_gestures.dart';
 import 'package:pure_live/features/live_play/player/player_status.dart';
@@ -817,6 +818,7 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
     final longPress = showDanmaku && watchSetting(ref, Settings.enableDanmakuLongPressInteraction);
     final longPressSwitch =
         watchSetting(ref, Settings.livePlayLongPressSwitchRoom) && !pip && !_locked && !_room.isArchive;
+    final rewind = watchSetting(ref, Settings.livePlayRewind);
     final diagnostics = watchSetting(ref, Settings.showPortraitDiagnostics);
     final pausedBehavior = watchSetting(ref, Settings.danmakuPausedBehavior);
     final maxVisible = watchSetting(ref, Settings.danmakuMaxVisibleCount);
@@ -1102,6 +1104,17 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
                               immersive: arrangement != ControlsArrangement.inline || widget.replayActionsInBar,
                               onInteract: _touch,
                               onHolding: _onMenu,
+                            ),
+                          ),
+                        if (!_locked && controls && !_room.isArchive && rewind)
+                          Positioned(
+                            left: padding.left,
+                            right: padding.right,
+                            bottom: padding.bottom + (portraitRows ? portraitRowHeight * 2 + 12 : controlBarHeight),
+                            child: RoomLiveRewindBar(
+                              key: ValueKey('live-rewind-${_room.room.identityKey}'),
+                              session: _room.session,
+                              onInteract: _touch,
                             ),
                           ),
                         if (!_locked && widget.edge != null)

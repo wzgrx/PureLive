@@ -35,6 +35,7 @@ final class MpvEngineConfig {
     this.androidCompatibility = false,
     this.rtxVideoSuperResolution = false,
     this.volumeGainDb = 0,
+    this.liveRewindEnabled = false,
   });
 
   /// The platform the defaults are for.
@@ -42,6 +43,9 @@ final class MpvEngineConfig {
 
   /// 3.x's "硬件解码" (`enableCodec`): `auto-safe` when on, `no` when off.
   final bool hardwareDecoding;
+
+  /// The room opted into a bounded in-memory back buffer.
+  final bool liveRewindEnabled;
 
   /// 3.x's expert output overrides (`customPlayerOutput`): use
   /// [videoOutputDriver], [hardwareDecoder] and [audioOutputDriver].
@@ -156,7 +160,7 @@ final class MpvEngineConfig {
       'cache-on-disk': 'no',
       'cache-secs': '6',
       'demuxer-max-bytes': '${32 * 1024 * 1024}',
-      'demuxer-max-back-bytes': '${4 * 1024 * 1024}',
+      'demuxer-max-back-bytes': '${(liveRewindEnabled ? 32 : 4) * 1024 * 1024}',
       'demuxer-donate-buffer': 'no',
       'demuxer-readahead-secs': '2',
       'network-timeout': '15',

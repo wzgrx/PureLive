@@ -34,6 +34,23 @@ void main() {
     }
   });
 
+  test('a released claim can be retried but does not recreate an appointment removed during navigation', () async {
+    final store = await LiveStore.memory(cipher: const FakeCipher());
+    addTearDown(store.close);
+    final tasks = store.roomSchedules;
+    final now = DateTime.utc(2026, 11, 8, 9);
+    final room = LiveRoom(platform: SiteIds.douyu, roomId: '9999');
+    await tasks.put(RoomOpenSchedule.once(id: 'claimed', room: room, at: now));
+    final first = (await tasks.claimDue(now))!;
+    expect(await tasks.claimDue(now), isNull);
+    await tasks.releaseClaim(first, now);
+    final next = (await tasks.claimDue(now))!;
+    expect(next.id, first.id);
+    expect(await tasks.remove(next.id), isTrue);
+    await tasks.releaseClaim(next, now);
+    expect(await tasks.all(), isEmpty);
+  });
+
   test('countdown deadlines survive timezone representation, but old missed tasks are not opened', () async {
     final store = await LiveStore.memory(cipher: const FakeCipher());
     addTearDown(store.close);

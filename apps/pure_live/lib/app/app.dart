@@ -174,6 +174,7 @@ class _PureLiveAppState extends ConsumerState<PureLiveApp> with WidgetsBindingOb
         ForegroundRoomScheduler(
             schedules: store.watch(),
             claim: store.claimDue,
+            releaseClaim: store.releaseClaim,
             canOpen: () {
               if (!mounted || liveRouteObserver.openPopups.value != 0) return false;
               final path = _router.routeInformationProvider.value.uri.path;

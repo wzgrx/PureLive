@@ -668,6 +668,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     androidCompatibility: settings.get(Settings.playerCompatMode),
     rtxVideoSuperResolution: settings.get(Settings.enableRtxVsr),
     volumeGainDb: settings.get(Settings.volumeBoostDb),
+    liveRewindEnabled: settings.get(Settings.livePlayRewind),
   );
 
   /// What decides whether a kept player fits ([PlayerStandby]): every field
@@ -682,6 +683,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     config.androidCompatibility,
     config.rtxVideoSuperResolution,
     config.volumeGainDb,
+    config.liveRewindEnabled,
   );
 
   /// Picture-in-picture or the desktop mini window began or ended.

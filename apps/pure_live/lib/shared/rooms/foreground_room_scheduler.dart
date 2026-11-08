@@ -13,6 +13,7 @@ final class ForegroundRoomScheduler {
   new({
     required this.schedules,
     required this.claim,
+    required this.releaseClaim,
     required this.canOpen,
     required this.openRoom,
     DateTime Function()? now,
@@ -23,6 +24,9 @@ final class ForegroundRoomScheduler {
 
   /// Atomically consumes one due occurrence.
   final Future<RoomOpenSchedule?> Function(DateTime now) claim;
+
+  /// Makes an occurrence eligible again if a route cannot safely start.
+  final Future<void> Function(RoomOpenSchedule task, DateTime now) releaseClaim;
 
   /// Whether the window and navigation state allow an explicit room open.
   final bool Function() canOpen;
@@ -59,22 +63,40 @@ final class ForegroundRoomScheduler {
   }
 
   void _syncTimer() {
+    _timer?.cancel();
+    _timer = null;
+    if (_disposed || !_foreground || _opening) return;
     final now = _now();
-    final pending = _items.any((item) {
-      final once = item.onceAt;
-      return item.enabled &&
-          (once == null || item.lastOccurrence == null && !now.isAfter(once.add(const Duration(minutes: 2))));
-    });
-    if (_disposed || !_foreground || _opening || !pending) {
-      _timer?.cancel();
-      _timer = null;
-      return;
+    Duration? delay;
+    for (final item in _items) {
+      if (!item.enabled) continue;
+      var due = item.dueAt(now);
+      if (item.isDueAt(now)) {
+        delay = const Duration(seconds: 1);
+        break;
+      }
+      if (!due.isAfter(now)) {
+        if (item.onceAt != null) continue;
+        final tomorrow = now.isUtc
+            ? DateTime.utc(now.year, now.month, now.day + 1)
+            : DateTime(now.year, now.month, now.day + 1);
+        due = item.dueAt(tomorrow);
+      }
+      final wait = due.difference(now);
+      if (delay == null || wait < delay) delay = wait;
     }
-    _timer ??= Timer.periodic(const Duration(seconds: 1), (_) => unawaited(_check()));
+    if (delay == null) return;
+    // Re-check local wall time occasionally without polling each second all day.
+    final next = delay > const Duration(minutes: 1) ? const Duration(minutes: 1) : delay;
+    _timer = Timer(next, () => unawaited(_check()));
   }
 
   Future<void> _check() async {
-    if (_disposed || !_foreground || _opening || !canOpen()) return;
+    if (_disposed || !_foreground || _opening) return;
+    if (!canOpen()) {
+      _syncTimer();
+      return;
+    }
     final now = _now();
     if (!_items.any((item) => item.isDueAt(now))) {
       _syncTimer();
@@ -84,7 +106,13 @@ final class ForegroundRoomScheduler {
     _syncTimer();
     try {
       final task = await claim(now);
-      if (task != null && !_disposed && _foreground && canOpen()) await openRoom(task.room);
+      if (task != null) {
+        if (!_disposed && _foreground && canOpen()) {
+          await openRoom(task.room);
+        } else {
+          await releaseClaim(task, now);
+        }
+      }
     } on Object catch (error) {
       log('Room schedule dispatch failed: ${error.runtimeType}', name: 'RoomSchedule');
     } finally {
