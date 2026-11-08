@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "Di tablet dan ponsel lipat yang dibuka, beranda memakai bilah bawah, bukan rel samping",
     "enable_liquid_glass": "Kaca cair",
     "enable_liquid_glass_subtitle": "Bilah bawah mengambang sebagai kaca cair yang membiaskan halaman di tepinya; tahan dan seret untuk beralih. Ponsel dengan 4 GB atau kurang mendapat warna polos",
+    "enable_live_play_pickers_in_video": "Pertahankan kualitas dan jalur di gambar",
+    "enable_live_play_pickers_in_video_subtitle": "Tampilkan pemilih kualitas dan jalur di bilah pemutar di luar layar penuh juga; nonaktif membiarkannya di atas obrolan",
     "enable_live_play_wide_footer": "Bilah di bawah video",
     "enable_live_play_wide_footer_subtitle": "Ruang lebar menampilkan penonton, durasi siaran, serta pilihan kualitas dan jalur di bawah video; jika mati, kembali ke atas chat",
     "enable_local_log": "Aktifkan Log Lokal",

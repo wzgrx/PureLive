@@ -137,6 +137,7 @@ typedef _LayoutSettings = ({
   String policy,
   bool collapsed,
   bool wideFooter,
+  bool pickersInVideo,
   bool swipe,
 });
 
@@ -749,6 +750,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     policy: ref.read(storeProvider).settings.get(Settings.portraitFullscreenPolicy),
     collapsed: ref.read(storeProvider).settings.get(Settings.livePlayChatCollapsed),
     wideFooter: ref.read(storeProvider).settings.get(Settings.livePlayWideFooter),
+    pickersInVideo: ref.read(storeProvider).settings.get(Settings.livePlayPickersInVideo),
     swipe: ref.read(storeProvider).settings.get(Settings.portraitFullscreenSwipeSwitch),
   );
 
@@ -1030,6 +1032,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       policy: watchSetting(ref, Settings.portraitFullscreenPolicy),
       collapsed: watchSetting(ref, Settings.livePlayChatCollapsed),
       wideFooter: watchSetting(ref, Settings.livePlayWideFooter),
+      pickersInVideo: watchSetting(ref, Settings.livePlayPickersInVideo),
       swipe: watchSetting(ref, Settings.portraitFullscreenSwipeSwitch),
     );
     return RoomMiniScope(
@@ -1148,6 +1151,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     Widget? edge,
     VoidCallback? onTitle,
     bool pickersInBar = false,
+    bool replayActionsInBar = false,
     Alignment alignment = Alignment.center,
   }) => RoomPlayer(
     key: _playerKey,
@@ -1173,6 +1177,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     edge: edge,
     onTitle: onTitle,
     pickersInBar: pickersInBar,
+    replayActionsInBar: replayActionsInBar,
     alignment: alignment,
   );
 
@@ -1497,13 +1502,15 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
         ),
       );
 
-  Widget _infoBar(LiveRoomController controller, {bool showFigures = true}) => controller.isArchive
-      ? RoomReplayInfo(controller: controller)
+  Widget _infoBar(LiveRoomController controller, {bool showFigures = true, bool showPickers = true}) =>
+      controller.isArchive
+      ? RoomReplayInfo(controller: controller, showPickers: showPickers)
       : RoomInfoBar(
           controller: controller,
           detailsOpen: _details,
           onToggleDetails: _toggleDetails,
           showFigures: showFigures,
+          showPickers: showPickers,
         );
 
   /// The details over [below] (the chat), sliding in unless the system asks
@@ -1540,28 +1547,32 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   /// The strip, a divider and the chat with the details over it; with
   /// [composerCollapsed] the local composer is a star on the chat list
   /// (the portrait room's panel, A07.17 c3).
-  Widget _chatColumn(LiveRoomController controller, {bool composerCollapsed = false, bool figuresBelowVideo = false}) =>
-      ListenableSelector<bool>(
-        listenable: controller,
-        selector: () => controller.isArchive,
-        builder: (context, _, _) => Column(
-          children: [
-            _infoBar(controller, showFigures: !figuresBelowVideo),
-            const Divider(height: 1),
-            Expanded(
-              child: _withDetails(
-                controller,
-                ChatPanel(
-                  controller: controller,
-                  detailsOpen: _details,
-                  memory: _memory,
-                  composerCollapsed: composerCollapsed,
-                ),
-              ),
+  Widget _chatColumn(
+    LiveRoomController controller, {
+    bool composerCollapsed = false,
+    bool figuresBelowVideo = false,
+    bool pickersInVideo = false,
+  }) => ListenableSelector<bool>(
+    listenable: controller,
+    selector: () => controller.isArchive,
+    builder: (context, _, _) => Column(
+      children: [
+        _infoBar(controller, showFigures: !figuresBelowVideo, showPickers: !pickersInVideo),
+        const Divider(height: 1),
+        Expanded(
+          child: _withDetails(
+            controller,
+            ChatPanel(
+              controller: controller,
+              detailsOpen: _details,
+              memory: _memory,
+              composerCollapsed: composerCollapsed,
             ),
-          ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   Widget _buildInline(BuildContext context, LiveRoomController controller, _LayoutSettings settings) => LayoutBuilder(
     builder: (context, page) {
@@ -1704,9 +1715,19 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
             SizedBox(
               key: const ValueKey('live-play-video-box'),
               height: height,
-              child: _player(controller, settings, arrangement: ControlsArrangement.inline),
+              child: _player(
+                controller,
+                settings,
+                arrangement: ControlsArrangement.inline,
+                pickersInBar: settings.pickersInVideo,
+              ),
             ),
-            Expanded(child: _coveredByPanel(_chatColumn(controller), keyboard: keyboard)),
+            Expanded(
+              child: _coveredByPanel(
+                _chatColumn(controller, pickersInVideo: settings.pickersInVideo),
+                keyboard: keyboard,
+              ),
+            ),
           ],
         ),
         _panelUnderPicture(controller, top: height, keyboard: keyboard, key: const ValueKey('live-play-below-panel')),
@@ -1733,11 +1754,12 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
           settings,
           arrangement: ControlsArrangement.inline,
           covered: covered,
+          pickersInBar: settings.pickersInVideo,
           alignment: Alignment.topCenter,
         ),
         stop: _memory.panelStop,
         onStop: (stop) => _memory.panelStop = stop,
-        content: _chatColumn(controller, composerCollapsed: true),
+        content: _chatColumn(controller, composerCollapsed: true, pickersInVideo: settings.pickersInVideo),
         panels: _panelLayer(controller, portrait: true),
         keyboard: keyboard,
       );
@@ -1758,6 +1780,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       presentation: portrait ? PicturePresentation.ambient : PicturePresentation.plain,
       onTitle: _toggleDetails,
       pickersInBar: true,
+      replayActionsInBar: true,
     );
     return _withSidePanel(
       controller,
@@ -1795,12 +1818,12 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   /// 400), which folds away from the bottom bar or its edge handle and stays
   /// folded for the next room (change 7). The picture fills the area up to
   /// the split (A07.41); portrait streams take its full height over the
-  /// ambient background (U.2b change 13). The figures, the time on air and
-  /// the quality and line sit under the picture while the wide footer is on
-  /// (Settings.livePlayWideFooter, A07.44) and above the chat while it is
-  /// off, and with it off and the chat folded the pickers move to the bar.
-  /// Panels and the details cover the chat column, or come in from the right
-  /// while it is folded (change 8).
+  /// ambient background (U.2b change 13). The figures and the time on air sit
+  /// under the picture while the wide footer is on (Settings.livePlayWideFooter,
+  /// A07.44) and above the chat while it is off; the quality and line follow
+  /// Settings.livePlayPickersInVideo (A07.46), staying in the bar when the
+  /// chat is folded and the footer is off. Panels and the details cover the
+  /// chat column, or come in from the right while it is folded (change 8).
   Widget _wide(
     LiveRoomController controller,
     _LayoutSettings settings,
@@ -1825,10 +1848,14 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
         tooltip: i18n(collapsed ? 'live_play_show_chat' : 'live_play_hide_chat'),
         onPressed: () => _toggleChat(collapsed),
       ),
-      // Without the footer the figures belong to the chat column, so a
-      // folded chat would take the quality and the line off screen; the bar
-      // hosts them then, as on a phone held sideways (A07.17 c2).
-      pickersInBar: !settings.wideFooter && collapsed,
+      // A07.46: the pickers follow the setting; with it off and no footer, a
+      // folded chat would take them off screen, so the bar hosts them then,
+      // as on a phone held sideways (A07.17 c2).
+      pickersInBar: settings.pickersInVideo || (!settings.wideFooter && collapsed),
+      // The replay strip rides the chat column; the transport carries its
+      // actions when the column is folded (A07.44's condition while the
+      // pickers setting is off).
+      replayActionsInBar: collapsed && (settings.pickersInVideo || !settings.wideFooter),
     );
     final video = ColoredBox(
       color: OnVideoColors.ground,
@@ -1862,6 +1889,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
                         detailsOpen: _details,
                         onToggleDetails: _toggleDetails,
                         showTitle: false,
+                        showPickers: !settings.pickersInVideo,
                       ),
                     ),
                   ),
@@ -1887,7 +1915,11 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
                 decoration: BoxDecoration(
                   border: Border(left: BorderSide(color: scheme.outlineVariant)),
                 ),
-                child: _chatColumn(controller, figuresBelowVideo: settings.wideFooter),
+                child: _chatColumn(
+                  controller,
+                  figuresBelowVideo: settings.wideFooter,
+                  pickersInVideo: settings.pickersInVideo,
+                ),
               ),
             ),
           ),

@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "Su tablet e pieghevoli aperti la home usa la barra in basso invece della barra laterale",
     "enable_liquid_glass": "Vetro liquido",
     "enable_liquid_glass_subtitle": "La barra inferiore fluttua come vetro liquido che curva la pagina ai bordi; tieni premuto e trascina per cambiare. I telefoni con 4 GB o meno hanno una tinta semplice",
+    "enable_live_play_pickers_in_video": "Mantieni qualità e linea nell'immagine",
+    "enable_live_play_pickers_in_video_subtitle": "Mostra i selettori di qualità e linea nella barra del lettore anche fuori dallo schermo intero; disattivato li lascia sopra la chat",
     "enable_live_play_wide_footer": "Barra sotto il video",
     "enable_live_play_wide_footer_subtitle": "Nelle viste ampie mostra spettatori, tempo in onda e scelta di qualità e linea sotto il video; se disattivata torna sopra la chat",
     "enable_local_log": "Attiva il log locale",

@@ -553,11 +553,16 @@ abstract final class Settings {
   /// change 7; new in v4, remembered for the next room).
   static const livePlayChatCollapsed = BoolSetting('livePlayChatCollapsed', section: 'player', defaultValue: false);
 
-  /// Wide rooms keep the figures, the time on air and the quality and line
-  /// pickers under the picture rather than above the chat
-  /// (docs/A-界面设计/A07-直播间界面/A07.44-宽屏视频底栏开关, GitHub issue #180;
-  /// new in v4, the bar 5.6.3 shipped with).
+  /// Wide rooms keep the figures and the time on air under the picture
+  /// rather than above the chat (docs/A-界面设计/A07-直播间界面/A07.44-宽屏视频底栏开关,
+  /// GitHub issue #180; new in v4, the bar 5.6.3 shipped with). The quality
+  /// and line pickers follow [livePlayPickersInVideo].
   static const livePlayWideFooter = BoolSetting('livePlayWideFooter', section: 'player', defaultValue: true);
+
+  /// Keep the quality and line pickers in the player's control bar outside
+  /// the fullscreen too, rather than above the chat or in the wide footer
+  /// (docs/A-界面设计/A07-直播间界面/A07.46-画质线路移入画面开关; off by default).
+  static const livePlayPickersInVideo = BoolSetting('livePlayPickersInVideo', section: 'player', defaultValue: false);
 
   /// New (docs/A-界面设计/A07-直播间界面/A07.13-切换直播间面板/brief.md, docs/A-界面设计/A07-直播间界面/A07.13-切换直播间面板 c4; 3.x has no such
   /// setting): how the live room's "切换直播间" panel shows the rooms, kept
@@ -2172,6 +2177,7 @@ abstract final class Settings {
     portraitRoomOverrides,
     livePlayChatCollapsed,
     livePlayWideFooter,
+    livePlayPickersInVideo,
     roomSwitcherLayout,
     hideDanmaku,
     noEmojiMode,

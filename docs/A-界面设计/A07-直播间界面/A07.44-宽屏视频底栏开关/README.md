@@ -1,5 +1,7 @@
 # A07.44 宽屏视频底栏改为开关（接 A07.41）
 
+> A07.46 之后，画质和线路由新设置 `livePlayPickersInVideo` 控制宿主；本任务的底栏只管人数和时长。
+
 5.6.3（A07.41，`bd781917`）按 issue #180 做了两件事：宽屏的分栏边界修复和横屏设备的视频下方底栏。第二件是硬编码的——只要不是回放就画底栏，弹幕窗上方的信息条只剩标题。用户随后要求这一项可配置：既可以保留底栏，也可以没有底栏，人数、时长、画质、线路回到之前在弹幕窗口上方的位置（3.x 和 5.6.2 的老位置）。
 
 现状（`apps/pure_live/lib/features/live_play/live_play_page.dart`）：`_wide` 把 `picture` 组成 `Column[Expanded(video), 底栏]`，底栏是 `Material(key: 'live-play-wide-footer')` 包一个 `showTitle: false` 的 `RoomInfoBar`，聊天栏则用 `_chatColumn(..., figuresBelowVideo: true)` 关掉自己那份人数行。`RoomInfoBar` 的 `showTitle`/`showFigures`（`layout/room_info_bar.dart:36-37`）本来就是为分工设计的，所以界面组件不用改，只需要把这个选择接到设置上。
