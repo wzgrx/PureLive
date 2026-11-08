@@ -430,9 +430,10 @@ void main() {
       engine.emit(const EngineBuffering(buffering: true));
       async.elapse(const Duration(seconds: 21));
       expect(engine.opens, hasLength(1));
-      engine.emit(const EnginePosition(Duration(seconds: 300)));
-      engine.playing();
-      engine.emit(const EngineBuffering(buffering: true));
+      engine
+        ..emit(const EnginePosition(Duration(seconds: 300)))
+        ..playing()
+        ..emit(const EngineBuffering(buffering: true));
       async.elapse(const Duration(seconds: 13));
       expect(engine.opens.last.uri.host, 'b.example');
       unawaited(session.dispose());
