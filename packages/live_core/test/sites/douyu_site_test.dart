@@ -589,7 +589,7 @@ void main() {
       final resolution = await setup.site.resolvePlayUrls(detail: room, quality: qualities.first);
       expect(resolution.appliedQualityData, 4);
       expect(resolution.qualityUnconfirmed, isFalse);
-      expect(resolution.lines.map((line) => line.lineId), ['hw-h5', 'hs-h5']);
+      expect(resolution.lines.map((line) => line.lineId), ['hw-h5_0', 'hs-h5_0']);
       expect(_count(setup.http, _encryption), 1, reason: 'the descriptor is reused');
       final plays = setup.http.requests.where((request) => request.url.path == _play).skip(1).toList();
       expect(plays.map((request) => _form(request)['cdn']), ['hw-h5', 'hs-h5']);
@@ -615,7 +615,7 @@ void main() {
       final setup = _setup(['S06-encryption', 'S09-24422-r0-hs-h5']);
       final quality = _quality(0, ['hw-h5', 'hs-h5']);
       final resolution = await setup.site.resolvePlayUrlAtRaw(detail: _room('24422'), quality: quality, lineIndex: 1);
-      expect(resolution.lines.single.lineId, 'hs-h5');
+      expect(resolution.lines.single.lineId, 'hs-h5_0');
       expect(resolution.appliedQualityData, 4);
       expect(_paths(setup.http), [_encryption, _play]);
       final beyond = await setup.site.resolvePlayUrlAtRaw(detail: _room('24422'), quality: quality, lineIndex: 2);
@@ -630,7 +630,7 @@ void main() {
         detail: _room('24422'),
         quality: _quality(0, ['expired']),
       );
-      expect(resolution.lines.map((line) => line.lineId), ['hw-h5', 'hs-h5']);
+      expect(resolution.lines.map((line) => line.lineId), ['hw-h5_0', 'hs-h5_0']);
       final forms = [for (final request in setup.http.requests.where((r) => r.url.path == _play)) _form(request)];
       expect(forms.map((form) => form['cdn']), ['', 'hw-h5', 'hs-h5']);
       expect(forms.every((form) => form['cdn'] != 'expired'), isTrue);
