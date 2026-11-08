@@ -190,6 +190,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       onRefresh: () async => await _controller?.load(preservePause: true),
       siteOf: ref.read(sitesProvider).maybeOf,
       maySwitch: () =>
+          !_rotation.active &&
           mounted &&
           _controller?.sleepDeadline == null &&
           !(_controller?.sleepTimerFinished ?? false) &&
@@ -271,13 +272,14 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
         !_superChatPanel &&
         (ModalRoute.isCurrentOf(context) ?? true) &&
         controller != null &&
-        controller.stage == RoomStage.playing &&
         !controller.isArchive &&
         !controller.switching &&
         !controller.switchingLine &&
         controller.sleepDeadline == null &&
         !controller.sleepTimerFinished &&
-        controller.session.state.status == PlaybackStatus.playing;
+        (controller.stage == RoomStage.playing && controller.session.state.status == PlaybackStatus.playing ||
+            controller.stage == RoomStage.offline && controller.room.isExplicitlyOfflineNow ||
+            controller.stage == RoomStage.unplayable);
   }
 
   List<LiveRoom> _availableQueue(List<LiveRoom> rooms) {

@@ -1655,10 +1655,12 @@ void main() {
     await _close(tester, services);
   });
 
-  testWidgets('TV saved room rotation starts from the remote settings and advances one room', (tester) async {
-    final services = await _pumpApp(tester);
+  testWidgets('TV saved room rotation starts from the remote settings and advances past a room that is offline', (
+    tester,
+  ) async {
+    final services = await _pumpApp(tester, offline: {2});
     await tester.runAsync(() async {
-      for (final id in ['1', '2']) {
+      for (final id in ['1', '2', '3']) {
         await services.store.savedRoomQueue.add(LiveRoom(platform: SiteIds.bilibili, roomId: id, nick: '频道$id'));
       }
     });
@@ -1689,6 +1691,10 @@ void main() {
     await tester.pump(const Duration(seconds: 6));
     await _settle(tester, rounds: 10);
     expect(room.controller!.room.roomId, '2');
+    expect(room.controller!.stage, RoomStage.offline);
+    await tester.pump(const Duration(seconds: 6));
+    await _settle(tester, rounds: 10);
+    expect(room.controller!.room.roomId, '3');
     expect(room.controller!.stage, RoomStage.playing);
     await _close(tester, services);
   });

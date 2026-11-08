@@ -1180,7 +1180,7 @@ void main() {
         0: const TarsStruct({1: ' nick ', 2: '//a.msstatic.com/f.jpg'}),
         1: text,
         4: total,
-        if (countdown != null) 5: countdown,
+        5: ?countdown,
         9: id,
         12: 1200,
       });

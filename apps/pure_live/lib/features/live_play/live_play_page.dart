@@ -304,6 +304,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       onRefresh: () async => await _controller?.load(preservePause: true),
       siteOf: ref.read(sitesProvider).maybeOf,
       maySwitch: () =>
+          !_rotation.active &&
           mounted &&
           !(_controller?.isArchive ?? false) &&
           _controller?.sleepDeadline == null &&
@@ -541,12 +542,13 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
         (ModalRoute.isCurrentOf(context) ?? true) &&
         controller != null &&
         !controller.isArchive &&
-        controller.stage == RoomStage.playing &&
         !controller.switching &&
         !controller.switchingLine &&
         controller.sleepDeadline == null &&
         !controller.sleepTimerFinished &&
-        controller.session.state.status == PlaybackStatus.playing;
+        (controller.stage == RoomStage.playing && controller.session.state.status == PlaybackStatus.playing ||
+            controller.stage == RoomStage.offline && controller.room.isExplicitlyOfflineNow ||
+            controller.stage == RoomStage.unplayable);
   }
 
   void _startRoomRotation(List<LiveRoom> rooms, RoomRotationOptions options) {
