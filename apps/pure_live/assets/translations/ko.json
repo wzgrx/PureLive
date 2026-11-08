@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "태블릿이나 펼친 폴더블에서도 홈 화면에 사이드 레일 대신 하단 바를 사용합니다",
     "enable_liquid_glass": "리퀴드 글래스",
     "enable_liquid_glass_subtitle": "하단 바가 리퀴드 글래스처럼 떠서 가장자리에서 페이지를 굴절시킵니다. 길게 눌러 끌면 전환됩니다. 메모리 4GB 이하 휴대폰은 단색으로 표시됩니다",
+    "enable_live_play_wide_footer": "영상 아래 바",
+    "enable_live_play_wide_footer_subtitle": "와이드 화면에서는 시청자 수, 방송 시간, 화질과 회선을 영상 아래에 표시합니다. 끄면 채팅창 위로 돌아갑니다",
     "enable_local_log": "로컬 로그 사용",
     "enable_player_proxy": "플레이어 프록시 사용",
     "enable_player_proxy_desc": "media_kit / mpv 커널이 라이브 영상을 가져올 때의 네트워크 설정을 제어합니다",

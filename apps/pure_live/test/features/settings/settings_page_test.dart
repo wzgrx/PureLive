@@ -145,6 +145,22 @@ void main() {
       await settleSettings(tester);
       expect(find.byKey(const ValueKey('settings-overview')), findsOneWidget);
 
+      // Which half of the recorder's "已占用" row cannot finish, and over what
+      // (S01.3): both awaits are bounded, so a stall says so instead of
+      // hanging the test.
+      final probe = await tester.runAsync(() async {
+        try {
+          final storage = h.services.recording!.storage;
+          final root = await storage.recordDirectory().timeout(const Duration(seconds: 3));
+          final entries = await root
+              .list(recursive: true, followLinks: false)
+              .length
+              .timeout(const Duration(seconds: 3));
+          return '${root.path}, $entries entries';
+        } on Object {
+          return 'not resolved';
+        }
+      });
       for (final (section, pageType) in [
         (SettingsSection.iptv, IptvPage),
         (SettingsSection.recording, RecordSettingsPage),
@@ -156,9 +172,13 @@ void main() {
         await tester.pump();
         expect(h.opened, isEmpty);
         expect(find.byType(pageType), findsOneWidget);
-        await settleSettingsFiles(tester);
+        final service = h.services.recording == null ? 'none' : 'there';
+        await settleSettingsFiles(
+          tester,
+          where: '${section.name} opened, recording service: $service, storage: $probe',
+        );
         await tester.binding.handlePopRoute();
-        await settleSettingsFiles(tester);
+        await settleSettingsFiles(tester, where: '${section.name} back');
         expect(find.byKey(const ValueKey('settings-overview')), findsOneWidget);
       }
     });

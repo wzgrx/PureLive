@@ -519,6 +519,91 @@ void main() {
       await captureQaFrame(tester, 'issue180-wide-short');
       await _close(tester, room);
     });
+    testWidgets('A07.44: the footer off puts the figures back above the chat', (tester) async {
+      final room = await _pump(
+        tester,
+        width: 1600,
+        height: 500,
+        platform: TargetPlatform.windows,
+        settings: {Settings.livePlayWideFooter: false},
+      );
+      final chat = tester.getRect(_key('live-play-chat-box'));
+      expect(_key('live-play-wide-footer'), findsNothing);
+      expect(
+        tester.getRect(_key('live-play-chat-handle')).right,
+        closeTo(chat.left, 0.1),
+        reason: '#180 one: the handle still snaps to the split',
+      );
+      expect(find.descendant(of: _key('live-play-chat-box'), matching: _key('live-play-audience-row')), findsOneWidget);
+      expect(find.descendant(of: _key('live-play-chat-box'), matching: find.byType(StreamPickers)), findsOneWidget);
+      expect(_key('live-play-audience-row'), findsOneWidget, reason: 'never two hosts');
+      expect(
+        tester.getRect(find.byType(RoomPlayer)).bottom,
+        closeTo(tester.getRect(_key('live-play-desktop-split')).bottom, 0.1),
+        reason: 'the picture takes what the bar used to hold',
+      );
+      await captureQaFrame(tester, 'issue180-footer-off');
+      await _close(tester, room);
+    });
+    testWidgets('A07.44: iPad with the footer off keeps the title and the figures above the chat', (tester) async {
+      final room = await _pump(
+        tester,
+        width: 1180,
+        height: 820,
+        platform: TargetPlatform.iOS,
+        settings: {Settings.livePlayWideFooter: false},
+      );
+      expect(_key('live-play-wide-footer'), findsNothing);
+      expect(find.descendant(of: _key('live-play-chat-box'), matching: _key('live-play-info')), findsOneWidget);
+      expect(
+        find.descendant(of: _key('live-play-chat-box'), matching: _key('live-play-audience-row')),
+        findsOneWidget,
+        reason: 'the 3.x place, as on a phone',
+      );
+      await _close(tester, room);
+    });
+    testWidgets('A07.44: with no footer a folded chat keeps quality and line in the bar', (tester) async {
+      final room = await _pump(
+        tester,
+        width: 1280,
+        height: 800,
+        platform: TargetPlatform.windows,
+        settings: {Settings.livePlayWideFooter: false, Settings.livePlayChatCollapsed: true},
+      );
+      expect(tester.getSize(_key('live-play-chat-box')).width, 0);
+      expect(
+        find.descendant(of: find.byType(RoomPlayer), matching: _key('live-play-quality')),
+        findsOneWidget,
+        reason: 'the folded column would hide them',
+      );
+      await _close(tester, room);
+      final kept = await _pump(
+        tester,
+        width: 1280,
+        height: 800,
+        platform: TargetPlatform.windows,
+        settings: {Settings.livePlayChatCollapsed: true},
+      );
+      expect(
+        find.descendant(of: find.byType(RoomPlayer), matching: _key('live-play-quality')),
+        findsNothing,
+        reason: 'the footer hosts them',
+      );
+      await _close(tester, kept);
+    });
+    testWidgets('A07.44: flipping the setting moves the figures without reopening the room', (tester) async {
+      final room = await _pump(tester, width: 1280, height: 800, platform: TargetPlatform.windows);
+      expect(_key('live-play-wide-footer'), findsOneWidget);
+      await tester.runAsync(() => room.services.store.settings.set(Settings.livePlayWideFooter, false));
+      await _settle(tester);
+      expect(_key('live-play-wide-footer'), findsNothing);
+      expect(
+        find.descendant(of: _key('live-play-chat-box'), matching: _key('live-play-audience-row')),
+        findsOneWidget,
+        reason: 'the page reads the setting, so a rebuild is enough',
+      );
+      await _close(tester, room);
+    });
     testWidgets('840 and wider: the chat column (34 %, 300-400) with the strip; a 16:9 frame; Windows bar', (
       tester,
     ) async {
@@ -1001,6 +1086,22 @@ void main() {
       final footer = tester.getRect(_key('live-play-wide-footer'));
       expect(player.height + footer.height, 744);
       expect(player.bottom, footer.top);
+      expect(_key('ambient-backdrop'), findsOneWidget);
+      await _close(tester, room);
+    });
+
+    testWidgets('wide A07.44: a portrait stream with the footer off takes the whole height', (tester) async {
+      final room = await _pump(
+        tester,
+        width: 1280,
+        height: 800,
+        portrait: true,
+        platform: TargetPlatform.windows,
+        settings: {Settings.livePlayWideFooter: false},
+      );
+      expect(_key('live-play-video-frame'), findsNothing);
+      expect(_key('live-play-wide-footer'), findsNothing);
+      expect(tester.getRect(find.byType(RoomPlayer)).height, 744, reason: 'the bar took 24 of it');
       expect(_key('ambient-backdrop'), findsOneWidget);
       await _close(tester, room);
     });

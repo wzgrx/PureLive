@@ -136,6 +136,7 @@ typedef _LayoutSettings = ({
   String mode,
   String policy,
   bool collapsed,
+  bool wideFooter,
   bool swipe,
 });
 
@@ -747,6 +748,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     mode: ref.read(storeProvider).settings.get(Settings.portraitLayoutMode),
     policy: ref.read(storeProvider).settings.get(Settings.portraitFullscreenPolicy),
     collapsed: ref.read(storeProvider).settings.get(Settings.livePlayChatCollapsed),
+    wideFooter: ref.read(storeProvider).settings.get(Settings.livePlayWideFooter),
     swipe: ref.read(storeProvider).settings.get(Settings.portraitFullscreenSwipeSwitch),
   );
 
@@ -1027,6 +1029,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       mode: watchSetting(ref, Settings.portraitLayoutMode),
       policy: watchSetting(ref, Settings.portraitFullscreenPolicy),
       collapsed: watchSetting(ref, Settings.livePlayChatCollapsed),
+      wideFooter: watchSetting(ref, Settings.livePlayWideFooter),
       swipe: watchSetting(ref, Settings.portraitFullscreenSwipeSwitch),
     );
     return RoomMiniScope(
@@ -1790,11 +1793,14 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
 
   /// 840 and wider (U.2d): the picture beside the chat column (34 %, 300 to
   /// 400), which folds away from the bottom bar or its edge handle and stays
-  /// folded for the next room (change 7). Landscape streams sit in a 16:9
-  /// frame in the middle of the picture area (3.x `LivePlayVideoFrame`);
-  /// portrait ones take its full height over the ambient background (U.2b
-  /// change 13). Panels and the details cover the chat column, or come in
-  /// from the right while it is folded (change 8).
+  /// folded for the next room (change 7). The picture fills the area up to
+  /// the split (A07.41); portrait streams take its full height over the
+  /// ambient background (U.2b change 13). The figures, the time on air and
+  /// the quality and line sit under the picture while the wide footer is on
+  /// (Settings.livePlayWideFooter, A07.44) and above the chat while it is
+  /// off, and with it off and the chat folded the pickers move to the bar.
+  /// Panels and the details cover the chat column, or come in from the right
+  /// while it is folded (change 8).
   Widget _wide(
     LiveRoomController controller,
     _LayoutSettings settings,
@@ -1819,6 +1825,10 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
         tooltip: i18n(collapsed ? 'live_play_show_chat' : 'live_play_hide_chat'),
         onPressed: () => _toggleChat(collapsed),
       ),
+      // Without the footer the figures belong to the chat column, so a
+      // folded chat would take the quality and the line off screen; the bar
+      // hosts them then, as on a phone held sideways (A07.17 c2).
+      pickersInBar: !settings.wideFooter && collapsed,
     );
     final video = ColoredBox(
       color: OnVideoColors.ground,
@@ -1830,27 +1840,32 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     final picture = Column(
       children: [
         Expanded(child: video),
-        ListenableSelector<bool>(
-          listenable: controller,
-          selector: () => controller.isArchive,
-          builder: (context, archive, _) => archive
-              ? const SizedBox.shrink()
-              : Material(
-                  key: const ValueKey('live-play-wide-footer'),
-                  color: Theme.of(context).colorScheme.surface,
-                  child: SafeArea(
-                    top: false,
-                    left: false,
-                    right: false,
-                    child: RoomInfoBar(
-                      controller: controller,
-                      detailsOpen: _details,
-                      onToggleDetails: _toggleDetails,
-                      showTitle: false,
+        // The figures and the pickers sit under the picture while the
+        // setting is on (A07.44); with it off they stay above the chat. A
+        // replay room never takes the bar: its strip belongs to the chat
+        // column, so the archive listener stays.
+        if (settings.wideFooter)
+          ListenableSelector<bool>(
+            listenable: controller,
+            selector: () => controller.isArchive,
+            builder: (context, archive, _) => archive
+                ? const SizedBox.shrink()
+                : Material(
+                    key: const ValueKey('live-play-wide-footer'),
+                    color: Theme.of(context).colorScheme.surface,
+                    child: SafeArea(
+                      top: false,
+                      left: false,
+                      right: false,
+                      child: RoomInfoBar(
+                        controller: controller,
+                        detailsOpen: _details,
+                        onToggleDetails: _toggleDetails,
+                        showTitle: false,
+                      ),
                     ),
                   ),
-                ),
-        ),
+          ),
       ],
     );
     final scheme = Theme.of(context).colorScheme;
@@ -1872,7 +1887,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
                 decoration: BoxDecoration(
                   border: Border(left: BorderSide(color: scheme.outlineVariant)),
                 ),
-                child: _chatColumn(controller, figuresBelowVideo: true),
+                child: _chatColumn(controller, figuresBelowVideo: settings.wideFooter),
               ),
             ),
           ),

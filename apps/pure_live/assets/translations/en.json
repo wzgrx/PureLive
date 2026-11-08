@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "On a tablet or unfolded foldable, the home page keeps the phone's bottom bar instead of the side rail",
     "enable_liquid_glass": "Liquid glass",
     "enable_liquid_glass_subtitle": "The bottom bar floats as liquid glass that bends the page at its edges; hold and drag to switch. Phones with 4 GB or less get a plain tint",
+    "enable_live_play_wide_footer": "Bar under the video",
+    "enable_live_play_wide_footer_subtitle": "Wide rooms put the audience, the time on air and the quality and line pickers under the picture; off returns them above the chat",
     "enable_local_log": "Enable Local Log",
     "enable_player_proxy": "Enable Player Proxy",
     "enable_player_proxy_desc": "Controls network settings when media_kit / mpv kernel fetches live stream video feeds",

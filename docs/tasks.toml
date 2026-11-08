@@ -8323,3 +8323,37 @@ from = "GitHub #202及本轮新issue一并解决要求"
 date = "2026-11-05"
 commit = "e10e50f4f7c6be46fbc9e475235e91acbef62c7e"
 note = "5.6.4正式交付；源门禁、同源包/公开下载及分层原生验证通过，原设备边界保留。"
+
+[[task]]
+id = "A07.44"
+title = "宽屏视频底栏改为开关（接 A07.41）"
+type = "界面"
+status = "开发中"
+size = "小"
+tier = 1
+from = "用户要求把 #180 加的视频下方底栏改成可配置：可以不要底栏，人数等回到之前的弹幕窗口上方"
+note = "新设置 livePlayWideFooter（播放 → 播放行为设置，默认开＝5.6.3 的视频下方底栏；关＝无底栏，人数、时长和画质线路回到弹幕窗上方，即 3.x 的位置）。#180 第二项的分栏边界修复（SizedBox.expand）不受开关影响。关掉且折叠聊天栏时画质/线路挪进播放器控制条（沿用 pickersInBar），人数和时长仍在被折叠的聊天栏里，是已知代价。RoomInfoBar 的 showTitle/showFigures 已能表达两种形态，未改。测试：live_play_layouts_test 新增 6 例（宽扁、iPad、折叠、即时生效、竖屏）。本轮按用户指示未跑门禁，验证待 GitHub Actions 侧"
+
+[[task]]
+id = "V02.89"
+title = "issue #180 的底栏想要能关掉（回到弹幕窗口上方）"
+type = "界面"
+status = "开发中"
+size = "小"
+tier = 1
+stages = ["复现与根因", "实现和回归", "原生验证与发布"]
+done = 2
+from = "https://github.com/wzgrx/PureLive/issues/180"
+to = ["A07.44"]
+note = "5.6.3 交付后用户追加：底栏要能配置，也可以没有。按 A07.44 实现，默认保持开启，不影响已提 issue 的用户；关掉后为 3.x 的老位置。真机项待验"
+
+[[task]]
+id = "S01.3"
+title = "CI 上设置页总览卡在录制页"
+type = "验证"
+status = "完成"
+date = "2026-11-06"
+size = "小"
+tier = 2
+from = "GitHub Actions 的 Test workflow：settings_page_test 的 overview 回退链在 settleSettingsFiles 失败，两次同一处"
+note = "两件事。一是设置页总览：诊断信息（新增的 where、转圈数、待画帧、途经 ValueKey 与该行文字）把它定位到 record-used-space 行的 busy；同一轮还在 runAsync 窗口里给 recordDirectory() 与递归 list 各加了 3 秒上限的探测。此后 Targeted tests 与 Full gate 的 apps/pure_live 全量都连续绿，但「探测顺带推进了事件循环」这一可能没被排除，等待逻辑本身没有放宽，若日后重现，storage: 字段会直接给出目录与条目数。二是 CI 环境缺口：live_player 的原生测试之所以红，是 media_kit build hook 放进 build/native_assets/linux 的 libmpv.so.2 缺系统依赖，按 ldd 报告的名单补齐（libva-drm、libva-x11、libva-wayland、libvdpau、libXv 等，逐个安装以容忍 t64 改名），并把基于错判的 $HOME libmpv 下载步骤撤掉。run 42200886546 为 gate: passed (all, 14 members)"

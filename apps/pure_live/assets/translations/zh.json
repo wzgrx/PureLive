@@ -679,6 +679,8 @@
     "enable_home_bottom_bar_wide_subtitle": "宽屏（平板、展开的折叠屏）首页也用手机的底栏，不用侧栏",
     "enable_liquid_glass": "液体玻璃",
     "enable_liquid_glass_subtitle": "底栏悬浮成液态玻璃，边缘折射，选中项可按住拖动；内存 4 GB 及以下只半透明",
+    "enable_live_play_wide_footer": "视频下方的底栏",
+    "enable_live_play_wide_footer_subtitle": "宽屏直播间的视频下方显示人数、时长和画质线路；关掉后回到聊天栏上方",
     "enable_local_log": "启用本地日志",
     "enable_player_proxy": "启用播放代理",
     "enable_player_proxy_desc": "控制 media_kit / mpv 播放器内核拉取直播源视频流时的网络设置",
