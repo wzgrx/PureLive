@@ -28,7 +28,8 @@ class RoomReplayTransport extends StatefulWidget {
   /// Existing room owner.
   final LiveRoomController controller;
 
-  /// Fullscreen/wide layouts have a compact extra tool row.
+  /// Fullscreen or a layout whose replay strip is out of reach: a compact
+  /// extra tool row.
   final bool immersive;
 
   /// Uses the original control-layer hide policy.
@@ -211,11 +212,15 @@ class RoomReplayActions extends StatelessWidget {
 
 /// Replaces the live audience figures with truthful replay metadata.
 class RoomReplayInfo extends StatelessWidget {
-  /// Uses the existing quality/line pickers.
-  const new({required this.controller, super.key});
+  /// Uses the existing quality/line pickers while [showPickers].
+  const new({required this.controller, this.showPickers = true, super.key});
 
   /// Existing room owner.
   final LiveRoomController controller;
+
+  /// Whether this strip owns the quality and line pickers (A07.46 puts them
+  /// in the player's control bar instead).
+  final bool showPickers;
   @override
   Widget build(BuildContext context) =>
       ListenableBuilder(listenable: controller, builder: (context, _) => _content(context));
@@ -235,7 +240,7 @@ class RoomReplayInfo extends StatelessWidget {
               child: Text(controller.archiveTitle, style: context.textStyles.t14),
             ),
             RoomReplayActions(controller: controller),
-            StreamPickers(controller: controller),
+            if (showPickers) StreamPickers(controller: controller),
           ],
         ),
       );
@@ -272,7 +277,7 @@ class RoomReplayInfo extends StatelessWidget {
             child: Row(
               children: [
                 RoomReplayActions(controller: controller),
-                StreamPickers(controller: controller),
+                if (showPickers) StreamPickers(controller: controller),
               ],
             ),
           ),

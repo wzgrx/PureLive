@@ -8411,6 +8411,18 @@ commit = "ed0e4e2daad3ee69b81576bf9a19af414fa3c8de"
 note = "5.6.5 正式交付；发布与组件验证已记录，继续保留原设备或其他未解决范围。"
 
 [[task]]
+id = "A07.46"
+title = "画质线路移入画面开关（接 A07.44）"
+type = "界面"
+status = "开发中"
+size = "小"
+tier = 1
+from = "用户要求：非全屏时也把原画和线路放进画面，并增加设置控制，默认关"
+branch = "ai/A07.46-pickers-in-video"
+next = "GitHub Actions test.yml（Test）全量门禁通过后合并审查"
+note = "新设置 livePlayPickersInVideo（播放 → 视频 → 播放行为设置，默认关）。关闭时维持现状：手机/竖屏流在弹幕栏上方、宽屏底栏或上方、手机横屏和全屏在控制条。开启后所有 inline 直播布局由播放器下栏承载画质线路，信息条、宽屏底栏、回放信息条只剩人数/时长/回放操作。回放传输条的 immersive 改由 replayActionsInBar 明确表达，避免宽屏展开聊天栏时回放操作重复。窄屏控制条沿用横向滚动，方向按钮可能需要滑出后再点。"
+
+[[task]]
 id = "E01.14"
 title = "关注列表已知身份批量刷新"
 type = "平台"
