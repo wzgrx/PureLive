@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:live_core/live_core.dart';
 import 'package:live_net/live_net.dart';
@@ -37,16 +39,16 @@ final class ChzzkArchiveVideo implements ArchiveVideo {
   final Duration duration;
 }
 
-/// A recording's single playable HLS part.
+/// A recording's single playable part.
 final class ChzzkArchivePart implements ArchiveVideo {
   /// Builds one playable part.
-  const new(this.recording, this.quality);
+  const new(this.recording, this.qualities);
 
   /// Recording metadata.
   final ChzzkArchiveVideo recording;
 
-  /// The server's adaptive playlist.
-  final ChzzkArchiveQuality quality;
+  /// The server's available quality choices.
+  final List<ChzzkArchiveQuality> qualities;
   @override
   String get id => '${recording.id}:1';
   @override
@@ -55,17 +57,20 @@ final class ChzzkArchivePart implements ArchiveVideo {
   Duration get duration => recording.duration;
 }
 
-/// An adaptive HLS playlist; no quality names are guessed from URL text.
+/// A public, seekable media URL discovered for this recording.
 final class ChzzkArchiveQuality implements ArchiveQuality {
   /// Creates a quality from a validated HTTPS URL.
-  const new(this.url);
+  const new(this.url, {this.id = 'auto', this.label = 'Auto', this.format = StreamFormat.hls});
 
-  /// Ephemeral playlist URL.
+  /// Ephemeral media URL.
   final String url;
   @override
-  String get id => 'auto';
+  final String id;
   @override
-  String get label => 'Auto';
+  final String label;
+
+  /// Distinguishes a playlist from a progressive muxed MP4.
+  final StreamFormat format;
   @override
   bool get playable => true;
 }
@@ -84,7 +89,7 @@ final class ChzzkArchiveApi {
   static final _id = RegExp(r'^[1-9][0-9]{0,18}$');
 
   /// Public media request headers.
-  static const headers = ChzzkApi.headers;
+  static const Map<String, String> headers = ChzzkApi.headers;
 
   /// A channel id or official channel/live/videos URL.
   static String? channelFromText(String text) {
@@ -189,21 +194,105 @@ final class ChzzkArchiveApi {
     );
   }
 
-  /// Resolves only the platform's public HLS replay; no age/paid bypass.
+  /// Resolves public HLS or a finished recording's muxed MP4 representations.
   Future<List<ChzzkArchivePart>> detail(String id, {CancelToken? cancel}) async {
     if (!_id.hasMatch(id)) throw const FormatException('Invalid replay id');
-    return parseDetail(await _get('/service/v3/videos/$id', cancel), id: id);
+    final row = await _get('/service/v3/videos/$id', cancel);
+    final recording = _publicRecording(row, id);
+    final hls = _playlist(row);
+    if (hls != null) {
+      return [
+        ChzzkArchivePart(recording, [hls]),
+      ];
+    }
+    final vodId = jsonString(row['videoId']);
+    final key = jsonString(row['inKey']);
+    if (row['vodStatus'] != 'ABR_HLS' ||
+        vodId == null ||
+        !_vodId.hasMatch(vodId) ||
+        key == null ||
+        key.isEmpty ||
+        key.length > 2048) {
+      throw const StreamUnavailable('chzzk', 'Public replay is still processing');
+    }
+    final url = Uri.https('apis.naver.com', '/neonplayer/vodplay/v1/playback/$vodId', {
+      'key': key,
+      'env': 'real',
+      'lc': 'en_US',
+      'cpl': 'en_US',
+    });
+    final manifest = await _readManifest(url, cancel);
+    return parseProgressive(recording, manifest);
   }
 
-  /// Accepts only permitted HLS paths, including currently converting replays
-  /// when the service still supplies a public rewind playlist.
-  static List<ChzzkArchivePart> parseDetail(Map<Object?, Object?> row, {required String id}) {
+  static final _vodId = RegExp(r'^[A-Za-z0-9_-]{16,128}$');
+  static const int _maxManifestBytes = 2 * 1024 * 1024;
+
+  Future<Object?> _readManifest(Uri url, CancelToken? cancel) async {
+    final owned = CancelToken();
+    if (cancel != null) {
+      if (cancel.isCancelled) owned.cancel();
+      unawaited(cancel.whenCancelled.then((_) => owned.cancel()));
+    }
+    Future<Object?> read() async {
+      final reply = await http.open(
+        LiveRequest.get(
+          site: 'chzzk',
+          url: url,
+          headers: const {...ChzzkApi.mediaHeaders, 'accept': 'application/json'},
+          timeout: const Duration(seconds: 12),
+          cancel: owned,
+        ),
+      );
+      if (!reply.isSuccess ||
+          reply.url.scheme != 'https' ||
+          reply.url.host != url.host ||
+          (reply.contentLength ?? 0) > _maxManifestBytes) {
+        await reply.discard();
+        throw const StreamUnavailable('chzzk', 'Public media manifest unavailable');
+      }
+      final bytes = BytesBuilder(copy: false);
+      await for (final chunk in reply.body) {
+        if (bytes.length + chunk.length > _maxManifestBytes) {
+          throw const ApiChanged('chzzk', 'Media manifest too large');
+        }
+        bytes.add(chunk);
+      }
+      try {
+        return jsonDecode(utf8.decode(bytes.takeBytes()));
+      } on FormatException {
+        throw const ApiChanged('chzzk', 'Invalid media manifest');
+      }
+    }
+
+    try {
+      return await read().timeout(const Duration(seconds: 14));
+    } finally {
+      owned.cancel();
+    }
+  }
+
+  static ChzzkArchiveVideo _publicRecording(Map<Object?, Object?> row, String id) {
     final recording = _video(row, requireExposure: true);
     if (recording == null) throw const StreamUnavailable('chzzk', 'Replay is not public');
     if (recording.id != id) throw const ApiChanged('chzzk', 'Replay identity');
+    return recording;
+  }
+
+  /// Accepts permitted HLS when the platform supplies a public rewind playlist.
+  static List<ChzzkArchivePart> parseDetail(Map<Object?, Object?> row, {required String id}) {
+    final recording = _publicRecording(row, id);
+    final q = _playlist(row);
+    if (q == null) throw const StreamUnavailable('chzzk', 'No permitted public HLS playlist');
+    return [
+      ChzzkArchivePart(recording, [q]),
+    ];
+  }
+
+  static ChzzkArchiveQuality? _playlist(Map<Object?, Object?> row) {
     final raw = row['liveRewindPlaybackJson'];
     if (raw is! String || raw.length > 262144) {
-      throw const StreamUnavailable('chzzk', 'No public HLS replay');
+      return null;
     }
     final json = jsonDecode(raw);
     final media = json is Map ? json['media'] : null;
@@ -225,8 +314,64 @@ final class ChzzkArchiveApi {
           ].any((d) => uri.host == d || uri.host.endsWith('.$d'))) {
         continue;
       }
-      return [ChzzkArchivePart(recording, ChzzkArchiveQuality(uri.toString()))];
+      return ChzzkArchiveQuality(uri.toString());
     }
-    throw const StreamUnavailable('chzzk', 'No permitted public HLS playlist');
+    return null;
+  }
+
+  /// Accepts only whole-file H.264/AAC MP4 representations of one static period.
+  /// DASH segments, audio-only tracks and encrypted sources are left untouched.
+  static List<ChzzkArchivePart> parseProgressive(ChzzkArchiveVideo recording, Object? manifest) {
+    if (manifest is! Map || jsonString(manifest['type'])?.toLowerCase() != 'static' || manifest['period'] is! List) {
+      throw const ApiChanged('chzzk', 'Unexpected media manifest');
+    }
+    final periods = manifest['period'] as List;
+    if (periods.length != 1 || periods.single is! Map) {
+      throw const StreamUnavailable('chzzk', 'Unsupported recording period layout');
+    }
+    final period = periods.single as Map;
+    final adaptations = period['adaptationSet'];
+    if (adaptations is! List || adaptations.length > 16) throw const ApiChanged('chzzk', 'Unexpected media tracks');
+    bool segmentedOrProtected(Map<Object?, Object?> row) =>
+        ['segmentTemplate', 'segmentList', 'segmentBase'].any((name) => row[name] != null) ||
+        (row['contentProtection'] != null &&
+            (row['contentProtection'] is! List || (row['contentProtection']! as List).isNotEmpty));
+    final found = <int, ChzzkArchiveQuality>{};
+    if (!segmentedOrProtected(period)) {
+      for (final track in adaptations) {
+        if (track is! Map || segmentedOrProtected(track)) continue;
+        final variants = track['representation'];
+        if (variants is! List || variants.length > 24) continue;
+        for (final v in variants) {
+          if (v is! Map || segmentedOrProtected(v) || (v['mimeType'] ?? track['mimeType']) != 'video/mp4') continue;
+          final codecs = (jsonString(v['codecs'] ?? track['codecs']) ?? '').split(',').map((c) => c.trim());
+          if (!codecs.any((c) => c.startsWith('avc1.')) || !codecs.any((c) => c.startsWith('mp4a.'))) continue;
+          final h = jsonInt(v['height'] ?? track['height']);
+          if (h == null || h < 100 || h > 4320 || found.containsKey(h)) continue;
+          final sources = v['baseURL'];
+          if (sources is! List || sources.length > 8) continue;
+          for (final source in sources) {
+            if (source is! Map) continue;
+            final raw = jsonString(source['value']);
+            final uri = raw == null || raw.length > 8192 ? null : Uri.tryParse(raw);
+            if (uri == null ||
+                uri.scheme != 'https' ||
+                uri.hasPort ||
+                uri.userInfo.isNotEmpty ||
+                !uri.host.endsWith('.akamaized.net') ||
+                !uri.path.toLowerCase().endsWith('.mp4')) {
+              continue;
+            }
+            found[h] = ChzzkArchiveQuality(uri.toString(), id: 'mp4-$h', label: '${h}p', format: StreamFormat.other);
+            break;
+          }
+        }
+      }
+    }
+    if (found.isEmpty) throw const StreamUnavailable('chzzk', 'No supported public MP4 source');
+    // Start on the cheapest verified muxed stream. The player can switch
+    // explicitly while retaining position and resolving a fresh media URL.
+    final heights = found.keys.toList()..sort();
+    return [ChzzkArchivePart(recording, List.unmodifiable(heights.map((h) => found[h]!)))];
   }
 }

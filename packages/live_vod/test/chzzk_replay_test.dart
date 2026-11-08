@@ -27,6 +27,55 @@ Map<String, Object?> detail(String url) => {
 };
 
 void main() {
+  test('finished public VOD offers only muxed allowlisted MP4 with stable quality ids', () {
+    final recording = ChzzkArchiveApi.parseDetail(
+      detail('https://sample.akamaized.net/live/index.m3u8'),
+      id: '101',
+    ).single.recording;
+    Map<String, Object?> variant(int height, String host, {String codecs = 'avc1.64002a,mp4a.40.2'}) => {
+      'codecs': codecs,
+      'height': height,
+      'baseURL': [
+        {'value': 'https://$host/public/video.mp4'},
+      ],
+    };
+    final manifest = {
+      'type': 'STATIC',
+      'period': [
+        {
+          'adaptationSet': [
+            {
+              'mimeType': 'video/mp4',
+              'representation': [
+                variant(1080, 'sample.akamaized.net'),
+                variant(144, 'sample.akamaized.net'),
+                variant(480, 'sample.akamaized.net.example'),
+                variant(720, 'sample.akamaized.net', codecs: 'avc1.64002a'),
+                {...variant(360, 'sample.akamaized.net'), 'segmentList': <String, Object?>{}},
+                {
+                  ...variant(240, 'sample.akamaized.net'),
+                  'contentProtection': [
+                    {'schemeIdUri': 'urn:example'},
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    final part = ChzzkArchiveApi.parseProgressive(recording, manifest).single;
+    expect(part.id, '101:1');
+    expect(part.qualities.map((q) => (q.id, q.format)), [
+      ('mp4-144', StreamFormat.other),
+      ('mp4-1080', StreamFormat.other),
+    ]);
+    expect(
+      () => ChzzkArchiveApi.parseProgressive(recording, {...manifest, 'type': 'dynamic'}),
+      throwsA(isA<ApiChanged>()),
+    );
+  });
+
   test('catalog pagination is server-driven, duplicates and restricted entries omitted', () {
     final page = ChzzkArchiveApi.parseList(
       {
@@ -48,7 +97,7 @@ void main() {
     expect(ChzzkArchiveApi.videoFromText('https://chzzk.naver.com.example/video/101'), isNull);
     final parts = ChzzkArchiveApi.parseDetail(detail('https://sample.akamaized.net/live/index.m3u8'), id: '101');
     expect(parts.single.id, '101:1');
-    expect(parts.single.quality.id, 'auto');
+    expect(parts.single.qualities.single.id, 'auto');
     expect(
       () => ChzzkArchiveApi.parseDetail(detail('https://sample.akamaized.net/live/index.m3u8'), id: '102'),
       throwsA(isA<ApiChanged>()),
