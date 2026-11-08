@@ -11,7 +11,8 @@ import 'package:live_core/live_core.dart';
 ///   given on joining) may be up to [maxReplayAge] old instead; a super chat
 ///   ([LiveMessage.data] a [LiveSuperChatMessage]) is not dropped for its
 ///   age before its [LiveSuperChatMessage.endTime], since it is shown for
-///   its own time (M5.F, B-26, B-22).
+///   its own time (M5.F, B-26, B-22). A verified delayed live chat with
+///   a stable ID uses the bounded live relay window instead.
 /// - A message with a [LiveMessage.messageId] passes once per
 ///   [stableIdWindow].
 /// - Without an id the key is the type, the user id and name (trimmed, lower
@@ -48,6 +49,7 @@ final class DanmakuMessageGate {
   /// Most keys kept.
   final int maxEntries;
 
+  static const Duration _lateLiveRelayAge = Duration(minutes: 2);
   static const Duration _maxFutureSkew = Duration(minutes: -10);
 
   final LinkedHashMap<String, DateTime> _seen = LinkedHashMap();
@@ -55,13 +57,18 @@ final class DanmakuMessageGate {
   /// Whether [message], received [now] (default: the current time), passes.
   bool accepts(LiveMessage message, {DateTime? now}) {
     final receivedAt = now ?? DateTime.now();
+    final stableId = message.messageId.trim();
     final sentAt = message.sentAt;
     if (sentAt != null) {
       final age = receivedAt.difference(sentAt);
-      final limit = message.replayed ? maxReplayAge : maxMessageAge;
+      final lateLiveChat = message.lateLiveDelivery && message.type == LiveMessageType.chat && stableId.isNotEmpty;
+      final limit = message.replayed
+          ? maxReplayAge
+          : lateLiveChat && _lateLiveRelayAge > maxMessageAge
+          ? _lateLiveRelayAge
+          : maxMessageAge;
       if (age < _maxFutureSkew || (age > limit && !_onDisplay(message, receivedAt))) return false;
     }
-    final stableId = message.messageId.trim();
     final hasStableId = stableId.isNotEmpty;
     final key = hasStableId
         ? 'id:$stableId'

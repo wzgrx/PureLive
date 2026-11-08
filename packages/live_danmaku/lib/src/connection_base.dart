@@ -197,6 +197,7 @@ LiveMessage cleanDanmakuText(LiveMessage message) {
     sentAt: message.sentAt,
     style: message.style,
     replayed: message.replayed,
+    lateLiveDelivery: message.lateLiveDelivery,
     emotes: message.emotes,
     sourceRoomId: message.sourceRoomId,
     nameColor: message.nameColor,

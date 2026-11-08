@@ -253,6 +253,9 @@ abstract final class DouyuDanmakuProtocol {
       message: text,
       color: color(int.tryParse(fields['col'] ?? '') ?? 0),
       messageId: messageId.isEmpty ? '' : 'douyu:$messageId',
+      // The live relay can deliver unique current-room chat more than 45
+      // seconds after its server timestamp (V02.92); history is not decoded.
+      lateLiveDelivery: roomId.isNotEmpty && packetRoomId == roomId && messageId.trim().isNotEmpty,
       userLevel: level > 0 ? '$level' : '',
       userLevelValue: int.tryParse(fields['level'] ?? ''),
       fansLevelValue: int.tryParse(fields['bl'] ?? ''),

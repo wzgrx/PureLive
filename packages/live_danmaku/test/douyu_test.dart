@@ -204,6 +204,36 @@ final Uint8List _heartbeat = DouyuDanmakuProtocol.heartbeat();
 final DouyuDanmakuArgs _args = DouyuDanmakuArgs(_roomId);
 
 void main() {
+  test('late but unique live messages from the current Douyu room survive the display gate', () {
+    final now = DateTime.utc(2026, 11, 8, 12);
+    const room = '9999';
+    final filter = DanmakuMessageFilter(clock: () => now);
+    List<LiveMessage> read({
+      required String id,
+      int age = 87,
+      String rid = room,
+      String kind = 'chatmsg',
+      String text = 'synthetic chat',
+    }) {
+      final stamp = now.subtract(Duration(seconds: age)).millisecondsSinceEpoch;
+      return DouyuDanmakuProtocol.decode(
+        DouyuDanmakuProtocol.packet('type@=$kind/rid@=$rid/cid@=$id/cst@=$stamp/txt@=$text/'),
+        roomId: room,
+      );
+    }
+
+    final message = read(id: 'delayed', text: 'synthetic￼ chat').single;
+    expect(filter.judge(cleanDanmakuText(message)), DanmakuVerdict.shown);
+    expect(filter.judge(message), DanmakuVerdict.duplicate, reason: 'do not show the same CID twice');
+    expect(filter.judge(read(id: 'edge', age: 120).single), DanmakuVerdict.shown);
+    expect(filter.judge(read(id: 'stale', age: 121).single), DanmakuVerdict.duplicate);
+    expect(filter.judge(read(id: '').single), DanmakuVerdict.duplicate);
+    expect(filter.judge(read(id: 'no-room', rid: '').single), DanmakuVerdict.duplicate);
+    expect(filter.judge(read(id: 'future', age: -601).single), DanmakuVerdict.duplicate);
+    expect(read(id: 'other-room', rid: '8888'), isEmpty);
+    expect(read(id: 'history', kind: 'hischatmsg'), isEmpty);
+  });
+
   group('protocol', () {
     test("client packets are byte for byte 3.x's and the recorded ones", () {
       final joins = [for (final frame in _recorded['joinFrames']! as List<Object?>) base64Decode(frame! as String)];

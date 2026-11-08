@@ -342,6 +342,7 @@ final class LiveMessage {
     this.sentAt,
     this.style,
     this.replayed = false,
+    this.lateLiveDelivery = false,
     this.emotes = const [],
     this.sourceRoomId = '',
     this.nameColor,
@@ -407,6 +408,10 @@ final class LiveMessage {
   /// the chat, or a backlog the platform gives on joining (such as super
   /// chats still on display). The duplicate gate accepts it for longer.
   final bool replayed;
+
+  /// A uniquely identified chat on a live relay that can arrive late.
+  /// Adapters set this only for validated live packets, never for history.
+  final bool lateLiveDelivery;
 
   /// The pictures the platform names for codes in [message], each code once;
   /// empty when it names none (the app may still know codes of its own,
