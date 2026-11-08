@@ -50,11 +50,12 @@ internal class XiaohongshuGuestChannel(private val activityProvider: () -> Activ
         val waiters = mutableListOf<MethodChannel.Result>()
     }
 
-    private fun supported(): Boolean =
-        WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE) &&
-            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT) &&
-            WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
-            WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)
+    private fun missingFeatures(): List<String> = listOf(
+        WebViewFeature.MULTI_PROFILE,
+        WebViewFeature.DOCUMENT_START_SCRIPT,
+        WebViewFeature.WEB_MESSAGE_LISTENER,
+        WebViewFeature.DELETE_BROWSING_DATA,
+    ).filterNot { WebViewFeature.isFeatureSupported(it) }
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun start(call: MethodCall, result: MethodChannel.Result) {
@@ -75,8 +76,14 @@ internal class XiaohongshuGuestChannel(private val activityProvider: () -> Activ
             result.error("busy", "Visitor browser is busy", null)
             return
         }
-        if (!supported()) {
-            result.error("unsupported", "WebView visitor isolation unavailable", null)
+        val missing = try {
+            missingFeatures()
+        } catch (_: Exception) {
+            result.error("unsupported", "WebView provider unavailable", null)
+            return
+        }
+        if (missing.isNotEmpty()) {
+            result.error("unsupported", "WebView visitor isolation unavailable", mapOf("missing" to missing))
             return
         }
         val activity = activityProvider()
@@ -131,7 +138,7 @@ internal class XiaohongshuGuestChannel(private val activityProvider: () -> Activ
             }
             browser.webViewClient = object : WebViewClient() {
                 override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-                    if (active === run && run.stage == "created") run.stage = "load_started"
+                    if (active === run && run.stage == "load_requested") run.stage = "load_started"
                 }
 
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
@@ -145,8 +152,12 @@ internal class XiaohongshuGuestChannel(private val activityProvider: () -> Activ
             val timeout = Runnable { if (active === run) finish("timeout", null) }
             run.timeout = timeout
             main.postDelayed(timeout, 29000)
+            run.stage = "profile_clear"
             WebStorageCompat.deleteBrowsingData(ProfileStore.getInstance().getOrCreateProfile(PROFILE).webStorage) {
-                if (active === run) browser.loadUrl(url)
+                if (active === run) {
+                    run.stage = "load_requested"
+                    browser.loadUrl(url)
+                }
             }
         } catch (_: Exception) {
             if (active != null) finish("failed", null)

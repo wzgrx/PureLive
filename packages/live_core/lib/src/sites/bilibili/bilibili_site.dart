@@ -403,7 +403,7 @@ final class BilibiliSite extends LiveSite
 
   @override
   Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async {
-    final eligible = rooms.where((room) => RegExp(r'^[1-9][0-9]{0,17}$').hasMatch(room.userId ?? ''));
+    final eligible = rooms.where((room) => BilibiliApi.followUid(room.userId) != null);
     final uids = {for (final room in eligible) room.userId!};
     if (uids.length < 2 || uids.length > 20) return const {};
     final response = await http.postJson(
@@ -420,7 +420,7 @@ final class BilibiliSite extends LiveSite
     final updates = <String, LiveRoom>{};
     for (final room in eligible) {
       final row = data[room.userId];
-      if (row is! Map || jsonInt(row['uid'])?.toString() != room.userId) continue;
+      if (row is! Map || BilibiliApi.followUid(row['uid']) != room.userId) continue;
       final canonical = jsonInt(row['room_id'])?.toString();
       final short = jsonInt(row['short_id']);
       if (canonical == null || (canonical != room.roomId && (short == null || short <= 0 || '$short' != room.roomId))) {
@@ -438,7 +438,9 @@ final class BilibiliSite extends LiveSite
         title: jsonString(row['title']) ?? '',
         nick: jsonString(row['uname']) ?? '',
         avatar: normalizeImageUrl(row['face']),
-        cover: normalizeImageUrl(row['cover_from_user']),
+        cover: state == 1
+            ? BilibiliApi.preferLiveKeyframe(row['keyframe'], normalizeImageUrl(row['cover_from_user']))
+            : normalizeImageUrl(row['cover_from_user']),
         area: jsonString(row['area_v2_name']),
         liveStatus: state == 1 ? LiveStatus.live : LiveStatus.offline,
         audienceMetricType: AudienceMetricType.popularity,

@@ -19,6 +19,7 @@ const _www = 'www.douyu.com';
 /// number) or an alias.
 final RegExp _roomKey = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
 final RegExp _digits = RegExp(r'^\d{1,18}$');
+final RegExp _followRid = RegExp(r'^[1-9][0-9]{0,17}$');
 
 /// The canonical rid a room's signing, stream and danmaku requests use (a
 /// room asked for by its 靓号 or alias keeps that address as its identity).
@@ -64,6 +65,7 @@ final class DouyuSite extends LiveSite
     with LiveSiteLinks
     implements
         LiveSiteRoomRefresher,
+        LiveSiteFollowBatchRefresher,
         LiveSiteRecordRoomResolver,
         LivePlayUrlResolver,
         LivePlayRecoveryResolver,
@@ -402,6 +404,25 @@ final class DouyuSite extends LiveSite
 
   @override
   Future<LiveRoom> getRoomDetailForRefresh({required String roomId}) => _detail(roomId);
+
+  @override
+  Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async {
+    final requested = {
+      for (final room in rooms)
+        if (room.platform == _site &&
+            _followRid.hasMatch(room.roomId) &&
+            (_rids[room.roomId] ?? room.roomId) == room.roomId)
+          room.roomId: room,
+    };
+    if (requested.length < 2 || requested.length > 20) return const {};
+    final response = await http.postJson(
+      _site,
+      Uri.https('apiv2.douyucdn.cn', '/Livenc/UserRelation/getFollowRoomListByRid'),
+      form: {'rids': requested.keys.join(',')},
+      timeout: const Duration(seconds: 3),
+    );
+    return DouyuApi.followBatch(response, requested);
+  }
 
   /// Strict: a failed `betard` is thrown, never turned into an offline room
   /// (3.x once stopped recordings that way).

@@ -224,6 +224,23 @@ abstract final class BilibiliApi {
           LiveRoom.compareAudienceRanking(left, right, preferRealOnline: false, platformEnabled: (_) => false),
     );
 
+  static final _followUidPattern = RegExp(r'^[1-9][0-9]{0,17}$');
+
+  /// Public streamer identity, distinct from the room and viewer ids.
+  static String? followUid(Object? value) {
+    final uid = jsonString(value);
+    return uid != null && _followUidPattern.hasMatch(uid) ? uid : null;
+  }
+
+  /// Prefers a usable keyframe for a confirmed live broadcast. Retains the
+  /// existing cover when the endpoint omits the keyframe or sends junk.
+  static String preferLiveKeyframe(Object? keyframe, String fallback, {String suffix = ''}) {
+    final image = normalizeImageUrl(keyframe);
+    final uri = Uri.tryParse(image);
+    if (uri == null || uri.host.isEmpty || uri.userInfo.isNotEmpty) return fallback;
+    return uri.hasQuery || uri.hasFragment ? image : '$image$suffix';
+  }
+
   static LiveRoom? _listRoom(Map<String, dynamic> item) {
     final id = _roomId(item['roomid'] ?? item['room_id']);
     if (id == null) return null;
@@ -231,10 +248,15 @@ abstract final class BilibiliApi {
     return LiveRoom(
       roomId: id,
       platform: _site,
+      userId: followUid(item['uid']),
       title: decodeHtmlEntities(jsonString(item['title']) ?? ''),
       nick: decodeHtmlEntities(jsonString(item['uname']) ?? ''),
       avatar: _image(item['face']),
-      cover: _image(item['cover'], '@400w.jpg').ifEmpty(() => _image(item['user_cover'], '@400w.jpg')),
+      cover: preferLiveKeyframe(
+        item['keyframe'],
+        _image(item['cover'], '@400w.jpg').ifEmpty(() => _image(item['user_cover'], '@400w.jpg')),
+        suffix: '@400w.jpg',
+      ),
       area: jsonString(item['area_v2_name']) ?? jsonString(item['area_name']) ?? jsonString(item['areaName']) ?? '',
       watching: online,
       popularity: online,
@@ -276,16 +298,23 @@ abstract final class BilibiliApi {
     if (id == null) return null;
     final state = _status(item['live_status']);
     final live = state == LiveStatus.live;
+    final cover = _image(item['user_cover'], '@400w.jpg').ifEmpty(() => _image(item['cover'], '@400w.jpg'));
     final online = jsonString(item['online']) ?? '';
     return LiveRoom(
       roomId: id,
       platform: _site,
+      userId: followUid(item['uid']),
       title: _highlighted(item['title']),
       nick: _highlighted(item['uname']),
       avatar: _image(item['uface'], '@400w.jpg'),
-      // `cover` is a keyframe screenshot; the room cover (what 3.x asked for
-      // with cover_type=user_cover) is `user_cover`.
-      cover: _image(item['user_cover'], '@400w.jpg').ifEmpty(() => _image(item['cover'], '@400w.jpg')),
+      // Search calls the keyframe `cover`; `user_cover` is the room cover.
+      cover: live
+          ? preferLiveKeyframe(
+              item['keyframe'],
+              preferLiveKeyframe(item['cover'], cover, suffix: '@400w.jpg'),
+              suffix: '@400w.jpg',
+            )
+          : cover,
       area: _highlighted(item['cate_name']),
       watching: online,
       popularity: online,
@@ -304,6 +333,7 @@ abstract final class BilibiliApi {
     return LiveRoom(
       roomId: id,
       platform: _site,
+      userId: followUid(item['uid']),
       nick: _highlighted(item['uname']),
       avatar: _image(item['uface'], '@400w.jpg'),
       area: _highlighted(item['cate_name']),
@@ -363,10 +393,11 @@ abstract final class BilibiliApi {
       room: LiveRoom(
         roomId: id,
         platform: _site,
+        userId: followUid(room['uid']),
         title: decodeHtmlEntities(jsonString(room['title']) ?? ''),
         nick: decodeHtmlEntities(jsonString(base?['uname']) ?? ''),
         avatar: _image(base?['face'], '@100w.jpg'),
-        cover: _image(room['cover']),
+        cover: live ? preferLiveKeyframe(room['keyframe'], _image(room['cover'])) : _image(room['cover']),
         area: jsonString(room['area_name']) ?? '',
         watching: online,
         popularity: online,

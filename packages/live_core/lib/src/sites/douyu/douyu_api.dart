@@ -508,6 +508,52 @@ abstract final class DouyuApi {
     );
   }
 
+  /// Public follow snapshots contain no reliable loop discriminator for
+  /// on-air rows. A real carousel can have the same show_status and scheme
+  /// as a live broadcast. Confirm those rows through the ordinary detail.
+  static Map<String, LiveRoom> followBatch(Object? body, Map<String, LiveRoom> requested) {
+    final root = _object(body);
+    final data = _object(root?['data']);
+    final rows = data?['room_list'];
+    if (jsonInt(root?['error']) != 0 || rows is! List || rows.length > 20) {
+      throw const ApiChanged(_site, 'Batch follow status');
+    }
+    final seen = <String>{};
+    final updates = <String, LiveRoom>{};
+    for (final item in rows) {
+      final row = _object(item);
+      if (row == null) continue;
+      final rid = _roomId(row['room_id']);
+      final room = requested[rid];
+      if (rid == null || room == null) continue;
+      if (!seen.add(rid)) {
+        updates.remove(room.identityKey);
+        continue;
+      }
+      final title = decodeHtmlEntities(jsonString(row['room_name']) ?? '').trim();
+      if (jsonInt(row['show_status']) != 2 ||
+          jsonInt(row['is_out_live']) != 0 ||
+          jsonInt(row['out_live_type']) != 0 ||
+          (row['videoLoop'] != null && jsonInt(row['videoLoop']) != 0) ||
+          title.startsWith('【回放】') ||
+          room.effectiveLiveStatus == LiveStatus.replay ||
+          room.effectiveLiveStatus == LiveStatus.carousel) {
+        continue;
+      }
+      updates[room.identityKey] = LiveRoom(
+        roomId: rid,
+        platform: _site,
+        title: title,
+        nick: decodeHtmlEntities(jsonString(row['nickname']) ?? ''),
+        avatar: normalizeImageUrl(row['avatar']),
+        cover: normalizeImageUrl(row['room_src']),
+        area: jsonString(row['cate2_name']),
+        liveStatus: LiveStatus.offline,
+      );
+    }
+    return updates;
+  }
+
   // Gifts (D07.3) -------------------------------------------------------------
 
   /// The gifts of a `betard` answer ([roomDetail] reads them too):

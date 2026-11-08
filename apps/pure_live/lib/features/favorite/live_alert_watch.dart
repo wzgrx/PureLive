@@ -38,6 +38,7 @@ final class LiveAlertWatch {
       final room = LiveRoom(
         platform: platform,
         roomId: roomId,
+        userId: platform == SiteIds.bilibili ? BilibiliApi.followUid(entry['userId']) : null,
         nick: entry['nick'] is String ? entry['nick']! as String : '',
         title: entry['title'] is String ? entry['title']! as String : '',
       );
@@ -94,9 +95,28 @@ final class LiveAlertWatch {
   /// before then.
   final DateTime? nextCheck;
 
-  /// A copy with [states].
-  LiveAlertWatch withStates(Map<String, LiveAlertSeen> states) =>
-      LiveAlertWatch(rooms: rooms, names: names, states: states, texts: texts, nextCheck: nextCheck);
+  /// Updates observations and backfills identities on rooms still watched.
+  /// A concurrently saved identity wins over an older worker result.
+  LiveAlertWatch withStates(Map<String, LiveAlertSeen> states, {Iterable<LiveRoom> refreshed = const []}) {
+    final learned = {
+      for (final room in refreshed)
+        if (BilibiliApi.followUid(room.userId) case final uid? when room.platform == SiteIds.bilibili)
+          room.identityKey: uid,
+    };
+    return LiveAlertWatch(
+      rooms: [
+        for (final room in rooms)
+          if (room.platform == SiteIds.bilibili && BilibiliApi.followUid(room.userId) == null)
+            room.copyWith(userId: learned[room.identityKey])
+          else
+            room,
+      ],
+      names: names,
+      states: states,
+      texts: texts,
+      nextCheck: nextCheck,
+    );
+  }
 
   /// The JSON form.
   Map<String, Object?> toJson() => {
@@ -113,6 +133,7 @@ final class LiveAlertWatch {
         {
           'platform': room.platform,
           'roomId': room.roomId,
+          if (BilibiliApi.followUid(room.userId) case final uid? when room.platform == SiteIds.bilibili) 'userId': uid,
           'nick': room.nick,
           'title': room.title,
           'name': ?names[room.identityKey],
@@ -257,6 +278,6 @@ Future<List<LiveRoom>> runLiveAlertCheck({
   final merged = LiveAlertTracker(now: now)
     ..adopt(latest.states)
     ..adopt(tracker.states);
-  await file.write(latest.withStates(merged.states));
+  await file.write(latest.withStates(merged.states, refreshed: result.rooms));
   return started;
 }

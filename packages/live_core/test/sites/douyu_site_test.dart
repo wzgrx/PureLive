@@ -192,6 +192,44 @@ LivePlayQuality _quality(int rate, List<String> cdns) =>
     LivePlayQuality(quality: '$rate', id: rate, data: DouyuPlayData(rate, cdns));
 
 void main() {
+  test('Douyu batches ordinary off-air rooms but checks on-air, aliases, and ambiguous rows individually', () async {
+    Map<String, Object> row(int rid, {int status = 2, int out = 0}) => {
+      'room_id': rid,
+      'show_status': status,
+      'is_out_live': out,
+      'out_live_type': 0,
+      'room_name': 'Example',
+      'schemeUrl': 'douyuapp://room?rid=$rid&liveType=0',
+    };
+    final http = ReplayHttp([
+      ReplaySample(
+        method: 'POST',
+        url: Uri.https('apiv2.douyucdn.cn', '/Livenc/UserRelation/getFollowRoomListByRid'),
+        status: 200,
+        form: {'rids': '101,102,103,104,105,106'},
+        bytes: utf8.encode(
+          jsonEncode({
+            'error': 0,
+            'data': {
+              'room_list': [row(101), row(102, status: 1), row(103, out: 1), row(104), row(104), row(106), row(999)],
+            },
+          }),
+        ),
+      ),
+    ]);
+    final site = DouyuSite(http);
+    final rooms = [
+      for (final id in ['101', '102', '103', '104', '105']) LiveRoom(platform: 'douyu', roomId: id),
+      LiveRoom(platform: 'douyu', roomId: '106', liveStatus: LiveStatus.replay),
+      LiveRoom(platform: 'douyu', roomId: 'short-alias'),
+    ];
+    final result = await site.refreshFollowBatch(rooms);
+    expect(http.requests, hasLength(1));
+    expect(http.requests.single.headers['cookie'], isNull);
+    expect(result.keys, ['douyu:101']);
+    expect(result.values.single.effectiveLiveStatus, LiveStatus.offline);
+  });
+
   test('issue135 failed login metadata can use public guest lines without changing other rooms', () async {
     const login = 'acf_auth=fixture-login;dy_did=01234567890123456789012345678901';
     final vault = MemoryCookieVault()..set('douyu', login);
