@@ -6,6 +6,7 @@ import 'package:pure_live/features/live_play/record/record_panel.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/danmaku/block_manager.dart';
 import 'package:pure_live/tv/tv_theme.dart';
+import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 import 'package:pure_live/tv/widgets/tv_tabs.dart';
 
 /// The parts of [TvRoomSettingsPanel] (A17.4 c7–c10).
@@ -32,13 +33,16 @@ enum TvRoomSettingsTab {
 /// TV's directional navigation); Back closes it.
 class TvRoomSettingsPanel extends StatefulWidget {
   /// Creates the panel for [controller]'s room.
-  const new({required this.controller, required this.onClose, super.key});
+  const new({required this.controller, required this.onClose, this.onRoomQueue, super.key});
 
   /// The room.
   final LiveRoomController controller;
 
   /// Closes the panel.
   final VoidCallback onClose;
+
+  /// Opens the saved queue using the TV's normal remote focus dialog.
+  final VoidCallback? onRoomQueue;
 
   /// The panel's width in canvas pixels (c2).
   static const double width = 400;
@@ -119,6 +123,12 @@ class _TvRoomSettingsPanelState extends State<TvRoomSettingsPanel> {
                 ),
               ),
               SizedBox(height: scale.px(8)),
+              if (widget.onRoomQueue != null)
+                TvOptionRow(
+                  key: const ValueKey('tv-room-saved-queue'),
+                  label: i18n('room_switch_saved'),
+                  onTap: widget.onRoomQueue,
+                ),
               Expanded(
                 child: Material(
                   type: MaterialType.transparency,

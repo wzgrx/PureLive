@@ -72,6 +72,8 @@ import 'package:pure_live/shared/rooms/archive/archive_rate_dialog.dart';
 import 'package:pure_live/shared/rooms/archive/archive_recording.dart';
 import 'package:pure_live/shared/rooms/archive/bilibili_archive_controller.dart';
 import 'package:pure_live/shared/rooms/auto_room_switch.dart';
+import 'package:pure_live/shared/rooms/room_rotation_dialog.dart';
+import 'package:pure_live/shared/rooms/timed_room_rotation.dart';
 
 /// The room's clock: the danmaku filter, the gift lines' limit and combo
 /// window go by it (tests replace it with their simulated time).
@@ -198,6 +200,10 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   /// room was opened from, or the group of the switch panel a room was
   /// picked from (U.2m c2); null for a lone room.
   RoomPlaylist? _playlist;
+  late final TimedRoomRotation _rotation = TimedRoomRotation(switchTo: _rotateTo);
+  late final AppLifecycleListener _rotationLifecycle;
+  List<LiveRoom> _rotationRooms = const [];
+  bool _rotationForeground = true;
 
   /// The list the room was opened from, as it came (the switch panel's
   /// "来源列表", U.2m c5).
@@ -234,6 +240,15 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   @override
   void initState() {
     super.initState();
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _rotationForeground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    _rotationLifecycle = AppLifecycleListener(
+      onStateChange: (state) {
+        _rotationForeground = state == AppLifecycleState.resumed;
+        _syncAutoRoomSwitch();
+      },
+    );
+    _panels.addListener(_syncAutoRoomSwitch);
     RoomCommands.current.value = _commands;
     DesktopWindow.fullScreen.addListener(_windowFullScreenChanged);
     OverlayWindow.active.addListener(_overlayShown);
@@ -506,6 +521,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   void _syncAutoRoomSwitch() {
     final controller = _controller;
     if (controller == null) return;
+    if (_rotation.active) _rotation.observe(controller.room, eligible: _canRotate);
     _autoRoomSwitch?.update(
       room: controller.room,
       playback: controller.session.state,
@@ -513,6 +529,52 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       unavailable: controller.stage == RoomStage.unplayable,
       replay: controller.playingCarousel,
     );
+  }
+
+  bool get _canRotate {
+    final controller = _controller;
+    return mounted &&
+        _rotationForeground &&
+        !_pip &&
+        !_details &&
+        _panels.value == null &&
+        (ModalRoute.isCurrentOf(context) ?? true) &&
+        controller != null &&
+        !controller.isArchive &&
+        controller.stage == RoomStage.playing &&
+        !controller.switching &&
+        !controller.switchingLine &&
+        controller.sleepDeadline == null &&
+        !controller.sleepTimerFinished &&
+        controller.session.state.status == PlaybackStatus.playing;
+  }
+
+  void _startRoomRotation(List<LiveRoom> rooms, RoomRotationOptions options) {
+    final current = _controller?.room;
+    final sites = ref.read(sitesProvider);
+    final eligible = rooms.where((room) => sites.maybeOf(room.platform) != null).toList();
+    if (current == null || eligible.length < 2 || !eligible.any(current.hasSameIdentity)) {
+      AppNavigator.toast(i18n('room_rotation_unavailable'));
+      return;
+    }
+    setState(() {
+      _rotationRooms = List.unmodifiable(eligible);
+      _rotation.start(_rotationRooms, interval: options.interval, order: options.order);
+    });
+    _panels.close();
+    _syncAutoRoomSwitch();
+  }
+
+  void _stopRoomRotation() => setState(() {
+    _rotation.stop();
+    _rotationRooms = const [];
+  });
+
+  bool _rotateTo(LiveRoom next) {
+    if (!_canRotate || ref.read(sitesProvider).maybeOf(next.platform) == null) return false;
+    _playlist = RoomPlaylist(_rotationRooms, current: next);
+    _switchRoom(next, automatic: true);
+    return true;
   }
 
   /// The portrait fullscreen's swipe let go past the switch (U.2b2): the
@@ -650,6 +712,9 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
 
   @override
   void dispose() {
+    _rotationLifecycle.dispose();
+    _panels.removeListener(_syncAutoRoomSwitch);
+    _rotation.dispose();
     if (_remoteTarget case final target?) _remote?.unregister(target);
     _autoRoomSwitch?.dispose();
     liveRouteObserver.currentRoute.removeListener(_syncAutoRoomSwitch);
@@ -1253,6 +1318,9 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       source: _source,
       group: _switchGroup,
       onPick: _pickRoom,
+      rotationActive: _rotation.active,
+      onStartRotation: _startRoomRotation,
+      onStopRotation: _stopRoomRotation,
       onClose: _panels.close,
       dragToClose: portrait,
     ),

@@ -29,6 +29,7 @@ import 'package:pure_live/shared/rooms/playback_hud.dart';
 import 'package:pure_live/shared/rooms/playback_lines.dart';
 import 'package:pure_live/shared/rooms/room_gain.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
+import 'package:pure_live/shared/rooms/timed_room_rotation.dart';
 import 'package:pure_live/tv/room/tv_room_overlays.dart';
 import 'package:pure_live/tv/room/tv_room_settings_panel.dart';
 import 'package:pure_live/tv/room/tv_super_chat_panel.dart';
@@ -81,6 +82,8 @@ class TvLivePlayPage extends ConsumerStatefulWidget {
   ConsumerState<TvLivePlayPage> createState() => TvLivePlayPageState();
 }
 
+enum _QueueAction { toggleCurrent, start, stop, open, up, down, remove }
+
 /// The TV room's state (tests read [index] and [controller]).
 class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
   final FocusNode _keys = FocusNode(debugLabel: 'tv room keys');
@@ -90,6 +93,10 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
   int _index = 0;
   LiveRoomController? _controller;
   AutoRoomSwitch? _autoRoomSwitch;
+  late final TimedRoomRotation _rotation = TimedRoomRotation(switchTo: _rotateTo);
+  late final AppLifecycleListener _rotationLifecycle;
+  List<LiveRoom> _rotationRooms = const [];
+  bool _rotationForeground = true;
   StreamSubscription<PlaybackState>? _autoRoomStates;
   PlaybackSession? _session;
   late final Future<void> _wallpaperReady;
@@ -131,6 +138,14 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
   @override
   void initState() {
     super.initState();
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _rotationForeground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    _rotationLifecycle = AppLifecycleListener(
+      onStateChange: (state) {
+        _rotationForeground = state == AppLifecycleState.resumed;
+        _syncAutoRoomSwitch();
+      },
+    );
     // One video at a time on a box: the video background waits (A17.8).
     _wallpaperReady = TvWallpaperVideo.hold();
     // Music gives the speakers to the room.
@@ -233,6 +248,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
   void _syncAutoRoomSwitch() {
     final controller = _controller;
     if (controller == null) return;
+    if (_rotation.active) _rotation.observe(controller.room, eligible: _canRotate);
     _autoRoomSwitch?.update(
       room: controller.room,
       playback: controller.session.state,
@@ -240,6 +256,156 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       unavailable: controller.stage == RoomStage.unplayable,
       replay: controller.playingCarousel,
     );
+  }
+
+  bool get _canRotate {
+    final controller = _controller;
+    return mounted &&
+        _rotationForeground &&
+        !_controls &&
+        !_panel &&
+        !_settings &&
+        !_superChatPanel &&
+        (ModalRoute.isCurrentOf(context) ?? true) &&
+        controller != null &&
+        controller.stage == RoomStage.playing &&
+        !controller.isArchive &&
+        !controller.switching &&
+        !controller.switchingLine &&
+        controller.sleepDeadline == null &&
+        !controller.sleepTimerFinished &&
+        controller.session.state.status == PlaybackStatus.playing;
+  }
+
+  List<LiveRoom> _availableQueue(List<LiveRoom> rooms) {
+    final sites = ref.read(sitesProvider);
+    return rooms.where((room) => sites.maybeOf(room.platform) != null).toList();
+  }
+
+  bool _rotateTo(LiveRoom next) {
+    if (!_canRotate || ref.read(sitesProvider).maybeOf(next.platform) == null) return false;
+    final index = _rotationRooms.indexWhere(next.hasSameIdentity);
+    if (index < 0) return false;
+    _playlist = _rotationRooms;
+    switchTo(index, automatic: true);
+    return true;
+  }
+
+  Future<void> _startQueueRotation(List<LiveRoom> rooms) async {
+    final order = await showTvChoice<RoomRotationOrder>(
+      context,
+      title: i18n('room_rotation_start'),
+      options: [
+        TvChoice(value: RoomRotationOrder.ordered, label: i18n('room_rotation_ordered')),
+        TvChoice(value: RoomRotationOrder.shuffled, label: i18n('room_rotation_random')),
+      ],
+    );
+    if (order == null || !mounted) return;
+    final text = await showTvInput(
+      context,
+      title: i18n('room_rotation_interval'),
+      text: '60',
+      numeric: true,
+      maxLength: 5,
+    );
+    if (text == null || !mounted) return;
+    final seconds = int.tryParse(text.trim());
+    if (seconds == null || seconds < 5 || seconds > 86400) {
+      AppNavigator.toast(i18n('room_rotation_interval_invalid'));
+      return;
+    }
+    final current = _room;
+    final available = _availableQueue(rooms);
+    if (current == null || available.length < 2 || !available.any(current.hasSameIdentity)) {
+      AppNavigator.toast(i18n('room_rotation_unavailable'));
+      return;
+    }
+    _rotationRooms = List.unmodifiable(available);
+    _rotation.start(
+      _rotationRooms,
+      interval: Duration(seconds: seconds),
+      order: order,
+    );
+    _hide();
+  }
+
+  Future<void> _queueRoomAction(LiveRoom room, List<LiveRoom> rooms) async {
+    final index = rooms.indexWhere(room.hasSameIdentity);
+    if (index < 0) return;
+    final action = await showTvChoice<_QueueAction>(
+      context,
+      title: room.nick.isEmpty ? room.roomId : room.nick,
+      options: [
+        TvChoice(value: _QueueAction.open, label: i18n('switch_live_room')),
+        if (index > 0) TvChoice(value: _QueueAction.up, label: i18n('room_switch_saved_move_up')),
+        if (index + 1 < rooms.length) TvChoice(value: _QueueAction.down, label: i18n('room_switch_saved_move_down')),
+        TvChoice(value: _QueueAction.remove, label: i18n('room_switch_saved_remove')),
+      ],
+    );
+    if (!mounted || action == null) return;
+    final store = ref.read(storeProvider).savedRoomQueue;
+    if (action == _QueueAction.open) {
+      final available = _availableQueue(rooms);
+      final target = available.indexWhere(room.hasSameIdentity);
+      if (target < 0) {
+        AppNavigator.toast(i18n('platform_retired'));
+        return;
+      }
+      _hide();
+      _playlist = available;
+      switchTo(target);
+      return;
+    }
+    final changed = await switch (action) {
+      _QueueAction.up => store.move(room, index - 1),
+      _QueueAction.down => store.move(room, index + 1),
+      _QueueAction.remove => store.remove(room),
+      _ => Future.value(false),
+    };
+    if (!changed && mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+  }
+
+  Future<void> _showSavedQueue() async {
+    try {
+      final store = ref.read(storeProvider).savedRoomQueue;
+      final rooms = await store.all();
+      if (!mounted) return;
+      final current = _room;
+      if (current == null) return;
+      final saved = rooms.any(current.hasSameIdentity);
+      final selected = await showTvChoice<Object>(
+        context,
+        title: i18n('room_switch_saved'),
+        options: [
+          TvChoice(
+            value: _QueueAction.toggleCurrent,
+            label: i18n(saved ? 'room_switch_saved_remove_current' : 'room_switch_saved_add_current'),
+          ),
+          if (_rotation.active)
+            TvChoice(value: _QueueAction.stop, label: i18n('room_rotation_stop'))
+          else if (rooms.length > 1 && saved)
+            TvChoice(value: _QueueAction.start, label: i18n('room_rotation_start')),
+          for (final room in rooms) TvChoice(value: room, label: room.nick.isEmpty ? room.roomId : room.nick),
+        ],
+      );
+      if (!mounted || selected == null) return;
+      switch (selected) {
+        case _QueueAction.toggleCurrent:
+          final changed = await (saved ? store.remove(current) : store.add(current));
+          if (!changed && mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+        case _QueueAction.stop:
+          _rotation.stop();
+          _rotationRooms = const [];
+        case _QueueAction.start:
+          await _startQueueRotation(rooms);
+        case final LiveRoom room:
+          await _queueRoomAction(room, rooms);
+        default:
+          break;
+      }
+    } on Object {
+      if (mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+    }
   }
 
   Future<void> _closeRoom() {
@@ -257,6 +423,8 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
 
   @override
   void dispose() {
+    _rotationLifecycle.dispose();
+    _rotation.dispose();
     if (_remoteTarget case final target?) _remote?.unregister(target);
     _autoRoomSwitch?.dispose();
     liveRouteObserver.currentRoute.removeListener(_syncAutoRoomSwitch);
@@ -279,6 +447,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       _superChatPanel = false;
     });
     _touch();
+    _syncAutoRoomSwitch();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _controls && _firstControl.context != null) _firstControl.requestFocus();
     });
@@ -301,6 +470,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       _superChatPanel = false;
     });
     _keys.requestFocus();
+    _syncAutoRoomSwitch();
   }
 
   void _openPanel() {
@@ -311,6 +481,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       _superChatPanel = false;
       _controls = false;
     });
+    _syncAutoRoomSwitch();
   }
 
   void _openSettings() {
@@ -321,6 +492,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       _superChatPanel = false;
       _controls = false;
     });
+    _syncAutoRoomSwitch();
   }
 
   /// Queues a switch by [delta] rooms; presses within [switchWindow] add up.
@@ -678,7 +850,11 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
                         top: 0,
                         right: 0,
                         bottom: 0,
-                        child: TvRoomSettingsPanel(controller: controller, onClose: _hide),
+                        child: TvRoomSettingsPanel(
+                          controller: controller,
+                          onClose: _hide,
+                          onRoomQueue: () => unawaited(_showSavedQueue()),
+                        ),
                       ),
                   ],
                 ),

@@ -1607,6 +1607,44 @@ void main() {
     await _close(tester, services);
   });
 
+  testWidgets('TV saved room rotation starts from the remote settings and advances one room', (tester) async {
+    final services = await _pumpApp(tester);
+    await tester.runAsync(() async {
+      for (final id in ['1', '2']) {
+        await services.store.savedRoomQueue.add(LiveRoom(platform: SiteIds.bilibili, roomId: id, nick: '频道$id'));
+      }
+    });
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    final room = tester.state<TvLivePlayPageState>(find.byType(TvLivePlayPage));
+    expect(room.controller!.room.roomId, '1');
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _settle(tester);
+    expect(find.byKey(const ValueKey('tv-room-saved-queue')), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    expect(find.text('开始轮播'), findsOneWidget);
+    await tester.tap(find.text('开始轮播'));
+    await _settle(tester);
+    await tester.tap(find.text('按列表顺序'));
+    await _settle(tester);
+    await tester.enterText(find.byKey(const ValueKey('tv-text-input')), '5');
+    await tester.tap(find.byKey(const ValueKey('tv-input-confirm')));
+    await _settle(tester);
+    expect(room.controller!.room.roomId, '1');
+    expect(find.byKey(const ValueKey('tv-room-settings')), findsNothing);
+    await tester.pump(const Duration(seconds: 6));
+    await _settle(tester, rounds: 10);
+    expect(room.controller!.room.roomId, '2');
+    expect(room.controller!.stage, RoomStage.playing);
+    await _close(tester, services);
+  });
+
   testWidgets('issue #14 room: touch and remote show controls; switching and Back keep working', (tester) async {
     final services = await _pumpApp(tester);
     await _press(tester, LogicalKeyboardKey.arrowDown);

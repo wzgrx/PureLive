@@ -15,6 +15,7 @@ import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/rooms/room_cards.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
+import 'package:pure_live/shared/rooms/room_rotation_dialog.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 
 /// What the panel needs from the follows: set by the app (`app/app.dart`),
@@ -81,6 +82,9 @@ class RoomSwitchPanel extends ConsumerStatefulWidget {
     this.source = const [],
     this.group,
     this.dragToClose = false,
+    this.rotationActive = false,
+    this.onStartRotation,
+    this.onStopRotation,
     this.now = DateTime.now,
     super.key,
   });
@@ -102,6 +106,15 @@ class RoomSwitchPanel extends ConsumerStatefulWidget {
 
   /// A downward drag on the header closes it (portrait).
   final bool dragToClose;
+
+  /// Whether this room is running a saved queue.
+  final bool rotationActive;
+
+  /// Starts an explicitly selected rotation in the owning live page.
+  final void Function(List<LiveRoom> rooms, RoomRotationOptions options)? onStartRotation;
+
+  /// Stops the owning page's rotation.
+  final VoidCallback? onStopRotation;
 
   /// The clock.
   final DateTime Function() now;
@@ -240,6 +253,11 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
   Future<void> _menu(LiveRoom room) =>
       showRoomMenu(context, store: ref.read(storeProvider), room: room, onOpen: () => _open(room, const []));
 
+  Future<void> _chooseRotation() async {
+    final options = await showRoomRotationOptions(context);
+    if (mounted && options != null) widget.onStartRotation?.call(_saved, options);
+  }
+
   Future<void> _editCurrentSaved() async {
     final room = widget.controller.room;
     final store = ref.read(storeProvider).savedRoomQueue;
@@ -373,18 +391,33 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
               ),
             ),
           if (group == RoomSwitchGroup.saved)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                key: const ValueKey('switch-saved-toggle-current'),
-                onPressed: () => unawaited(_editCurrentSaved()),
-                child: Text(
-                  i18n(
-                    _saved.any(widget.controller.room.hasSameIdentity)
-                        ? 'room_switch_saved_remove_current'
-                        : 'room_switch_saved_add_current',
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Wrap(
+                spacing: 4,
+                children: [
+                  TextButton(
+                    key: const ValueKey('switch-saved-toggle-current'),
+                    onPressed: () => unawaited(_editCurrentSaved()),
+                    child: Text(
+                      i18n(
+                        _saved.any(widget.controller.room.hasSameIdentity)
+                            ? 'room_switch_saved_remove_current'
+                            : 'room_switch_saved_add_current',
+                      ),
+                    ),
                   ),
-                ),
+                  if (widget.onStartRotation != null)
+                    TextButton(
+                      key: const ValueKey('switch-saved-rotation'),
+                      onPressed: widget.rotationActive
+                          ? widget.onStopRotation
+                          : _saved.length > 1 && _saved.any(widget.controller.room.hasSameIdentity)
+                          ? () => unawaited(_chooseRotation())
+                          : null,
+                      child: Text(i18n(widget.rotationActive ? 'room_rotation_stop' : 'room_rotation_start')),
+                    ),
+                ],
               ),
             ),
           _WatchingLine(controller: widget.controller),

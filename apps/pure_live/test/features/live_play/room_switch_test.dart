@@ -228,6 +228,27 @@ int _whole(double height, double card, int columns) {
 }
 
 void main() {
+  testWidgets('saved rotation is explicit and advances the existing room player', (tester) async {
+    final room = await _pump(tester, platform: TargetPlatform.windows, width: 1280, height: 800);
+    final queue = room.services.store.savedRoomQueue;
+    await tester.runAsync(() async {
+      await queue.add(_room('6'));
+      await queue.add(_room('7'));
+    });
+    await _openFromMenu(tester);
+    await _tap(tester, 'switch-group-saved');
+    await _tap(tester, 'switch-saved-rotation');
+    await tester.enterText(_key('room-rotation-seconds'), '5');
+    await _tap(tester, 'room-rotation-confirm');
+    expect(room.engine.opens, hasLength(1));
+    await tester.pump(const Duration(seconds: 6));
+    await _settle(tester);
+    expect(room.engine.opens, hasLength(2));
+    expect(room.engine.opens.last.uri.path, contains('/7/'));
+    expect(room.sessions, hasLength(1));
+    await _close(tester, room);
+  });
+
   testWidgets('saved room list adds, reorders and removes rooms without switching the player', (tester) async {
     final room = await _pump(
       tester,
