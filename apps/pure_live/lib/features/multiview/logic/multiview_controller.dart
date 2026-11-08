@@ -175,17 +175,21 @@ class MultiviewController extends ChangeNotifier {
     required this.danmakuSupports,
     required this.store,
     this.mobile = false,
+    this.persistSession = true,
+    this.allowAudioMix = true,
+    MultiviewLayout initialLayout = MultiviewLayout.quad,
     int? maxCells,
     this.toast,
     this.danmakuStartTimeout = const Duration(seconds: 30),
     this.emotes,
     DateTime Function()? now,
   }) : maxCells = maxCells ?? (mobile ? MultiviewLayout.focus.capacity : desktopMaxCells),
+       _layout = initialLayout,
        _now = now ?? DateTime.now {
-    if (this.maxCells < MultiviewLayout.focus.capacity || this.maxCells > desktopMaxCells) {
-      throw ArgumentError.value(this.maxCells, 'maxCells', 'must be between 4 and $desktopMaxCells');
+    if (this.maxCells < initialLayout.capacity || this.maxCells > desktopMaxCells) {
+      throw ArgumentError.value(this.maxCells, 'maxCells', 'must fit the initial layout and the decoder cap');
     }
-    _mixAudio = store.settings.get(Settings.multiviewMixAudio);
+    _mixAudio = allowAudioMix && store.settings.get(Settings.multiviewMixAudio);
     _filter = DanmakuMessageFilter(clock: _now);
     _cells.addAll([for (var i = 0; i < _layout.capacity; i++) _newCell()]);
   }
@@ -219,6 +223,17 @@ class MultiviewController extends ChangeNotifier {
   /// A phone (four cells at most; the default volume of phones).
   final bool mobile;
 
+  /// Whether this view restores or writes the ordinary desktop/phone layout.
+  final bool persistSession;
+
+  /// Whether the owner's audio policy permits concurrent audible cells.
+  final bool allowAudioMix;
+
+  Future<void>? _retirement;
+
+  /// Completion of all decoder retirement requested by [dispose].
+  Future<void> get retirement => _retirement ?? Future<void>.value();
+
   /// Most cells the focus layout may grow to.
   final int maxCells;
 
@@ -247,7 +262,7 @@ class MultiviewController extends ChangeNotifier {
     streamer: () => _cells.isEmpty ? '' : _cells[selectedIndex].room?.nick ?? '',
   );
   int _nextCellId = 0;
-  MultiviewLayout _layout = MultiviewLayout.quad;
+  MultiviewLayout _layout;
   int _focused = 0;
   int _audio = 0;
   bool _allMuted = false;
@@ -385,11 +400,13 @@ class MultiviewController extends ChangeNotifier {
     for (final setting in _filterSettings) {
       _subscriptions.add(store.settings.watch(setting).skip(1).listen((_) => unawaited(_reloadFilter())));
     }
-    _subscriptions.add(store.settings.watch(Settings.multiviewMixAudio).skip(1).listen(_updateMixAudio));
+    if (allowAudioMix) {
+      _subscriptions.add(store.settings.watch(Settings.multiviewMixAudio).skip(1).listen(_updateMixAudio));
+    }
     _subscriptions.add(store.settings.watch(Settings.roomVolumeGains).skip(1).listen((_) => _syncRoomGains()));
     _subscriptions.add(store.settings.watch(Settings.volumeBoostDb).skip(1).listen((_) => _syncRoomGains()));
     await _reloadFilter();
-    await _load();
+    if (persistSession) await _load();
   }
 
   static const List<Setting<Object>> _filterSettings = [
@@ -470,7 +487,7 @@ class MultiviewController extends ChangeNotifier {
   }
 
   Future<void> _save() async {
-    if (_disposed || _restoring) return;
+    if (!persistSession || _disposed || _restoring) return;
     final json = {
       'layout': _layout.name,
       'smallCellsLowQuality': _smallCellsLowQuality,
@@ -533,7 +550,7 @@ class MultiviewController extends ChangeNotifier {
   /// Changes the arrangement (3.x `setLayout`): cells beyond the new size are
   /// released; the first ones keep playing.
   Future<void> setLayout(MultiviewLayout next, {bool save = true}) async {
-    if (next == _layout || _disposed) return;
+    if (next == _layout || _disposed || next.capacity > maxCells) return;
     final capacity = next.capacity;
     final removed = _cells.length > capacity ? _cells.sublist(capacity) : const <MultiviewCell>[];
     if (removed.isNotEmpty) _cells.removeRange(capacity, _cells.length);
@@ -1043,7 +1060,7 @@ class MultiviewController extends ChangeNotifier {
 
   /// Persists the opt-in audio mode without rewriting the last arrangement.
   Future<void> setMixAudio({required bool enabled}) async {
-    if (_disposed || enabled == _mixAudio) return;
+    if (!allowAudioMix || _disposed || enabled == _mixAudio) return;
     await _guard(() async {
       await store.settings.set(Settings.multiviewMixAudio, enabled);
       _updateMixAudio(enabled);
@@ -1219,11 +1236,15 @@ class MultiviewController extends ChangeNotifier {
     unawaited(_danmakuEvents?.cancel());
     final danmaku = _danmaku;
     if (danmaku != null) unawaited(_guard(danmaku.close, 'danmaku close'));
+    final releases = <Future<void>>[];
     for (final cell in _cells) {
       final session = _clear(cell);
       cell._autoSwitch.dispose();
-      if (session != null) unawaited(session.dispose());
+      if (session != null) releases.add(session.dispose());
     }
+    final retiring = Future.wait<void>(releases).then((_) {});
+    _retirement = retiring;
+    unawaited(_guard(() => retiring, 'decoder retirement'));
     _giftFlights.dispose();
     unawaited(_flying.close());
     unawaited(_retractions.close());

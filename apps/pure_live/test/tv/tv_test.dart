@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_danmaku/live_danmaku.dart';
 import 'package:live_iptv/live_iptv.dart';
+import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:pure_live/app/app.dart';
@@ -38,6 +39,7 @@ import 'package:pure_live/tv/room/tv_live_play_page.dart';
 import 'package:pure_live/tv/settings/tv_settings_catalog.dart';
 import 'package:pure_live/tv/settings/tv_settings_section_page.dart';
 import 'package:pure_live/tv/tv_theme.dart';
+import 'package:pure_live/tv/wallpaper/tv_wallpaper_layer.dart';
 import 'package:pure_live/tv/widgets/tv_button.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
@@ -1604,6 +1606,48 @@ void main() {
     expect(find.byKey(const ValueKey('tv-notice')), findsNothing);
     expect(_focused, 'tv menu favorites');
     expect(await tester.runAsync(() => services.store.meta.get(TvHomePage.noticeKey)), '1');
+    await _close(tester, services);
+  });
+
+  testWidgets('TV dual view opens two selected rooms and retires both when leaving the pane', (tester) async {
+    final services = await _pumpApp(tester);
+    final baseline = TvWallpaperVideo.holds.value;
+    await tester.runAsync(() async {
+      await services.store.settings.set(Settings.multiviewMixAudio, true);
+      for (final id in ['1', '2']) {
+        await services.store.savedRoomQueue.add(LiveRoom(platform: SiteIds.bilibili, roomId: id, nick: '双画面频道$id'));
+      }
+    });
+    for (var i = 0; i < 12 && _focused != 'tv menu multiview'; i++) {
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+    }
+    expect(_focused, 'tv menu multiview');
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    final first = find.byKey(const ValueKey('tv-multiview-cell-0'));
+    final second = find.byKey(const ValueKey('tv-multiview-cell-1'));
+    expect(first, findsOneWidget);
+    expect(second, findsOneWidget);
+    expect(find.byKey(const ValueKey('tv-multiview-cell-2')), findsNothing);
+    await tester.tap(first);
+    await _settle(tester);
+    await tester.tap(find.text('双画面频道1'));
+    await _settle(tester, rounds: 10);
+    await tester.tap(second);
+    await _settle(tester);
+    await tester.tap(find.text('双画面频道2'));
+    await _settle(tester, rounds: 10);
+    final left = tester.widget<LiveVideoView>(find.descendant(of: first, matching: find.byType(LiveVideoView)));
+    final right = tester.widget<LiveVideoView>(find.descendant(of: second, matching: find.byType(LiveVideoView)));
+    expect(left.session.state.volume, 0);
+    expect(right.session.state.volume, greaterThan(0));
+    expect(TvWallpaperVideo.holds.value, greaterThan(baseline));
+    final favorites = find.byKey(const ValueKey('tv-menu-favorites'));
+    await tester.ensureVisible(favorites);
+    await tester.tap(favorites);
+    await _settle(tester, rounds: 10);
+    expect(find.byKey(const ValueKey('tv-multiview-cell-0'), skipOffstage: false), findsNothing);
+    expect(TvWallpaperVideo.holds.value, baseline);
     await _close(tester, services);
   });
 

@@ -13,6 +13,7 @@ import 'package:pure_live/features/live_play/logic/predictive_back.dart';
 import 'package:pure_live/features/version/update_feed.dart';
 import 'package:pure_live/features/version/update_prompt.dart';
 import 'package:pure_live/i18n/i18n.dart';
+import 'package:pure_live/tv/home/tv_dual_view_pane.dart';
 import 'package:pure_live/tv/music/music_panes.dart';
 import 'package:pure_live/tv/pages/tv_areas_pane.dart';
 import 'package:pure_live/tv/pages/tv_favorites_pane.dart';
@@ -81,6 +82,9 @@ enum TvPane {
 
   /// IPTV playlists and channels.
   iptv('tv_menu_iptv', TvIcons.menuIptv),
+
+  /// A bounded two-stream viewing pane.
+  multiview('multiview_title', AppIcons.multiview),
 
   /// Video search (A17.6, X4: the video mode's order).
   videoSearch('tv_menu_video_search', TvIcons.menuSearch, mode: TvMode.video),
@@ -519,6 +523,7 @@ class _TvHomePageState extends ConsumerState<TvHomePage> with WidgetsBindingObse
     TvPane.search => const TvSearchPane(),
     TvPane.link => const TvLinkPane(),
     TvPane.iptv => const TvIptvPane(),
+    TvPane.multiview => const TvDualViewPane(),
     TvPane.settings => const TvSettingsCatalog(),
     TvPane.videoSearch => const TvVideoGate(child: TvVideoSearchPane()),
     TvPane.videoMine => const TvVideoGate(child: TvVideoMinePane()),
@@ -651,7 +656,7 @@ class _TvHomePageState extends ConsumerState<TvHomePage> with WidgetsBindingObse
         sizing: StackFit.expand,
         children: [
           for (final pane in panes)
-            if (_visited.contains(pane))
+            if (_visited.contains(pane) && (pane != TvPane.multiview || pane == _pane))
               Focus(
                 focusNode: _paneNode(pane),
                 skipTraversal: true,
