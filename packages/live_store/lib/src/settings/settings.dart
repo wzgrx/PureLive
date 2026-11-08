@@ -564,6 +564,14 @@ abstract final class Settings {
   /// (docs/A-界面设计/A07-直播间界面/A07.46-画质线路移入画面开关; off by default).
   static const livePlayPickersInVideo = BoolSetting('livePlayPickersInVideo', section: 'player', defaultValue: false);
 
+  /// A long press on the live picture opens the room switch panel. A
+  /// danmaku item still keeps its own long-press action.
+  static const livePlayLongPressSwitchRoom = BoolSetting(
+    'livePlayLongPressSwitchRoom',
+    section: 'player',
+    defaultValue: false,
+  );
+
   /// New (docs/A-界面设计/A07-直播间界面/A07.13-切换直播间面板/brief.md, docs/A-界面设计/A07-直播间界面/A07.13-切换直播间面板 c4; 3.x has no such
   /// setting): how the live room's "切换直播间" panel shows the rooms, kept
   /// from the panel's style button: `grid` (the default, 3.x's small cards,
@@ -2178,6 +2186,7 @@ abstract final class Settings {
     livePlayChatCollapsed,
     livePlayWideFooter,
     livePlayPickersInVideo,
+    livePlayLongPressSwitchRoom,
     roomSwitcherLayout,
     hideDanmaku,
     noEmojiMode,

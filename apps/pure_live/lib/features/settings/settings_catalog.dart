@@ -998,6 +998,14 @@ List<SettingsEntry> _build() {
       desc: 'enable_live_play_pickers_in_video_subtitle',
       keywords: ['画质', '线路', '原画', '画面', '控制条', '弹幕窗口', 'quality', 'line', 'picker'],
     )
+    ..toggle(
+      'live_play_long_press_switch',
+      'enable_live_play_long_press_switch',
+      Settings.livePlayLongPressSwitchRoom,
+      AppIcons.switchRoom,
+      desc: 'enable_live_play_long_press_switch_subtitle',
+      keywords: ['长按', '切换直播间', '手势', 'long press', 'switch room'],
+    )
     ..link(
       'audience',
       'audience_metric_settings',

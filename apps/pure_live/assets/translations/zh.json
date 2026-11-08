@@ -679,6 +679,8 @@
     "enable_home_bottom_bar_wide_subtitle": "宽屏（平板、展开的折叠屏）首页也用手机的底栏，不用侧栏",
     "enable_liquid_glass": "液体玻璃",
     "enable_liquid_glass_subtitle": "底栏悬浮成液态玻璃，边缘折射，选中项可按住拖动；内存 4 GB 及以下只半透明",
+    "enable_live_play_long_press_switch": "长按画面切换直播间",
+    "enable_live_play_long_press_switch_subtitle": "长按直播画面的空白处打开切房面板；命中弹幕时保留弹幕操作",
     "enable_live_play_pickers_in_video": "画质和线路放在播放器控制栏",
     "enable_live_play_pickers_in_video_subtitle": "非全屏时也在播放器控制栏显示画质和线路，随控制栏显示或隐藏；关闭后沿用原位置",
     "enable_live_play_wide_footer": "视频下方的底栏",

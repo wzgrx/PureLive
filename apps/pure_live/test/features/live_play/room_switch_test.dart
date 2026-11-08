@@ -228,6 +228,15 @@ int _whole(double height, double card, int columns) {
 }
 
 void main() {
+  testWidgets('the opt-in picture long press opens the room switch panel', (tester) async {
+    final room = await _pump(tester, settings: {Settings.livePlayLongPressSwitchRoom: true});
+    await tester.longPressAt(tester.getCenter(find.byType(RoomPlayer)));
+    await _settle(tester);
+    expect(_key('live-play-switch-panel'), findsOneWidget);
+    expect(room.engine.opens, hasLength(1));
+    await _close(tester, room);
+  });
+
   testWidgets('room appointment accepts a daily time and keeps the current room untouched', (tester) async {
     final room = await _pump(tester, platform: TargetPlatform.windows, width: 1280, height: 800);
     await _openFromMenu(tester);

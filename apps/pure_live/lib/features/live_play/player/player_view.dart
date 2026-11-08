@@ -815,6 +815,8 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
       mode: watchSetting(ref, Settings.refreshRateMode),
     );
     final longPress = showDanmaku && watchSetting(ref, Settings.enableDanmakuLongPressInteraction);
+    final longPressSwitch =
+        watchSetting(ref, Settings.livePlayLongPressSwitchRoom) && !pip && !_locked && !_room.isArchive;
     final diagnostics = watchSetting(ref, Settings.showPortraitDiagnostics);
     final pausedBehavior = watchSetting(ref, Settings.danmakuPausedBehavior);
     final maxVisible = watchSetting(ref, Settings.danmakuMaxVisibleCount);
@@ -938,11 +940,15 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
                     onSecondaryTapCancel: widget.platform.desktop ? _cancelSecondary : null,
                     onTertiaryTapUp: widget.platform.platform == TargetPlatform.windows ? _onMiddleTap : null,
                     onTertiaryTapCancel: widget.platform.platform == TargetPlatform.windows ? _cancelMiddle : null,
-                    // F.2b: only with its switch on, so it never holds a drag back.
-                    onLongPressStart: longPress
+                    // An explicit danmaku hit owns the long press. Only a
+                    // blank part of an unlocked live picture can switch rooms.
+                    onLongPressStart: longPress || longPressSwitch
                         ? (details) {
-                            if (_danmakuAt(details.globalPosition, longPress: true) case final hit?) {
+                            final hit = longPress ? _danmakuAt(details.globalPosition, longPress: true) : null;
+                            if (hit != null) {
                               unawaited(_openMessage(hit));
+                            } else if (longPressSwitch) {
+                              RoomPanelScope.maybeOf(context)?.open(RoomPanelKind.switchRoom);
                             }
                           }
                         : null,
