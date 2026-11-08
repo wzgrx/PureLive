@@ -22,6 +22,7 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
     required this.progress,
     this.initialVolume = 1,
     this.ownsSession = true,
+    this.restoreOnQualityFailure = false,
   }) {
     _states = session.states.listen(_changed);
   }
@@ -51,6 +52,10 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
 
   /// False for a room-owned native decoder.
   final bool ownsSession;
+
+  /// A variant can resolve but fail to open (for example a signed MP4 on an
+  /// unavailable CDN). Keep the preceding playable variant in that case.
+  final bool restoreOnQualityFailure;
   @override
   P? video;
   @override
@@ -152,6 +157,50 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
     return _plan(q, position);
   }
 
+  Future<void> _confirmVariant(int generation) async {
+    final result = Completer<PlaybackState?>();
+    void observe(PlaybackState state) {
+      if (result.isCompleted) return;
+      if (const {PlaybackStatus.playing, PlaybackStatus.completed, PlaybackStatus.error}.contains(state.status)) {
+        result.complete(state);
+      }
+    }
+
+    final subscription = session.states.listen(observe);
+    final cancel = _cancel;
+    try {
+      observe(session.state);
+      final state = await Future.any<PlaybackState?>([
+        result.future,
+        if (cancel != null) cancel.whenCancelled.then<PlaybackState?>((_) => null),
+      ]).timeout(const Duration(seconds: 12));
+      if (_current(generation) && state?.status == PlaybackStatus.error) {
+        final failure = state?.error;
+        if (failure is Exception) throw failure;
+        if (failure is Error) throw failure;
+        throw StreamUnavailable(site, 'The selected replay quality did not open');
+      }
+    } finally {
+      await subscription.cancel();
+    }
+  }
+
+  Future<void> _openVariant(int generation, PlaybackPlan plan, double volume, {required bool paused}) async {
+    // Confirm playback before pausing it again, without audible output
+    // while replacing an already paused source.
+    final muted = restoreOnQualityFailure && paused;
+    await session.open(
+      PlaybackRequest(site: site, plan: plan, volume: muted ? 0 : volume, refresh: () => _refresh(generation)),
+    );
+    if (!_current(generation)) return;
+    if (restoreOnQualityFailure) await _confirmVariant(generation);
+    if (!_current(generation)) return;
+    if (paused) await session.pause();
+    if (!_current(generation)) return;
+    if (muted) await session.setVolume(volume);
+    if (_current(generation)) await restoreRate();
+  }
+
   @override
   Future<void> selectQuality(String id) async {
     if (_disposed || busy || !_ready || id == qualityId || qualities.every((q) => q.id != id)) return;
@@ -168,22 +217,38 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
     _ready = false;
     qualityId = id;
     notifyListeners();
+    var replaced = false;
     try {
       final plan = await _refresh(g);
       if (!_current(g)) return;
-      await session.open(PlaybackRequest(site: site, plan: plan, volume: volume, refresh: () => _refresh(g)));
-      if (_current(g)) {
-        if (paused) await session.pause();
-        await restoreRate();
-        _ready = true;
-      }
+      replaced = true;
+      await _openVariant(g, plan, volume, paused: paused);
+      if (_current(g)) _ready = true;
     } on Object catch (e) {
-      if (_current(g)) {
-        qualityId = previous;
-        error = e;
-        _pending = null;
-        _ready = true;
+      if (!_current(g)) return;
+      qualityId = previous;
+      if (restoreOnQualityFailure && replaced && previous != null) {
+        try {
+          _pending = at;
+          final plan = await _refresh(g);
+          if (!_current(g)) return;
+          await _openVariant(g, plan, volume, paused: paused);
+          if (_current(g)) {
+            error = null;
+            _ready = true;
+          }
+          return;
+        } on Object catch (restoreError) {
+          if (!_current(g)) return;
+          error = restoreError;
+          _pending = null;
+          _ready = true;
+          return;
+        }
       }
+      error = e;
+      _pending = null;
+      _ready = true;
     } finally {
       if (_current(g)) {
         busy = false;
@@ -246,7 +311,12 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
     if (!_ready ||
         _pending != null ||
         part == null ||
-        {PlaybackStatus.opening, PlaybackStatus.idle, PlaybackStatus.stopped}.contains(session.state.status)) {
+        const {
+          PlaybackStatus.opening,
+          PlaybackStatus.idle,
+          PlaybackStatus.stopped,
+          PlaybackStatus.error,
+        }.contains(session.state.status)) {
       return;
     }
     await progress.save(part.id, session.state.status == PlaybackStatus.completed ? Duration.zero : position);

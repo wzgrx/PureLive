@@ -50,6 +50,7 @@ void main() {
       lineFor: (quality) => LivePlayLine(quality.url, format: quality.format),
       session: fakeSession(engine),
       progress: progress,
+      restoreOnQualityFailure: true,
     );
     await controller.open(record.id);
     expect(controller.error, isNull);
@@ -82,6 +83,31 @@ void main() {
     await controller.record();
     expect(await progress.position('123:1'), const Duration(seconds: 85));
     expect(saved, isNot(contains('http')));
+
+    // A CDN can refuse a high quality after resolving its signed URL.
+    // Restore the same preceding variant, seek and user controls once.
+    engine.onOpen = (media) async {
+      if (media.uri.path.endsWith('-1080.mp4')) {
+        throw const StreamUnavailable(SiteIds.chzzk, 'Synthetic unavailable variant');
+      }
+      engine
+        ..emit(const EngineBuffering(buffering: false))
+        ..emit(const EnginePlaying(playing: true));
+    };
+    await controller.selectQuality('mp4-1080');
+    expect(engine.opens.map((media) => media.uri.path), [
+      '/replay-144.mp4',
+      '/replay-720.mp4',
+      '/replay-1080.mp4',
+      '/replay-720.mp4',
+    ]);
+    expect(engine.opens.last.uri.queryParameters['revision'], '4');
+    expect(engine.opens.last.start, const Duration(seconds: 85));
+    expect(controller.qualityId, 'mp4-720');
+    expect(controller.error, isNull);
+    expect(controller.session.state.status, PlaybackStatus.paused);
+    expect(controller.session.state.volume, .4);
+    expect(engine.rates.last, 1.75);
     controller.dispose();
     await controller.retirement;
     expect(engine.disposed, isTrue);

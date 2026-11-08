@@ -146,6 +146,7 @@ ArchivePlaybackController Function(ArchiveRecording) roomArchiveFactory(
         progress: chzzkProgress,
         initialVolume: volume,
         ownsSession: false,
+        restoreOnQualityFailure: true,
       ),
       final SoopArchiveVideo video => SoopArchiveController(
         source: soop,
