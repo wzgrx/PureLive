@@ -27,6 +27,81 @@ Map<String, Object?> detail(String url) => {
 };
 
 void main() {
+  test('public contiguous TS entries make a finite VOD index at the original quality', () {
+    final recording = ChzzkArchiveApi.parseDetail(
+      detail('https://sample.akamaized.net/live/index.m3u8'),
+      id: '101',
+    ).single.recording;
+    final timeline = [
+      {'t': 0, 'd': 4000, 'r': 299},
+    ];
+    final ts = {
+      'id': 'rendition_144',
+      'height': 144,
+      'codecs': 'avc1.4dc00c,mp4a.40.2',
+      'baseURL': [
+        {'value': 'https://sample.akamaized.net/video/'},
+      ],
+      'segmentTemplate': {
+        'media': r'$RepresentationID$/seg_$Number%06d$.ts?sig=synthetic',
+        'timescale': 1000,
+        'startNumber': 0,
+        'segmentTimeline': {'s': timeline},
+      },
+    };
+    Map<String, Object?> manifest(Map<String, Object?> variant) => {
+      'type': 'STATIC',
+      'period': [
+        {
+          'adaptationSet': [
+            {
+              'mimeType': 'video/mp2t',
+              'representation': [variant],
+            },
+            {
+              'mimeType': 'video/mp4',
+              'representation': [
+                {
+                  'height': 144,
+                  'codecs': 'avc1.4dc00c,mp4a.40.2',
+                  'baseURL': [
+                    {'value': 'https://sample.akamaized.net/replay.mp4'},
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    final quality = ChzzkArchiveApi.parseMediaManifest(recording, manifest(ts)).single.qualities.single;
+    expect(quality.id, 'mp4-144');
+    expect(quality.url, endsWith('replay.mp4'));
+    final playlist = quality.segments!.render();
+    expect(quality.segments!.firstUrl, endsWith('/rendition_144/seg_000000.ts?sig=synthetic'));
+    expect(playlist, contains('/rendition_144/seg_000075.ts?sig=synthetic'));
+    expect(playlist, contains('#EXT-X-TARGETDURATION:4'));
+    expect('#EXTINF:'.allMatches(playlist), hasLength(300));
+    expect(playlist, endsWith('#EXT-X-ENDLIST\n'));
+    timeline[0]['r'] = -1;
+    expect(ChzzkArchiveApi.parseMediaManifest(recording, manifest(ts)).single.qualities.single.segments, isNull);
+    timeline[0]['r'] = 299;
+    final protected = {
+      ...ts,
+      'contentProtection': [
+        {'schemeIdUri': 'urn:test'},
+      ],
+    };
+    expect(ChzzkArchiveApi.parseMediaManifest(recording, manifest(protected)).single.qualities.single.segments, isNull);
+    final offCdn = {
+      ...ts,
+      'baseURL': [
+        {'value': 'https://sample.akamaized.net.example.test/'},
+      ],
+    };
+    expect(ChzzkArchiveApi.parseMediaManifest(recording, manifest(offCdn)).single.qualities.single.segments, isNull);
+  });
+
   test('finished public VOD offers only muxed allowlisted MP4 with stable quality ids', () {
     final recording = ChzzkArchiveApi.parseDetail(
       detail('https://sample.akamaized.net/live/index.m3u8'),

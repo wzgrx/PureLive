@@ -19,10 +19,13 @@ sealed class PlaybackSource {
 /// codec and lease).
 final class LineSource extends PlaybackSource {
   /// Creates the source.
-  const new(this.line);
+  const new(this.line, {this.vodPlaylist});
 
   /// The line.
   final LivePlayLine line;
+
+  /// A validated, finite on-demand HLS index served only on loopback.
+  final String? vodPlaylist;
 
   @override
   String get url => line.url;

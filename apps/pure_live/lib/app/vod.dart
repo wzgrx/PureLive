@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
+import 'package:live_media/live_media.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/services.dart';
@@ -142,6 +143,21 @@ ArchivePlaybackController Function(ArchiveRecording) roomArchiveFactory(
         loadParts: chzzk.detail,
         qualitiesOf: (part) => part.qualities,
         lineFor: (q) => LivePlayLine(q.url, headers: ChzzkArchiveApi.headers, format: q.format),
+        sourcesFor: (q) => [
+          if (q.segments case final segments?)
+            LineSource(
+              LivePlayLine(
+                segments.firstUrl,
+                headers: ChzzkArchiveApi.headers,
+                format: StreamFormat.hls,
+                codec: 'avc',
+                lineId: 'chzzk-segments:${q.id}',
+              ),
+              vodPlaylist: segments.render(),
+            ),
+          if (q.segments == null || q.format == StreamFormat.other)
+            LineSource(LivePlayLine(q.url, headers: ChzzkArchiveApi.headers, format: q.format)),
+        ],
         session: session,
         progress: chzzkProgress,
         initialVolume: volume,

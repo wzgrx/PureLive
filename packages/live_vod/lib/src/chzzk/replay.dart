@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:live_core/live_core.dart';
 import 'package:live_net/live_net.dart';
 import 'package:live_vod/src/archive.dart';
+import 'package:live_vod/src/chzzk/segments.dart';
 
 /// Public recording metadata. Transient playlist URLs are kept separately.
 final class ChzzkArchiveVideo implements ArchiveVideo {
@@ -60,7 +61,7 @@ final class ChzzkArchivePart implements ArchiveVideo {
 /// A public, seekable media URL discovered for this recording.
 final class ChzzkArchiveQuality implements ArchiveQuality {
   /// Creates a quality from a validated HTTPS URL.
-  const new(this.url, {this.id = 'auto', this.label = 'Auto', this.format = StreamFormat.hls});
+  const new(this.url, {this.id = 'auto', this.label = 'Auto', this.format = StreamFormat.hls, this.segments});
 
   /// Ephemeral media URL.
   final String url;
@@ -71,6 +72,9 @@ final class ChzzkArchiveQuality implements ArchiveQuality {
 
   /// Distinguishes a playlist from a progressive muxed MP4.
   final StreamFormat format;
+
+  /// The same quality as independently seekable public TS segments, when offered.
+  final ChzzkVodSegments? segments;
   @override
   bool get playable => true;
 }
@@ -222,7 +226,7 @@ final class ChzzkArchiveApi {
       'cpl': 'en_US',
     });
     final manifest = await _readManifest(url, cancel);
-    return parseProgressive(recording, manifest);
+    return parseMediaManifest(recording, manifest);
   }
 
   static final _vodId = RegExp(r'^[A-Za-z0-9_-]{16,128}$');
@@ -317,6 +321,63 @@ final class ChzzkArchiveApi {
       return ChzzkArchiveQuality(uri.toString());
     }
     return null;
+  }
+
+  /// Keeps the quality labels stable while pairing available TS segments
+  /// with the original whole-file MP4. Unrecognised segments fall back to MP4.
+  static List<ChzzkArchivePart> parseMediaManifest(ChzzkArchiveVideo recording, Object? manifest) {
+    final segmented = <int, ChzzkVodSegments>{};
+    final periods = manifest is Map && jsonString(manifest['type'])?.toLowerCase() == 'static'
+        ? manifest['period']
+        : null;
+    if (periods case [final Map<Object?, Object?> period]) {
+      final tracks = period['adaptationSet'];
+      if (tracks is List &&
+          tracks.length <= 16 &&
+          ['segmentBase', 'segmentTemplate', 'segmentList', 'contentProtection'].every((key) => period[key] == null)) {
+        for (final track in tracks) {
+          if (track is! Map || track['representation'] is! List) continue;
+          final variants = track['representation'] as List;
+          if (variants.length > 24) continue;
+          for (final v in variants) {
+            if (v is! Map) continue;
+            final height = jsonInt(v['height'] ?? track['height']);
+            if (height == null || height < 100 || height > 4320 || segmented.containsKey(height)) continue;
+            final timeline = ChzzkVodSegments.parse(track, v, duration: recording.duration);
+            if (timeline != null) segmented[height] = timeline;
+          }
+        }
+      }
+    }
+    if (segmented.isEmpty) return parseProgressive(recording, manifest);
+    final progressive = <int, ChzzkArchiveQuality>{};
+    try {
+      for (final q in parseProgressive(recording, manifest).single.qualities) {
+        final height = int.tryParse(q.id.substring('mp4-'.length));
+        if (height != null) progressive[height] = q;
+      }
+    } on StreamUnavailable {
+      // A public recording can legitimately have TS but no whole-file MP4.
+    }
+    final heights = {...segmented.keys, ...progressive.keys}.toList()..sort();
+    return [
+      ChzzkArchivePart(
+        recording,
+        List.unmodifiable([
+          for (final height in heights)
+            if (segmented[height] case final segments?)
+              ChzzkArchiveQuality(
+                progressive[height]?.url ?? segments.firstUrl,
+                id: 'mp4-$height',
+                label: '${height}p',
+                format: progressive[height]?.format ?? StreamFormat.hls,
+                segments: segments,
+              )
+            else
+              progressive[height]!,
+        ]),
+      ),
+    ];
   }
 
   /// Accepts only whole-file H.264/AAC MP4 representations of one static period.

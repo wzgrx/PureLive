@@ -304,6 +304,20 @@ final class PlaybackSession {
 
   /// The current source moved since it opened or resumed.
   bool _moved = false;
+  bool _finiteVodStarted = false;
+
+  /// A finite TS playlist can need multiple origin requests before its
+  /// first position. Subsequent stalls use the ordinary session limits.
+  static const Duration segmentedStartupAllowance = Duration(seconds: 30);
+
+  bool get _waitingForSegmentedVod =>
+      !_finiteVodStarted &&
+      (_plan?.onDemand ?? false) &&
+      _source is LineSource &&
+      (_source! as LineSource).vodPlaylist != null;
+
+  Duration _startupBudget(Duration normal) =>
+      _waitingForSegmentedVod && normal < segmentedStartupAllowance ? segmentedStartupAllowance : normal;
 
   /// A reopened source of a recovery: the engine's flags do not end the
   /// recovery, moving does.
@@ -866,6 +880,7 @@ final class PlaybackSession {
     final plan = _plan!;
     _cancelWatchdogs();
     _source = source;
+    _finiteVodStarted = false;
     if (source case LineSource(:final line)) _lines.select(line);
     final generation = _fence.begin(source.url);
     _rewindPosition = null;
@@ -946,7 +961,7 @@ final class PlaybackSession {
             },
           )
           .timeout(
-            timings.sourceOpen,
+            _startupBudget(timings.sourceOpen),
             onTimeout: () {
               // A later open may reuse this transport. Only this source
               // transaction's deadline can cancel its pending input.
@@ -1037,7 +1052,10 @@ final class PlaybackSession {
         if (_accepting && fps > 0) _emit(_state.copyWith(frameRate: fps));
       case EnginePosition(:final position):
         if (_accepting) _timingMoved(position);
-        if (_accepting && _state.onDemand) _emit(_state.copyWith(position: position));
+        if (_accepting && _state.onDemand) {
+          if (position > Duration.zero && _waitingForSegmentedVod) _finiteVodStarted = true;
+          _emit(_state.copyWith(position: position));
+        }
         if (_accepting && !_state.onDemand) _rewindPosition = position;
         if (_accepting) {
           _onPosition(position, session);
@@ -1262,7 +1280,7 @@ final class PlaybackSession {
   /// Repeated buffering notifications keep the first deadline (3.x).
   void _armBufferingWatchdog(int session) {
     if (_bufferingTimer != null || !_wantPlaying) return;
-    _bufferingTimer = Timer(timings.bufferingStall, () {
+    _bufferingTimer = Timer(_startupBudget(timings.bufferingStall), () {
       _bufferingTimer = null;
       if (!_current(session) || !_buffering || !_wantPlaying) return;
       if (_accepting && _reconcilable && _progressed()) {
@@ -1322,8 +1340,9 @@ final class PlaybackSession {
       _frameTimer = null;
       if (!_current(session) || !_wantPlaying || _state.audioOnly || _buffering || !_presentationVisible) return;
       final idle = clock.now().difference(_lastFrame ?? clock.now());
-      if (idle < timings.frameStall) {
-        _frameTimer = Timer(timings.frameStall - idle, check);
+      final limit = _startupBudget(timings.frameStall);
+      if (idle < limit) {
+        _frameTimer = Timer(limit - idle, check);
         return;
       }
       _handleError(
@@ -1336,7 +1355,7 @@ final class PlaybackSession {
       );
     }
 
-    _frameTimer = Timer(timings.frameStall, check);
+    _frameTimer = Timer(_startupBudget(timings.frameStall), check);
   }
 
   /// G02.3: a live source that moved, or a recovery's source that has to,

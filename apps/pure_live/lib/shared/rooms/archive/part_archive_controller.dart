@@ -20,6 +20,7 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
     required this.session,
     required this.recordingId,
     required this.progress,
+    this.sourcesFor,
     this.initialVolume = 1,
     this.ownsSession = true,
     this.restoreOnQualityFailure = false,
@@ -38,6 +39,9 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
 
   /// Converts a current rendition into an on-demand input.
   final LivePlayLine Function(Q quality) lineFor;
+
+  /// Optional ordered inputs for the same verified rendition.
+  final List<PlaybackSource> Function(Q quality)? sourcesFor;
   @override
   final PlaybackSession session;
 
@@ -154,8 +158,12 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
     }
   }
 
-  PlaybackPlan _plan(Q quality, Duration at) =>
-      PlaybackPlan(sources: [LineSource(lineFor(quality))], onDemand: true, start: at, appliedQualityData: quality.id);
+  PlaybackPlan _plan(Q quality, Duration at) => PlaybackPlan(
+    sources: sourcesFor?.call(quality) ?? [LineSource(lineFor(quality))],
+    onDemand: true,
+    start: at,
+    appliedQualityData: quality.id,
+  );
 
   Future<PlaybackPlan> _refresh(int g) async {
     if (!_current(g)) throw StateError('Archive replaced');
@@ -173,7 +181,7 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
     return _plan(q, position);
   }
 
-  Future<void> _confirmVariant(int generation) async {
+  Future<void> _confirmVariant(int generation, {required bool segmented}) async {
     final result = Completer<PlaybackState?>();
     void observe(PlaybackState state) {
       if (result.isCompleted) return;
@@ -186,10 +194,15 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
     final cancel = _cancel;
     try {
       observe(session.state);
-      final state = await Future.any<PlaybackState?>([
-        result.future,
-        if (cancel != null) cancel.whenCancelled.then<PlaybackState?>((_) => null),
-      ]).timeout(const Duration(seconds: 12));
+      final state =
+          await Future.any<PlaybackState?>([
+            result.future,
+            if (cancel != null) cancel.whenCancelled.then<PlaybackState?>((_) => null),
+          ]).timeout(
+            segmented
+                ? PlaybackSession.segmentedStartupAllowance + const Duration(seconds: 3)
+                : const Duration(seconds: 12),
+          );
       if (_current(generation) && state?.status == PlaybackStatus.error) {
         final failure = state?.error;
         if (failure is Exception) throw failure;
@@ -209,7 +222,12 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
       PlaybackRequest(site: site, plan: plan, volume: muted ? 0 : volume, refresh: () => _refresh(generation)),
     );
     if (!_current(generation)) return;
-    if (restoreOnQualityFailure) await _confirmVariant(generation);
+    if (restoreOnQualityFailure) {
+      await _confirmVariant(
+        generation,
+        segmented: plan.sources.any((source) => source is LineSource && source.vodPlaylist != null),
+      );
+    }
     if (!_current(generation)) return;
     if (paused) await session.pause();
     if (!_current(generation)) return;
