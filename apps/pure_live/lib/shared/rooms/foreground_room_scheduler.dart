@@ -8,8 +8,8 @@ import 'package:live_store/live_store.dart';
 /// Navigation remains owned by the app; this object never tries to wake a
 /// stopped process or bypass the operating system's background limits.
 final class ForegroundRoomScheduler {
-  /// Creates a stopped scheduler. [openRoom] completes after the scheduled
-  /// page closes so overlapping appointments do not stack player pages.
+  /// Creates a stopped scheduler. [openRoom] completes after navigation is
+  /// applied; the app owns replacing any previous scheduled room.
   new({
     required this.schedules,
     required this.claim,

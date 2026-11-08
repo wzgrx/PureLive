@@ -32,6 +32,7 @@ import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/platform_services.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/app_router.dart';
+import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_observer.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/routes/tv_router.dart';
@@ -182,7 +183,22 @@ class _PureLiveAppState extends ConsumerState<PureLiveApp> with WidgetsBindingOb
             },
             openRoom: (room) async {
               if (!mounted || ref.read(sitesProvider).maybeOf(room.platform) == null) return;
-              await AppNavigator.toNamed<void>(RoutePath.kLivePlay, arguments: room);
+              final top = liveRouteObserver.topPage.value;
+              final previousAppointment =
+                  top?.name == RoutePath.kLivePlay &&
+                  switch (top?.arguments) {
+                    LiveRoomArgs(appointment: true) => true,
+                    _ => false,
+                  };
+              final arguments = LiveRoomArgs(room: room, appointment: true);
+              unawaited(
+                previousAppointment
+                    ? AppNavigator.offAndToNamed<void>(RoutePath.kLivePlay, arguments: arguments)
+                    : AppNavigator.toNamed<void>(RoutePath.kLivePlay, arguments: arguments),
+              );
+              // Dispatch is complete when navigation is applied, not when
+              // the viewer eventually closes the scheduled room.
+              await WidgetsBinding.instance.endOfFrame;
             },
           )
           ..setForeground(value: state == null || state == AppLifecycleState.resumed)

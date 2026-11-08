@@ -137,7 +137,10 @@ GoRouter buildAppRouter({
               // reads it), not the list it came with (U.2b2).
               ? liveRoomPage(
                   key: state.pageKey,
-                  arguments: LiveRoomArgs.roomOf(state.extra) ?? state.extra,
+                  arguments: switch (state.extra) {
+                    LiveRoomArgs(appointment: true) => state.extra,
+                    _ => LiveRoomArgs.roomOf(state.extra) ?? state.extra,
+                  },
                   child: child,
                 )
               : MaterialPage<Object?>(key: state.pageKey, name: path, arguments: state.extra, child: child);

@@ -31,7 +31,7 @@ final class RouteArgs {
 @immutable
 final class LiveRoomArgs {
   /// Creates the arguments.
-  const new({required this.room, this.playlist = const [], this.startFullscreen = false});
+  const new({required this.room, this.playlist = const [], this.startFullscreen = false, this.appointment = false});
 
   /// The room to open.
   final LiveRoom room;
@@ -41,6 +41,9 @@ final class LiveRoomArgs {
 
   /// Opens this room fullscreen without changing the user's global preference.
   final bool startFullscreen;
+
+  /// True only for a route opened by the foreground appointment scheduler.
+  final bool appointment;
 
   /// The room [arguments] (a `LiveRoom` or a [LiveRoomArgs]) opens, or null.
   static LiveRoom? roomOf(Object? arguments) => switch (arguments) {

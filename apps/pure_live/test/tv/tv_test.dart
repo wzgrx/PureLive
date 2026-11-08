@@ -1774,7 +1774,7 @@ void main() {
     await _close(tester, services);
   });
 
-  testWidgets('TV stops the original room on timer after returning from a scheduled room', (tester) async {
+  testWidgets('TV replaces a scheduled room and returns to the original sleep timer', (tester) async {
     final services = await _pumpApp(tester);
     await _press(tester, LogicalKeyboardKey.arrowDown);
     await _press(tester, LogicalKeyboardKey.select);
@@ -1798,6 +1798,20 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await _settle(tester, rounds: 12);
     expect(tester.state<TvLivePlayPageState>(find.byType(TvLivePlayPage)).controller!.room.roomId, '2');
+    await tester.runAsync(() async {
+      final saved = await services.store.roomSchedules.put(
+        RoomOpenSchedule.once(
+          id: 'tv-scheduled-next',
+          room: LiveRoom(platform: SiteIds.bilibili, roomId: '3'),
+          at: DateTime.now().subtract(const Duration(seconds: 1)),
+        ),
+      );
+      expect(saved, isTrue);
+    });
+    await _settle(tester);
+    await tester.pump(const Duration(seconds: 2));
+    await _settle(tester, rounds: 12);
+    expect(tester.state<TvLivePlayPageState>(find.byType(TvLivePlayPage)).controller!.room.roomId, '3');
     await _press(tester, LogicalKeyboardKey.escape);
     await _settle(tester, rounds: 10);
     expect(tester.state<TvLivePlayPageState>(find.byType(TvLivePlayPage)), same(original));
