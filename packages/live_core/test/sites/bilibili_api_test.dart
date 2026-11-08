@@ -40,6 +40,47 @@ String _editPlay(String body, void Function(Map<String, dynamic> data) change) {
 }
 
 void main() {
+  test('extra codecs keep the AVC default, requested tier and stable identities', () {
+    Map<String, Object?> codec(String kind, int qn) => {
+      'codec_name': kind,
+      'current_qn': qn,
+      'base_url': '/live/$kind.flv?',
+      'url_info': [
+        {'host': 'https://video.example.test', 'extra': 'expires=1794124800'},
+      ],
+    };
+    final data = <String, dynamic>{
+      'playurl_info': {
+        'playurl': {
+          'stream': [
+            {
+              'protocol_name': 'http_stream',
+              'format': [
+                {
+                  'format_name': 'flv',
+                  'codec': [codec('live-av1', 250), codec('live-hevc', 250), codec('avc', 250), codec('av1', 150)],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    LivePlayUrlResolution read({bool extra = false}) => BilibiliApi.resolution(
+      data,
+      requestedQn: 250,
+      roomId: '1',
+      issuedAt: DateTime.utc(2026, 11, 8),
+      includeAlternateCodecs: extra,
+    );
+    expect(read().lines.map((line) => line.codec), ['avc']);
+    final alternate = read(extra: true);
+    expect(alternate.appliedQualityData, 250);
+    expect(alternate.lines.map((line) => line.codec), ['avc', 'av1', 'hevc']);
+    expect(alternate.lines.map((line) => line.lineId).toSet(), hasLength(3));
+    expect(alternate.lines.first.lineId, read().lines.single.lineId);
+  });
+
   test('Bilibili detail prefers valid current keyframes and preserves offline and invalid-frame covers', () {
     final body = _sample('S06-short-id').body;
     LiveRoom parse(Object? frame, int status) => BilibiliApi.roomDetail(

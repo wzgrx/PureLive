@@ -65,7 +65,22 @@ final class PlaybackRequest {
   final ExternalAudioFor? audio;
 }
 
-/// The session's deadlines, 3.x's `PlayerManager` defaults.
+/// Selects a fresh URL for an existing relay without changing its bitstream
+/// codec. Failure lets the owning session recover by opening a new input.
+@visibleForTesting
+LivePlayLine selectRelayRenewal(LivePlayLine current, List<LivePlayLine> lines, {required int previousIndex}) {
+  bool compatible(LivePlayLine line) => current.codec == null || current.codec == line.codec;
+  final exact = lines.where((line) => current.lineId != null && line.lineId == current.lineId && compatible(line));
+  if (exact.isNotEmpty) return exact.first;
+  if (previousIndex >= 0 && previousIndex < lines.length && compatible(lines[previousIndex])) {
+    return lines[previousIndex];
+  }
+  final sameCodec = lines.where(compatible).firstOrNull;
+  if (sameCodec == null) throw StateError('No compatible codec for the current relay');
+  return sameCodec;
+}
+
+/// The session's deadlines, 3.x's PlayerManager defaults.
 @immutable
 final class SessionTimings {
   /// Creates the timings.
@@ -988,8 +1003,7 @@ final class PlaybackSession {
     if (lines.isEmpty) throw StateError('The refreshed plan has no lines');
     final previous = _plan?.lines ?? const <LivePlayLine>[];
     final index = previous.indexWhere((line) => line.url == current.url);
-    return lines.where((line) => current.lineId != null && line.lineId == current.lineId).firstOrNull ??
-        (index >= 0 && index < lines.length ? lines[index] : lines.first);
+    return selectRelayRenewal(current, lines, previousIndex: index);
   };
 
   // Engine events.

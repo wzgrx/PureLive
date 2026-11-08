@@ -215,6 +215,40 @@ void main() {
     expect(calls, ['run', 'cancel', 'run', 'cancel']);
   });
 
+  test('a failed cancellation does not mask a native visitor capability failure', () async {
+    const channel = MethodChannel('pure_live/xiaohongshu_guest');
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    var successfulRun = false;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'cancel') throw PlatformException(code: 'cancel-transport-lost');
+      if (successfulRun) return '{"ok":true,"value":"synthetic"}';
+      throw PlatformException(
+        code: 'unsupported',
+        details: {
+          'missing': ['MULTI_PROFILE'],
+        },
+      );
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final browser = InAppXiaohongshuGuestBrowser();
+    final page = Uri.parse('https://www.xiaohongshu.com/livelist');
+    await expectLater(
+      browser.androidRequest(page, 'return 1;', null),
+      throwsA(
+        isA<TransportFailure>().having(
+          (e) => e.detail,
+          'detail',
+          'WebView visitor isolation unavailable (directory, missing=MULTI_PROFILE)',
+        ),
+      ),
+    );
+    successfulRun = true;
+    await expectLater(
+      browser.androidRequest(page, 'return 1;', null),
+      throwsA(isA<TransportFailure>().having((e) => e.detail, 'detail', 'Visitor cleanup not acknowledged')),
+    );
+  });
+
   test('cancelling a native visitor job closes its exact request and suppresses a late result', () async {
     const channel = MethodChannel('pure_live/xiaohongshu_guest');
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;

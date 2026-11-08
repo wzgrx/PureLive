@@ -1750,6 +1750,30 @@ void main() {
     await _close(tester, services);
   });
 
+  testWidgets('TV card schedules a room without opening the player', (tester) async {
+    final services = await _pumpApp(tester);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.contextMenu);
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('tv-room-card-appointment')));
+    await _settle(tester, rounds: 10);
+    await tester.tap(find.text('每天'));
+    await _settle(tester);
+    await tester.enterText(find.byKey(const ValueKey('tv-text-input')), '0910');
+    await tester.tap(find.byKey(const ValueKey('tv-input-confirm')));
+    await _settle(tester, rounds: 10);
+    final tasks = (await tester.runAsync(services.store.roomSchedules.all))!;
+    expect(tasks.single.room.roomId, '1');
+    expect(tasks.single.dailyMinute, 550);
+    expect(find.byType(TvLivePlayPage), findsNothing);
+    await _press(tester, LogicalKeyboardKey.escape);
+    await _settle(tester);
+    await _close(tester, services);
+  });
+
   testWidgets('TV stops the original room on timer after returning from a scheduled room', (tester) async {
     final services = await _pumpApp(tester);
     await _press(tester, LogicalKeyboardKey.arrowDown);

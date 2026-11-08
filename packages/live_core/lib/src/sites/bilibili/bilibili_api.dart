@@ -676,6 +676,7 @@ abstract final class BilibiliApi {
     required DateTime issuedAt,
     String? cookie,
     bool preferRaw = false,
+    bool includeAlternateCodecs = false,
   }) {
     final playurl = _playurl(data);
     final requested = jsonInt(requestedQn);
@@ -689,7 +690,7 @@ abstract final class BilibiliApi {
       final base = entry.codec['base_url'];
       final current = jsonInt(entry.codec['current_qn']);
       if (format == null || base is! String || base.isEmpty || current == null || current <= 0) continue;
-      final codec = jsonString(entry.codec['codec_name'])?.toLowerCase();
+      final codec = _streamCodec(jsonString(entry.codec['codec_name']));
       for (final info in _list(entry.codec['url_info'])) {
         final map = _object(info);
         if (map == null) continue;
@@ -711,11 +712,23 @@ abstract final class BilibiliApi {
     if (candidates.isEmpty) return LivePlayUrlResolution(urls: const [], appliedQualityData: requestedQn);
     candidates.sort((a, b) => _compareCandidates(a, b, requested));
     final first = candidates.first;
+    // Keep the legacy delivered quality. Extra codecs may not downgrade it.
+    final primaryCodec = includeAlternateCodecs && candidates.any((c) => c.qn == first.qn && c.codec == 'avc')
+        ? 'avc'
+        : first.codec;
+    final ordered = includeAlternateCodecs
+        ? [
+            ...candidates.where((c) => c.codec == primaryCodec),
+            ...candidates.where((c) => c.codec != primaryCodec && const {'avc', 'hevc', 'av1'}.contains(c.codec)),
+          ]
+        : candidates;
     final headers = mediaHeaders(roomId, cookie: cookie);
     final seen = <String>{};
     final lines = <LivePlayLine>[
-      for (final candidate in candidates)
-        if (candidate.qn == first.qn && candidate.codec == first.codec && seen.add(candidate.url.toString()))
+      for (final candidate in ordered)
+        if (candidate.qn == first.qn &&
+            (includeAlternateCodecs || candidate.codec == primaryCodec) &&
+            seen.add(candidate.url.toString()))
           LivePlayLine(
             candidate.url.toString(),
             headers: headers,
@@ -729,7 +742,7 @@ abstract final class BilibiliApi {
     // lines. Respect its delivered tier and leave untranscoded rooms alone.
     final raw =
         preferRaw && requested == 10000 && first.qn == 10000 && qualities(data).any((quality) => quality.data == 250)
-        ? _rawLines(lines)
+        ? _rawLines(lines.where((line) => line.codec == primaryCodec).toList())
         : const <LivePlayLine>[];
     return LivePlayUrlResolution.lines([...raw, ...lines], appliedQualityData: first.qn);
   }
@@ -980,6 +993,13 @@ abstract final class BilibiliApi {
       }
     }
   }
+
+  static String? _streamCodec(String? value) => switch (value?.trim().toLowerCase()) {
+    'avc' || 'h264' || 'live-h264' => 'avc',
+    'hevc' || 'h265' || 'live-hevc' => 'hevc',
+    'av1' || 'av01' || 'live-av1' => 'av1',
+    final other => other,
+  };
 
   static int _compareCandidates(_Candidate a, _Candidate b, int? requestedQn) {
     final byRequest = (a.qn == requestedQn ? 0 : 1).compareTo(b.qn == requestedQn ? 0 : 1);

@@ -123,11 +123,27 @@ class PartArchiveController<P extends ArchiveVideo, Q extends ArchiveQuality> ex
       if (at.isNegative || part.duration > Duration.zero && at >= part.duration) at = Duration.zero;
       _pending = at > Duration.zero ? at : null;
       _lastSaved = at;
-      await session.open(PlaybackRequest(site: site, plan: _plan(q, at), volume: volume, refresh: () => _refresh(g)));
-      if (_current(g)) {
-        await restoreRate();
-        _ready = true;
+      final backup = restoreOnQualityFailure
+          ? qualities.where((other) => other.playable && other.id != q.id).firstOrNull
+          : null;
+      if (backup != null) {
+        try {
+          await _openVariant(g, _plan(q, at), volume, paused: false);
+        } on Object {
+          if (!_current(g)) return;
+          // A new rendition must use a freshly resolved URL. Keep the
+          // same part and resume point; one fallback is the entire budget.
+          qualityId = backup.id;
+          _pending = at > Duration.zero ? at : null;
+          final plan = await _refresh(g);
+          if (!_current(g)) return;
+          await _openVariant(g, plan, volume, paused: false);
+        }
+      } else {
+        await session.open(PlaybackRequest(site: site, plan: _plan(q, at), volume: volume, refresh: () => _refresh(g)));
+        if (_current(g)) await restoreRate();
       }
+      if (_current(g)) _ready = true;
     } on Object catch (e) {
       if (_current(g)) error = e;
     } finally {

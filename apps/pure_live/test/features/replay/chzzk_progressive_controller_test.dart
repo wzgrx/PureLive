@@ -9,6 +9,69 @@ import '../live_play/live_play_support.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('an unavailable initial CDN gets one fresh replay variant at the same resume point', () async {
+    var loads = 0;
+    const record = ChzzkArchiveVideo(
+      id: '123',
+      title: 'Public replay',
+      channelId: '0123456789abcdef0123456789abcdef',
+      authorName: 'Example',
+      cover: '',
+      publishedAt: null,
+      duration: Duration(hours: 3),
+    );
+    String? stored;
+    final progress = HuyaArchiveProgress(
+      read: () async => stored,
+      write: (value) async => stored = value,
+      idPattern: r'^[0-9]+:1$',
+    );
+    final engine = FakeEngine()
+      ..onOpen = (media) async {
+        if (media.uri.path == '/144.mp4') throw const StreamUnavailable(SiteIds.chzzk, 'Synthetic refused CDN');
+      };
+    final initial = engine.onOpen!;
+    engine.onOpen = (media) async {
+      await initial(media);
+      engine
+        ..emit(const EngineBuffering(buffering: false))
+        ..emit(const EnginePlaying(playing: true));
+    };
+    final controller = PartArchiveController<ChzzkArchivePart, ChzzkArchiveQuality>(
+      site: SiteIds.chzzk,
+      recordingId: record.id,
+      loadParts: (id, {cancel}) async {
+        final revision = ++loads;
+        return [
+          ChzzkArchivePart(record, [
+            for (final height in [144, 720, 1080])
+              ChzzkArchiveQuality(
+                'https://video.example.test/$height.mp4?revision=$revision',
+                id: 'mp4-$height',
+                label: '${height}p',
+                format: StreamFormat.other,
+              ),
+          ]),
+        ];
+      },
+      qualitiesOf: (part) => part.qualities,
+      lineFor: (q) => LivePlayLine(q.url, format: q.format),
+      session: fakeSession(engine),
+      progress: progress,
+      restoreOnQualityFailure: true,
+    );
+    await controller.open(record.id, start: const Duration(minutes: 5));
+    expect(controller.error, isNull);
+    expect(controller.qualityId, 'mp4-720');
+    expect(loads, 2);
+    expect(engine.opens.map((media) => media.uri.path), ['/144.mp4', '/720.mp4']);
+    expect(engine.opens.last.uri.queryParameters['revision'], '2');
+    expect(engine.opens.map((media) => media.start), everyElement(const Duration(minutes: 5)));
+    controller.dispose();
+    await controller.retirement;
+  });
+
   test('muxed replay resumes, selects a refreshed variant, and stores no media URL', () async {
     var loads = 0;
     String? saved;

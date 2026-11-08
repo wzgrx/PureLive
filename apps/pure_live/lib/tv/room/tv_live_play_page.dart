@@ -30,7 +30,6 @@ import 'package:pure_live/shared/rooms/playback_hud.dart';
 import 'package:pure_live/shared/rooms/playback_lines.dart';
 import 'package:pure_live/shared/rooms/room_gain.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
-import 'package:pure_live/shared/rooms/room_schedule_dialog.dart';
 import 'package:pure_live/shared/rooms/timed_room_rotation.dart';
 import 'package:pure_live/tv/room/tv_room_overlays.dart';
 import 'package:pure_live/tv/room/tv_room_settings_panel.dart';
@@ -40,6 +39,7 @@ import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/wallpaper/tv_wallpaper_layer.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
+import 'package:pure_live/tv/widgets/tv_room_appointment.dart';
 import 'package:pure_live/tv/widgets/tv_room_dialog.dart';
 import 'package:pure_live/tv/widgets/tv_status.dart';
 
@@ -334,51 +334,8 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
     _hide();
   }
 
-  Future<void> _roomAppointment(LiveRoom room) async {
-    final store = ref.read(storeProvider).roomSchedules;
-    final saved = (await store.all()).where((item) => item.room.hasSameIdentity(room)).toList();
-    if (!mounted) return;
-    final choice = await showTvChoice<Object>(
-      context,
-      title: i18n('room_schedule_title'),
-      subtitle: i18n('room_schedule_foreground_hint'),
-      options: [
-        TvChoice(value: RoomScheduleInput.daily, label: i18n('room_schedule_daily')),
-        TvChoice(value: RoomScheduleInput.countdown, label: i18n('room_schedule_countdown')),
-        for (final item in saved) TvChoice(value: item, label: roomAppointmentLabel(item)),
-      ],
-    );
-    if (!mounted || choice == null) return;
-    if (choice is RoomOpenSchedule) {
-      final remove = await showTvChoice<bool>(
-        context,
-        title: i18n('room_schedule_remove'),
-        options: [
-          TvChoice(value: true, label: i18n('confirm')),
-          TvChoice(value: false, label: i18n('cancel')),
-        ],
-      );
-      if (remove ?? false) await store.remove(choice.id);
-      return;
-    }
-    if (choice is! RoomScheduleInput) return;
-    final daily = choice == RoomScheduleInput.daily;
-    final input = await showTvInput(
-      context,
-      title: i18n(daily ? 'room_schedule_daily_input' : 'room_schedule_countdown_input'),
-      text: daily ? '0800' : '60',
-      numeric: true,
-      maxLength: 5,
-    );
-    if (!mounted || input == null) return;
-    final task = parseRoomAppointment(room, choice, input, DateTime.now());
-    if (task == null) {
-      AppNavigator.toast(i18n('room_schedule_invalid'));
-      return;
-    }
-    final stored = await store.put(task);
-    if (mounted) AppNavigator.toast(i18n(stored ? 'room_schedule_saved' : 'room_schedule_edit_failed'));
-  }
+  Future<void> _roomAppointment(LiveRoom room) =>
+      showTvRoomAppointment(context, ref.read(storeProvider).roomSchedules, room);
 
   Future<void> _queueRoomAction(LiveRoom room, List<LiveRoom> rooms) async {
     final index = rooms.indexWhere(room.hasSameIdentity);

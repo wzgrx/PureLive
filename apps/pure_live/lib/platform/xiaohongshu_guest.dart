@@ -222,6 +222,7 @@ final class InAppXiaohongshuGuestBrowser implements XiaohongshuGuestBrowser {
       'capture': WebViewXiaohongshuGuest.captureScript,
       'script': script,
     });
+    var requestFailed = false;
     try {
       final body = await Future.any([
         run,
@@ -237,9 +238,21 @@ final class InAppXiaohongshuGuestBrowser implements XiaohongshuGuestBrowser {
       if (decoded is! Map || decoded['ok'] != true) throw StateError('Visitor request failed');
       return decoded['value'];
     } on PlatformException catch (error) {
+      requestFailed = true;
       throw _visitorFailure(page, error);
+    } on Object {
+      requestFailed = true;
+      rethrow;
     } finally {
-      await _channel.invokeMethod<void>('cancel', {'id': id});
+      try {
+        await _channel.invokeMethod<void>('cancel', {'id': id}).timeout(const Duration(seconds: 5));
+      } on Object {
+        // The native operation has its own cleanup deadline. A failed
+        // redundant acknowledgement must not replace its diagnostic.
+        if (!requestFailed) {
+          throw const TransportFailure('xiaohongshu', TransportReason.protocol, 'Visitor cleanup not acknowledged');
+        }
+      }
     }
   }
 

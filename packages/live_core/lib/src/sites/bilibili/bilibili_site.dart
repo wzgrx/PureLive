@@ -55,10 +55,12 @@ final class BilibiliSite extends LiveSite
     this._cookies,
     int Function()? storedUid,
     bool Function()? preferRaw,
+    bool Function()? additionalCodecs,
     DateTime Function()? now,
     Future<void> Function(Duration)? sleep,
   }) : _storedUid = storedUid ?? (() => 0),
        _preferRaw = preferRaw ?? (() => false),
+       _additionalCodecs = additionalCodecs ?? (() => false),
        _now = now ?? DateTime.now,
        _sleep = sleep ?? Future<void>.delayed;
 
@@ -68,6 +70,7 @@ final class BilibiliSite extends LiveSite
   final CookieVault? _cookies;
   final int Function() _storedUid;
   final bool Function() _preferRaw;
+  final bool Function() _additionalCodecs;
   final DateTime Function() _now;
   final Future<void> Function(Duration) _sleep;
   _Session? _session;
@@ -497,6 +500,25 @@ final class BilibiliSite extends LiveSite
   Future<LivePlayUrlResolution> resolvePlayUrlsRaw({required LiveRoom detail, required LivePlayQuality quality}) async {
     final longId = _longId(detail);
     if (quality.data == BilibiliApi.carouselQualityId) return await _carousel(longId);
+    if (_additionalCodecs()) {
+      try {
+        final alternate = await _play(longId, quality.data, additionalCodecs: true);
+        if (alternate.data case final data?) {
+          final offered = BilibiliApi.resolution(
+            data,
+            requestedQn: quality.data,
+            roomId: longId,
+            issuedAt: alternate.issuedAt,
+            cookie: alternate.cookie,
+            preferRaw: _preferRaw(),
+            includeAlternateCodecs: true,
+          );
+          if (offered.lines.isNotEmpty) return offered;
+        }
+      } on SiteError {
+        // Retry the original public request; alternative codec metadata is optional.
+      }
+    }
     final play = await _play(longId, quality.data);
     final data = play.data;
     if (data == null) return await _carousel(longId);
@@ -529,14 +551,18 @@ final class BilibiliSite extends LiveSite
 
   /// `getRoomPlayInfo` at [qn]; `data` is null for a carousel without a
   /// stream for this client ([BilibiliApi.carouselWithoutStream]).
-  Future<({Map<String, dynamic>? data, DateTime issuedAt, String cookie})> _play(String longId, Object? qn) async {
+  Future<({Map<String, dynamic>? data, DateTime issuedAt, String cookie})> _play(
+    String longId,
+    Object? qn, {
+    bool additionalCodecs = false,
+  }) async {
     final cookie = await _cookie(_current());
     final response = await _get(
       Uri.https(_liveApi, '/xlive/web-room/v2/index/getRoomPlayInfo', {
         'room_id': longId,
         'protocol': '0,1',
         'format': '0,1,2',
-        'codec': '0',
+        'codec': additionalCodecs ? '0,1,2' : '0',
         'qn': '${qn ?? 0}',
         'platform': 'web',
         'ptype': '8',

@@ -752,7 +752,7 @@ abstract final class DouyuApi {
 
   /// The `getH5PlayV1` form for room [roomId] at Unix second [tt]. [did]
   /// must be the one the descriptor was issued for and the cookie carries.
-  /// Only AVC is asked for (`hevc=0`).
+  /// The default is AVC; [additionalCodecs] permits the extra HEVC entry.
   static Map<String, String> signedForm(
     DouyuDescriptor descriptor, {
     required String roomId,
@@ -760,6 +760,7 @@ abstract final class DouyuApi {
     required String did,
     int rate = -1,
     String cdn = '',
+    bool additionalCodecs = false,
   }) => {
     'enc_data': descriptor.encData,
     'tt': '$tt',
@@ -767,7 +768,7 @@ abstract final class DouyuApi {
     'auth': descriptor.auth(roomId, tt),
     'cdn': cdn,
     'rate': '$rate',
-    'hevc': '0',
+    'hevc': additionalCodecs ? '1' : '0',
     'fa': '0',
     'ive': '0',
     'ver': 'Douyu_new',
@@ -908,17 +909,61 @@ abstract final class DouyuApi {
   }) {
     final url = mediaUrl(data);
     if (url == null) throw const ApiChanged(_site, 'getH5PlayV1: no playable URL');
+    return _lineAnswer(url, data, roomId, cdn, cookie, issuedAt, forceRenewal);
+  }
+
+  static final _hevcPath = RegExp(r'_\d+h\.(flv|m3u8)$');
+  static final _avcPath = RegExp(r'_\d+\.(flv|m3u8)$');
+
+  /// The stable primary line and a positively identified alternate. A HEVC
+  /// path keeps the same identity even when the response omits its primary.
+  static List<({LivePlayLine line, int? rate})> codecAnswers(
+    Map<String, dynamic> data, {
+    required String roomId,
+    required String cdn,
+    required String cookie,
+    required DateTime issuedAt,
+    bool forceRenewal = false,
+  }) {
+    final primary = mediaUrl(data);
+    if (primary == null) throw const ApiChanged(_site, 'getH5PlayV1: no playable URL');
+    final alternate = decodeHtmlEntities(jsonString(data['player_1']) ?? '');
+    String? codec(String url) {
+      final path = Uri.tryParse(url)?.path.toLowerCase() ?? '';
+      return _hevcPath.hasMatch(path) ? 'hevc' : (_avcPath.hasMatch(path) ? 'avc' : null);
+    }
+
+    final primaryCodec = codec(primary);
+    return [
+      _lineAnswer(primary, data, roomId, cdn, cookie, issuedAt, forceRenewal, codec: primaryCodec),
+      if (primaryCodec == 'avc' && alternate != primary && _playable(alternate) && codec(alternate) == 'hevc')
+        _lineAnswer(alternate, data, roomId, cdn, cookie, issuedAt, forceRenewal, codec: 'hevc'),
+    ];
+  }
+
+  static ({LivePlayLine line, int? rate}) _lineAnswer(
+    String url,
+    Map<String, dynamic> data,
+    String roomId,
+    String cdn,
+    String cookie,
+    DateTime issuedAt,
+    bool forceRenewal, {
+    String? codec,
+  }) {
     final path = Uri.tryParse(url)?.path.toLowerCase() ?? '';
+    final edge = cdn.isEmpty ? jsonString(data['rtmp_cdn'])?.trim() ?? '' : cdn;
     return (
       line: LivePlayLine(
         url,
+        codec: codec,
         headers: mediaHeaders(roomId, cookie: cookie),
         format: path.endsWith('.flv')
             ? StreamFormat.flv
             : path.endsWith('.m3u8')
             ? StreamFormat.hls
             : null,
-        lineId: cdn.isEmpty ? null : cdn,
+        lineId: codec == 'hevc' ? 'douyu:${edge.isEmpty ? 'default' : edge}:hevc' : (cdn.isEmpty ? null : cdn),
         lease: lease(url, issuedAt, forceRenewal: forceRenewal),
       ),
       rate: confirmedRate(data),
@@ -941,7 +986,10 @@ abstract final class DouyuApi {
     }
     final applied = groups.containsKey(requestedRate) ? requestedRate : groups.keys.whereType<int>().firstOrNull;
     return LivePlayUrlResolution.lines(
-      groups[applied]!,
+      [
+        ...groups[applied]!.where((line) => line.codec != 'hevc'),
+        ...groups[applied]!.where((line) => line.codec == 'hevc'),
+      ],
       appliedQualityData: applied,
       qualityUnconfirmed: applied == null,
     );

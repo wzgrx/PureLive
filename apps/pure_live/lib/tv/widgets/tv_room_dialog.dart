@@ -14,6 +14,7 @@ import 'package:pure_live/shared/rooms/room_texts.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/widgets/tv_button.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
+import 'package:pure_live/tv/widgets/tv_room_appointment.dart';
 
 /// A page's own action in the card dialog (history: "删除这条记录").
 @immutable
@@ -190,6 +191,13 @@ class TvRoomDialog extends StatelessWidget {
                   autofocus: true,
                   onTap: () => unawaited(tvEditRoomTags(context, store: store, room: room)),
                 ),
+                if (!SiteIds.isRetired(room.platform))
+                  TvButton(
+                    key: const ValueKey('tv-room-card-appointment'),
+                    icon: AppIcons.sleepTimer,
+                    label: i18n('room_schedule_title'),
+                    onTap: () => unawaited(showTvRoomAppointment(context, store.roomSchedules, room)),
+                  ),
                 if (liveAlertsAvailable && room.platform != SiteIds.iptv && !SiteIds.isRetired(room.platform))
                   StreamBuilder<bool>(
                     stream: store.follows.watchContains(room),
