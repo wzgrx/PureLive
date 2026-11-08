@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "Sur tablette ou pliable ouvert, l’accueil garde la barre du bas au lieu du rail latéral",
     "enable_liquid_glass": "Verre liquide",
     "enable_liquid_glass_subtitle": "La barre du bas flotte comme du verre liquide qui courbe la page à ses bords ; maintenez et faites glisser pour changer. Les téléphones de 4 Go ou moins ont une teinte simple",
+    "enable_live_play_pickers_in_video": "Garder la qualité et la ligne dans l'image",
+    "enable_live_play_pickers_in_video_subtitle": "Affiche les sélecteurs de qualité et de ligne dans la barre du lecteur même hors plein écran ; désactivé les laisse au-dessus du chat",
     "enable_live_play_wide_footer": "Barre sous la vidéo",
     "enable_live_play_wide_footer_subtitle": "En vue large, affiche les spectateurs, la durée de diffusion et le choix de qualité et de flux sous la vidéo ; désactivée, revient au-dessus du chat",
     "enable_local_log": "Activer le journal local",

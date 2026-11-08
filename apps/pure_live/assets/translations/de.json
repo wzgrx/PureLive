@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "Auf Tablets und aufgeklappten Foldables nutzt die Startseite die untere Leiste statt der Seitenleiste",
     "enable_liquid_glass": "Flüssiges Glas",
     "enable_liquid_glass_subtitle": "Die untere Leiste schwebt als flüssiges Glas, das die Seite an den Rändern bricht; gedrückt halten und ziehen zum Wechseln. Telefone mit 4 GB oder weniger erhalten eine einfache Tönung",
+    "enable_live_play_pickers_in_video": "Qualität und Leitung im Bild behalten",
+    "enable_live_play_pickers_in_video_subtitle": "Zeigt die Auswahl für Originalqualität und Leitung auch außerhalb des Vollbilds in der Steuerleiste; aus lässt sie über dem Chat",
     "enable_live_play_wide_footer": "Leiste unter dem Video",
     "enable_live_play_wide_footer_subtitle": "Breite Ansichten zeigen Zuschauer, Sendedauer sowie Qualitäts- und Leitungsauswahl unter dem Video; ohne Leiste stehen sie über dem Chat",
     "enable_local_log": "Lokales Protokoll aktivieren",

@@ -85,6 +85,11 @@ def safe(text: str) -> str:
     return re.sub(r'[\s()（）/\\:*?"<>|“”‘’,，;；]', '', text)
 
 
+def relative(path: Path, base: Path) -> str:
+    """[path] relative to [base], with `/` separators for Markdown links."""
+    return os.path.relpath(path, base).replace(os.sep, '/')
+
+
 def find_dir(parent: Path, prefix: str) -> Path | None:
     """The folder under [parent] whose name is [prefix] or starts with `prefix-`."""
     if not parent.is_dir():
@@ -237,12 +242,12 @@ class Project:
             ('review.md', '合并审查'),
         ]
         links = [
-            f'[{label}]({os.path.relpath(folder / name, base)})' for name, label in names if (folder / name).exists()
+            f'[{label}]({relative(folder / name, base)})' for name, label in names if (folder / name).exists()
         ]
         if (folder / 'page').is_dir():
             first = sorted((folder / 'page').iterdir())
             if first:
-                links.append(f'[评审页]({os.path.relpath(first[0], base)})')
+                links.append(f'[评审页]({relative(first[0], base)})')
         return '、'.join(links) or '—'
 
     def to_text(self, task: dict, base: Path) -> str:
@@ -254,7 +259,7 @@ class Project:
     def task_link(self, tid: str, base: Path) -> str:
         folder = self.task_dir(tid)
         target = folder / 'README.md' if (folder / 'README.md').exists() else self.sub_dir(tid[:3]) / 'README.md'
-        return f'[{tid}]({os.path.relpath(target, base)})'
+        return f'[{tid}]({relative(target, base)})'
 
     # ---- generated files
     def status_md(self) -> str:
@@ -287,7 +292,7 @@ class Project:
                 (t for t in gt if t['status'] in ('未开始', '已确认')),
                 key=lambda t: (t.get('tier', 9), t['id']),
             )
-            link = f'[{g["id"]} {g["title"]}]({os.path.relpath(self.group_dir(g["id"]) / "README.md", base)})'
+            link = f'[{g["id"]} {g["title"]}]({relative(self.group_dir(g["id"]) / "README.md", base)})'
             out.append(
                 f'| {link} | {bar(ratio(gt))} | {done} / {len(gt)} | {"、".join(doing) or "—"} | '
                 f'{nxt[0]["id"] + " " + nxt[0]["title"] if nxt else "—"} |'
@@ -353,7 +358,7 @@ class Project:
             out.append(f'## {g["id"]} {g["title"]}\n\n{g["scope"]}\n\n{bar(ratio(self.group_tasks(g["id"])))}\n')
             for s in (s for s in self.subs if s['id'][:1] == g['id']):
                 tasks = self.tasks_of_sub[s['id']]
-                out.append(f'### [{s["id"]} {s["title"]}]({os.path.relpath(self.sub_dir(s["id"]) / "README.md", base)})\n')
+                out.append(f'### [{s["id"]} {s["title"]}]({relative(self.sub_dir(s["id"]) / "README.md", base)})\n')
                 if not tasks:
                     out.append('还没有任务。\n')
                     continue
@@ -418,7 +423,7 @@ class Project:
         for s in (s for s in self.subs if s['id'][:1] == g['id']):
             st = counted(self.tasks_of_sub[s['id']])
             done = sum(1 for t in st if t['status'] == '完成')
-            out.append(f'| [{s["id"]} {s["title"]}]({os.path.relpath(self.sub_dir(s["id"]) / "README.md", base)}) | {s["scope"]} | {bar(ratio(st)) if st else "—"} | {done} / {len(st)} |')
+            out.append(f'| [{s["id"]} {s["title"]}]({relative(self.sub_dir(s["id"]) / "README.md", base)}) | {s["scope"]} | {bar(ratio(st)) if st else "—"} | {done} / {len(st)} |')
         out.append('')
         left = [t for t in tasks if t['status'] in OPEN or t['status'] == '待真机']
         out.append(f'## 还没完成的（{len(left)}）\n')
@@ -478,7 +483,7 @@ class Project:
             out.append('\n## 资料\n')
             for p in extra:
                 target = p / 'README.md' if p.is_dir() and (p / 'README.md').exists() else p
-                out.append(f'- [{p.name}{"/" if p.is_dir() else ""}]({os.path.relpath(target, base)})')
+                out.append(f'- [{p.name}{"/" if p.is_dir() else ""}]({relative(target, base)})')
         return '\n'.join(out) + '\n'
 
     def generated(self) -> dict[Path, str]:

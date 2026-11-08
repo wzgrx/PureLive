@@ -427,6 +427,7 @@ setting = [
   { key = "portraitRoomOverrides", sub = "A07" },
   { key = "livePlayChatCollapsed", sub = "A07" },
   { key = "livePlayWideFooter", sub = "A07" },
+  { key = "livePlayPickersInVideo", sub = "A07" },
   { key = "multiviewProjectionDisplay", sub = "A13" },
   { key = "roomSwitcherLayout", sub = "A07" },
   # danmaku 分节（默认 D05）

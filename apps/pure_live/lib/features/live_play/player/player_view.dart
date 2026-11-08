@@ -95,6 +95,7 @@ class RoomPlayer extends ConsumerStatefulWidget {
     this.edge,
     this.onTitle,
     this.pickersInBar = false,
+    this.replayActionsInBar = false,
     this.alignment = Alignment.center,
     super.key,
   });
@@ -103,8 +104,14 @@ class RoomPlayer extends ConsumerStatefulWidget {
   /// opens or closes the room details ([PlayerBarActions.onTitle]).
   final VoidCallback? onTitle;
 
-  /// The quality and line buttons in the inline bottom bar (A07.17 c2).
+  /// The quality and line buttons in the inline bottom bar (A07.17 c2; every
+  /// inline room layout when Settings.livePlayPickersInVideo is on, A07.46).
   final bool pickersInBar;
+
+  /// The chat column's replay strip is out of reach (a phone held sideways,
+  /// a folded wide chat): the replay transport carries its rate, catalog and
+  /// return-live actions (A07.44, A07.46).
+  final bool replayActionsInBar;
 
   /// Where the picture sits in the player: at the top under the portrait
   /// room's panel (A07.17 c3: centred, a portrait picture left a black
@@ -1086,7 +1093,7 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
                             bottom: padding.bottom + (portraitRows ? portraitRowHeight * 2 + 12 : controlBarHeight),
                             child: RoomReplayTransport(
                               controller: _room,
-                              immersive: arrangement != ControlsArrangement.inline || widget.pickersInBar,
+                              immersive: arrangement != ControlsArrangement.inline || widget.replayActionsInBar,
                               onInteract: _touch,
                               onHolding: _onMenu,
                             ),

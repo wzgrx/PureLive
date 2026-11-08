@@ -202,7 +202,8 @@ final class PlayerBarActions {
   final VoidCallback? onTitle;
 
   /// The quality and line buttons in the inline bottom bar (a phone held
-  /// sideways has no strip for them, A07.17 c2).
+  /// sideways always; every inline layout with Settings.livePlayPickersInVideo,
+  /// A07.46).
   final bool pickersInBar;
 
   /// The picture goes on under the portrait room's panel: the inline bottom

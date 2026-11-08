@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "En tabletas y plegables abiertos, el inicio usa la barra inferior en lugar del riel lateral",
     "enable_liquid_glass": "Cristal líquido",
     "enable_liquid_glass_subtitle": "La barra inferior flota como cristal líquido que curva la página en sus bordes; mantén pulsado y arrastra para cambiar. Los teléfonos con 4 GB o menos usan un tinte simple",
+    "enable_live_play_pickers_in_video": "Mantener calidad y línea en la imagen",
+    "enable_live_play_pickers_in_video_subtitle": "Muestra los selectores de calidad y línea en la barra del reproductor también fuera de pantalla completa; desactivado los deja sobre el chat",
     "enable_live_play_wide_footer": "Barra bajo el vídeo",
     "enable_live_play_wide_footer_subtitle": "En vistas anchas muestra espectadores, tiempo en emisión y selección de calidad y línea bajo el vídeo; desactivada vuelve sobre el chat",
     "enable_local_log": "Activar el registro local",

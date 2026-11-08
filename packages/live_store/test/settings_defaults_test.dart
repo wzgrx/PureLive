@@ -308,6 +308,7 @@ const Map<String, Object> newInV4 = {
   'portraitFullscreenSwipeSwitch': false, // A07.2, A07.3
   'livePlayChatCollapsed': false, // A07.5
   'livePlayWideFooter': true, // A07.44: 5.6.3's bar under the picture stays the default
+  'livePlayPickersInVideo': false, // A07.46: the pickers stay above the chat by default
   'roomSwitcherLayout': 'grid', // A07.13, D-022
   'room_card_size': 'standard', // V02.47 (D-058): today's grid widths
   'danmakuListStyle': 'compact', // A07.1

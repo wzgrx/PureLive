@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "Tablette ve açılmış katlanabilirde ana sayfa yan ray yerine alt çubuğu kullanır",
     "enable_liquid_glass": "Sıvı cam",
     "enable_liquid_glass_subtitle": "Alt çubuk, sayfayı kenarlarında büken sıvı cam gibi süzülür; geçiş yapmak için basılı tutup sürükleyin. 4 GB veya daha az belleğe sahip telefonlar düz bir renk alır",
+    "enable_live_play_pickers_in_video": "Kalite ve hattı görüntüde tut",
+    "enable_live_play_pickers_in_video_subtitle": "Kalite ve hat seçicilerini tam ekran dışında da oynatıcı çubuğunda göster; kapalıyken sohbetin üzerinde kalır",
     "enable_live_play_wide_footer": "Videonun altındaki çubuk",
     "enable_live_play_wide_footer_subtitle": "Geniş görünümlerde izleyici, yayın süresi, kalite ve hat seçimini videonun altında gösterir; kapalıyken sohbetin üstüne döner",
     "enable_local_log": "Yerel Günlüğü Etkinleştir",

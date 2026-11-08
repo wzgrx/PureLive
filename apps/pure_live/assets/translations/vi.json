@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "Trên máy tính bảng và máy gập khi mở, trang chủ dùng thanh dưới thay cho thanh bên",
     "enable_liquid_glass": "Kính lỏng",
     "enable_liquid_glass_subtitle": "Thanh dưới nổi như kính lỏng, khúc xạ trang ở các cạnh; nhấn giữ và kéo để chuyển. Điện thoại 4 GB trở xuống dùng màu phủ đơn giản",
+    "enable_live_play_pickers_in_video": "Giữ chất lượng và tuyến trong khung hình",
+    "enable_live_play_pickers_in_video_subtitle": "Hiển thị bộ chọn chất lượng và tuyến trên thanh trình phát cả khi không toàn màn hình; tắt để giữ chúng phía trên trò chuyện",
     "enable_live_play_wide_footer": "Thanh dưới video",
     "enable_live_play_wide_footer_subtitle": "Ở chế độ ngang, hiển thị số người xem, thời lượng và lựa chọn chất lượng/đường phát dưới video; tắt sẽ trở lại phía trên khung chat",
     "enable_local_log": "Bật nhật ký cục bộ",

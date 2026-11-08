@@ -990,6 +990,14 @@ List<SettingsEntry> _build() {
       desc: 'enable_live_play_wide_footer_subtitle',
       keywords: ['底栏', '信息栏', '人数', '画质', '线路', '宽屏', '布局', 'footer', 'bottom bar'],
     )
+    ..toggle(
+      'live_play_pickers_in_video',
+      'enable_live_play_pickers_in_video',
+      Settings.livePlayPickersInVideo,
+      AppIcons.settingsQuality,
+      desc: 'enable_live_play_pickers_in_video_subtitle',
+      keywords: ['画质', '线路', '原画', '画面', '控制条', '弹幕窗口', 'quality', 'line', 'picker'],
+    )
     ..link(
       'audience',
       'audience_metric_settings',
