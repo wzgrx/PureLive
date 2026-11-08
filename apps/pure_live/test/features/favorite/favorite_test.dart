@@ -56,6 +56,16 @@ final class FakeSite extends LiveSite {
   }
 }
 
+final class PartialBatchSite extends FakeSite implements LiveSiteFollowBatchRefresher {
+  new(super.id, super.details);
+
+  @override
+  Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async => {
+    'bilibili:1': room(id, '1', status: LiveStatus.live),
+    'bilibili:2': room(id, '99', status: LiveStatus.offline),
+  };
+}
+
 LiveRoom room(
   String platform,
   String id, {
@@ -138,6 +148,27 @@ void main() {
   });
 
   group('refresh', () {
+    test('batch confirmation skips only the matching room, leaving detail fallback and progress intact', () async {
+      final site = PartialBatchSite('bilibili', {'2': room('bilibili', '2', status: LiveStatus.live)});
+      final refresher = FollowRefresher(sites: SiteRegistry({'bilibili': () => site}));
+      final progress = <(int, int)>[];
+
+      final result = await refresher.refresh(
+        [
+          for (final id in ['1', '2', '3']) room('bilibili', id, status: LiveStatus.live),
+        ],
+        concurrency: 2,
+        onProgress: (done, total) => progress.add((done, total)),
+      );
+      expect(site.requested, unorderedEquals(['2', '3']));
+      expect(result.failed, 1);
+      expect(
+        {for (final item in result.rooms) item.roomId: item.effectiveLiveStatus},
+        {'1': LiveStatus.live, '2': LiveStatus.live, '3': LiveStatus.unknown},
+      );
+      expect(progress, [(1, 3), (2, 3), (3, 3)]);
+    });
+
     test('merges into the stored follow: empty names keep the stored ones, failures become pending', () async {
       final store = await memoryStore();
       addTearDown(store.close);

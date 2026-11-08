@@ -72,8 +72,7 @@ final class FollowRefresher {
     final groups = <String, List<LiveRoom>>{};
     for (final room in queue) {
       if (sites.maybeOf(room.platform) is! LiveSiteFollowBatchRefresher) continue;
-      final group = groups.putIfAbsent(room.platform, () => []);
-      group.add(room);
+      final group = groups.putIfAbsent(room.platform, () => [])..add(room);
       if (group.length == 20) {
         batches.add(group);
         groups.remove(room.platform);
