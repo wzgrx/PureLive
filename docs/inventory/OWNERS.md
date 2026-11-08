@@ -6,7 +6,7 @@
 
 路径规则按 OWNERS.toml 里的顺序第一条匹配的生效，所以一条目录规则只管前面的规则没拿走的文件。本页只随归属表、设置、来源和通道变化，加删代码文件不用重新生成。
 
-路径规则 248 条；设置 303 个（分节默认 24 条、单独指定 115 个）；来源 35 个；通道 24 个。
+路径规则 248 条；设置 305 个（分节默认 24 条、单独指定 117 个）；来源 35 个；通道 24 个。
 
 | 子分类 | 路径规则 | 设置 | 播放 | 弹幕 | 通道 |
 |---|---:|---:|---:|---:|---:|
@@ -15,13 +15,13 @@
 | A03 动效和手感 | 3 |  |  |  |  |
 | A04 尺寸和适配 | 1 |  |  |  |  |
 | A06 首页和全局 | 3 |  |  |  |  |
-| A07 直播间界面 | 5 | 12 |  |  | 1 |
+| A07 直播间界面 | 5 | 13 |  |  | 1 |
 | A08 弹幕界面 | 5 | 11 |  |  |  |
 | A09 浏览界面 | 9 | 12 |  |  |  |
 | A10 录制界面 | 6 |  |  |  |  |
 | A11 设置界面 | 3 | 1 |  |  |  |
 | A12 账号和数据界面 | 6 |  |  |  |  |
-| A13 网络电视和多画面界面 | 2 |  |  |  |  |
+| A13 网络电视和多画面界面 | 2 | 1 |  |  |  |
 | A15 小页面 | 6 |  |  |  |  |
 | A16 桌面界面 | 1 | 13 |  |  |  |
 | A17 电视界面 | 3 | 19 |  |  |  |
@@ -125,7 +125,7 @@
 ## A07 直播间界面
 
 - 代码：`apps/pure_live/lib/platform/overlay_window.dart`、`apps/pure_live/android/**/FloatingOverlay.kt`、`apps/pure_live/lib/features/live_play/`、`apps/pure_live/lib/shared/rooms/playback_hud*.dart`、`apps/pure_live/lib/shared/rooms/playback_lines.dart`
-- 设置：`enablePortraitStreamAdaptation`、`portraitAdaptiveHeight`、`portraitLayoutMode`、`portraitFullscreenPolicy`、`portraitFullscreenDisplayMode`、`portraitPipFollowSource`、`portraitDanmakuMode`、`rememberPortraitRoomOverride`、`portraitFullscreenSwipeSwitch`、`portraitRoomOverrides`、`livePlayChatCollapsed`、`roomSwitcherLayout`
+- 设置：`enablePortraitStreamAdaptation`、`portraitAdaptiveHeight`、`portraitLayoutMode`、`portraitFullscreenPolicy`、`portraitFullscreenDisplayMode`、`portraitPipFollowSource`、`portraitDanmakuMode`、`rememberPortraitRoomOverride`、`portraitFullscreenSwipeSwitch`、`portraitRoomOverrides`、`livePlayChatCollapsed`、`livePlayWideFooter`、`roomSwitcherLayout`
 - 通道：`pure_live/overlay`
 
 ## A08 弹幕界面
@@ -154,6 +154,7 @@
 ## A13 网络电视和多画面界面
 
 - 代码：`apps/pure_live/lib/features/iptv/`、`apps/pure_live/lib/features/multiview/`
+- 设置：`multiviewProjectionDisplay`
 
 ## A15 小页面
 

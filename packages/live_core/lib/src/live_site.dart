@@ -409,6 +409,13 @@ abstract interface class LiveSiteRoomRefresher {
   Future<LiveRoom> getRoomDetailForRefresh({required String roomId});
 }
 
+/// Optional follow-card batching for verified room identities.
+abstract interface class LiveSiteFollowBatchRefresher {
+  /// Returns only confirmed rooms, keyed by the requested identity key.
+  /// Missing entries are refreshed individually by the caller.
+  Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms);
+}
+
 /// A strict, playback-complete detail before a recording starts: transport
 /// and shape failures are thrown, offline or banned only when the platform
 /// said so, and every field `getPlayQualities` needs is kept.

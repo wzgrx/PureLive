@@ -114,6 +114,61 @@ String _guestCookie() {
 ReplaySample _risk(String url) => _synthetic(url, {'code': -352, 'message': '-352'});
 
 void main() {
+  test('Bilibili batches known UIDs and ignores mismatched rooms or restricted results', () async {
+    final http = ReplayHttp([]);
+    final site = BilibiliSite(
+      _Sequenced(http, {
+        '/room/v1/Room/get_status_info_by_uids': [
+          _synthetic('https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids', {
+            'code': 0,
+            'data': {
+              '101': {
+                'uid': 101,
+                'room_id': 30001,
+                'short_id': 11,
+                'live_status': 1,
+                'online': 85,
+                'title': 'New',
+                'uname': 'Example',
+                'live_time': 1793782000,
+                'lock_till': '0000-00-00 00:00:00',
+                'hidden_till': '0000-00-00 00:00:00',
+              },
+              '102': {
+                'uid': 102,
+                'room_id': 99999,
+                'short_id': 0,
+                'live_status': 0,
+                'lock_till': '0000-00-00 00:00:00',
+                'hidden_till': '0000-00-00 00:00:00',
+              },
+              '103': {
+                'uid': 103,
+                'room_id': 30003,
+                'short_id': 0,
+                'live_status': 1,
+                'lock_till': '2026-11-07 00:00:00',
+                'hidden_till': '0000-00-00 00:00:00',
+              },
+            },
+          }),
+        ],
+      }),
+    );
+    final first = LiveRoom(platform: 'bilibili', roomId: '11', userId: '101');
+    final result = await site.refreshFollowBatch([
+      first,
+      LiveRoom(platform: 'bilibili', roomId: '30002', userId: '102'),
+      LiveRoom(platform: 'bilibili', roomId: '30003', userId: '103'),
+      LiveRoom(platform: 'bilibili', roomId: '30004'),
+    ]);
+    expect(http.requests, hasLength(1));
+    expect(http.requests.single.method, 'POST');
+    expect(result.keys, [first.identityKey]);
+    expect(result[first.identityKey]?.title, 'New');
+    expect(result[first.identityKey]?.isLiveNow, isTrue);
+  });
+
   group('anonymous session', () {
     test(
       'one finger/spi and one nav for concurrent callers; the guest pair is the cookie (REG-BILIBILI-021)',

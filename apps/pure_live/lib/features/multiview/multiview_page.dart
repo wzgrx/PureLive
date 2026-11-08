@@ -39,6 +39,11 @@ import 'package:pure_live/shared/remote/playback_remote.dart';
 import 'package:pure_live/shared/remote/playback_target.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 
+/// Reads the current monitors without retaining native display handles.
+final Provider<List<DesktopDisplayGeometry> Function()> projectionDisplaysProvider = Provider(
+  (ref) => readDesktopDisplays,
+);
+
 /// Multi-view (3.x `lib/modules/multiview`, docs/A-界面设计/A13-网络电视和多画面界面/A13.2-多画面): several
 /// rooms at once, one of them audible, in a 1×1, 1×2, 2×2 or 1+3 wall of
 /// 16:9 cells. Laid out as the live room: the picture area above (portrait)
@@ -120,6 +125,7 @@ class _MultiviewPageState extends ConsumerState<MultiviewPage> {
   late final AppLifecycleListener _lifecycle;
   ProjectionChannel? _projection;
   String? _projectionDisplay;
+  bool _projectionChoosing = false;
   PlaybackRemote? _remote;
   RemotePlaybackTarget? _remoteTarget;
 
@@ -367,10 +373,43 @@ class _MultiviewPageState extends ConsumerState<MultiviewPage> {
     );
   }
 
+  Future<void> _toggleProjection() async {
+    if (_projectionChoosing) return;
+    if (_projectionDisplay != null) {
+      await _applyProjection('off');
+      return;
+    }
+    final saved = ref.read(storeProvider).settings.get(Settings.multiviewProjectionDisplay);
+    if (saved.isEmpty) {
+      await _applyProjection(saved);
+      return;
+    }
+    try {
+      if (saved != 'unset' &&
+          ref.read(projectionDisplaysProvider)().any((display) => display.persistenceKey == saved)) {
+        await _applyProjection(saved);
+        return;
+      }
+    } on Object {
+      // A disconnected display must not be silently replaced by another.
+    }
+    await _chooseProjection();
+  }
+
   Future<void> _chooseProjection() async {
+    if (_projectionChoosing) return;
+    _projectionChoosing = true;
+    try {
+      await _chooseProjectionDisplay();
+    } finally {
+      _projectionChoosing = false;
+    }
+  }
+
+  Future<void> _chooseProjectionDisplay() async {
     final displays = <DesktopDisplayGeometry>[];
     try {
-      displays.addAll(readDesktopDisplays());
+      displays.addAll(ref.read(projectionDisplaysProvider)());
     } on Object {
       AppNavigator.toast(i18n('projection_failed'));
       return;
@@ -382,7 +421,11 @@ class _MultiviewPageState extends ConsumerState<MultiviewPage> {
         children: [
           Padding(padding: const EdgeInsets.all(16), child: Text(i18n('projection_hint'))),
           SimpleDialogOption(onPressed: () => Navigator.pop(context, 'off'), child: Text(i18n('projection_off'))),
-          SimpleDialogOption(onPressed: () => Navigator.pop(context, ''), child: Text(i18n('projection_current'))),
+          SimpleDialogOption(
+            key: const ValueKey('projection-current'),
+            onPressed: () => Navigator.pop(context, ''),
+            child: Text(i18n('projection_current')),
+          ),
           for (var i = 0; i < displays.length; i++)
             SimpleDialogOption(
               onPressed: () => Navigator.pop(context, displays[i].persistenceKey),
@@ -392,6 +435,13 @@ class _MultiviewPageState extends ConsumerState<MultiviewPage> {
       ),
     );
     if (!mounted || selection == null) return;
+    if (selection != 'off') {
+      await ref.read(storeProvider).settings.set(Settings.multiviewProjectionDisplay, selection);
+    }
+    if (mounted) await _applyProjection(selection);
+  }
+
+  Future<void> _applyProjection(String selection) async {
     setState(() => _projectionDisplay = selection == 'off' ? null : selection);
     if (selection == 'off') {
       final channel = _projection;
@@ -624,12 +674,16 @@ class _MultiviewPageState extends ConsumerState<MultiviewPage> {
             : Text(i18n('multiview_title')),
         actions: [
           if (!_mobile)
-            ToolbarToggle(
-              key: const ValueKey('multiview-projection'),
-              tooltip: i18n('projection_title'),
-              on: _projectionDisplay != null,
-              onPressed: () => unawaited(_chooseProjection()),
-              child: const Icon(AppIcons.newWindow, size: 22),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onSecondaryTap: () => unawaited(_chooseProjection()),
+              child: ToolbarToggle(
+                key: const ValueKey('multiview-projection'),
+                tooltip: i18n('projection_title'),
+                on: _projectionDisplay != null,
+                onPressed: () => unawaited(_toggleProjection()),
+                child: const Icon(AppIcons.newWindow, size: 22),
+              ),
             ),
           ToolbarToggle(
             key: const ValueKey('multiview-mix-audio'),

@@ -1007,7 +1007,7 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
           child: CatchupBadge(controller: _room, onOpenGuide: widget.onOpenGuide),
         ),
         // F.1d: "显示识别状态" (3.x: 12 from the left, 62 from the top).
-        if (!_inline && !pip && !_locked)
+        if (!_inline && !pip && !_locked && _controls)
           Positioned(
             right: 12 + padding.right,
             top: badgeTop,

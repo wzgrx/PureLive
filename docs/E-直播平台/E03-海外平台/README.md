@@ -102,7 +102,7 @@
 属于 [E 直播平台](../README.md)。
 
 - 代码：`packages/live_core/lib/src/sites/`
-- 进度：`████████████████████` 98%
+- 进度：`███████████████████░` 95%
 
 
 | 编号 | 任务 | 类型 | 状态 | 日期 | 提交 | 资料 |
@@ -130,5 +130,14 @@
 | E03.21 | 接 E03.20：Windows 复用 Kick HTTP2 通道与桌面验收 | 平台 | 待真机 | 2026-10-24 | 7a823612a836d04a774a575d1e6dee5ff16b18b1 | [设计或说明](E03.21-Windows的Kick适配/README.md)、[任务书](E03.21-Windows的Kick适配/brief.md)、[记录](E03.21-Windows的Kick适配/record.md)、[真机验证](E03.21-Windows的Kick适配/verify.md)、[合并审查](E03.21-Windows的Kick适配/review.md) |
 | E03.22 | SOOP多CDN播放线路 | 平台 | 待真机 | 2026-11-05 | e10e50f4f7c6be46fbc9e475235e91acbef62c7e | [设计或说明](E03.22-SOOP多CDN播放线路/README.md)、[任务书](E03.22-SOOP多CDN播放线路/brief.md)、[记录](E03.22-SOOP多CDN播放线路/record.md)、[真机验证](E03.22-SOOP多CDN播放线路/verify.md)、[合并审查](E03.22-SOOP多CDN播放线路/review.md) |
 | E03.23 | SOOP公开直播回放 | 平台 | 待真机 | 2026-11-05 | e10e50f4f7c6be46fbc9e475235e91acbef62c7e | [设计或说明](E03.23-SOOP公开直播回放/README.md)、[任务书](E03.23-SOOP公开直播回放/brief.md)、[记录](E03.23-SOOP公开直播回放/record.md)、[真机验证](E03.23-SOOP公开直播回放/verify.md)、[合并审查](E03.23-SOOP公开直播回放/review.md) |
+| E03.24 | CHZZK公开回放播放验证 | 平台 | 暂停 | — | — | [设计或说明](E03.24-CHZZK公开回放播放验证/README.md)、[任务书](E03.24-CHZZK公开回放播放验证/brief.md)、[记录](E03.24-CHZZK公开回放播放验证/record.md)、[真机验证](E03.24-CHZZK公开回放播放验证/verify.md)、[合并审查](E03.24-CHZZK公开回放播放验证/review.md) |
+
+## 还没完成的
+
+- **E03.24 CHZZK公开回放播放验证**（暂停，第一档，规模 中）
+  - 接着做：先复核公开DASH初始化和分片，再用现有播放会话验证
+  - 分支：ai/E03.24-chzzk-replay-research
+  - 说明：目录与公开 HLS 有实测；同一个录像从 UPLOAD 转 ABR_HLS 后不再给 HLS。Accept: application/dash+xml 可取得 XML，远端 FFmpeg 读 MPD 失败，本地 MPD 的端到端解码仍未通过。HLS 试验提交 de5219d5 保留本地研究分支；不进入 5.6.5，后续核对分片和本地代理后再验收。
+  - 来源：GitHub #208
 
 <!-- docs:生成结束 -->

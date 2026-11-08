@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "タブレットや展開した折りたたみ端末でも、ホームはサイドレールではなく下部バーを使います",
     "enable_liquid_glass": "リキッドグラス",
     "enable_liquid_glass_subtitle": "下部バーがリキッドグラスとして浮かび、縁でページを屈折させます。長押しでドラッグして切り替えます。メモリ 4 GB 以下の端末では単色になります",
+    "enable_live_play_wide_footer": "映像の下にバー",
+    "enable_live_play_wide_footer_subtitle": "ワイド画面では人数・配信時間・画質と回線を映像の下に表示します。オフにするとチャット欄の上に戻ります",
     "enable_local_log": "ローカルログを有効にする",
     "enable_player_proxy": "プレーヤーのプロキシを有効にする",
     "enable_player_proxy_desc": "media_kit／mpv カーネルが配信映像を取得するときのネットワーク設定を制御します",

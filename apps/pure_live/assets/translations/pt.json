@@ -680,6 +680,8 @@
     "enable_home_bottom_bar_wide_subtitle": "Em tablets e dobráveis abertos, o início usa a barra inferior em vez do trilho lateral",
     "enable_liquid_glass": "Vidro líquido",
     "enable_liquid_glass_subtitle": "A barra inferior flutua como vidro líquido que curva a página nas bordas; segure e arraste para trocar. Celulares com 4 GB ou menos recebem uma tonalidade simples",
+    "enable_live_play_wide_footer": "Barra abaixo do vídeo",
+    "enable_live_play_wide_footer_subtitle": "Nas telas largas mostra espectadores, tempo no ar e seleção de qualidade e linha abaixo do vídeo; desativada volta acima do chat",
     "enable_local_log": "Ativar log local",
     "enable_player_proxy": "Ativar o proxy do player",
     "enable_player_proxy_desc": "Controla a rede quando o núcleo media_kit / mpv busca o vídeo das transmissões",
