@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:live_core/live_core.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_vod/live_vod.dart';
 import 'package:pure_live/app/services.dart';
@@ -8,6 +9,7 @@ import 'package:pure_live/shared/rooms/archive/bilibili_archive_controller.dart'
 import 'package:pure_live/shared/rooms/archive/douyu_archive_controller.dart';
 import 'package:pure_live/shared/rooms/archive/douyu_archive_progress.dart';
 import 'package:pure_live/shared/rooms/archive/huya_archive_controller.dart';
+import 'package:pure_live/shared/rooms/archive/part_archive_controller.dart';
 import 'package:pure_live/shared/rooms/archive/soop_archive_controller.dart';
 import 'package:pure_live/shared/rooms/archive_playback.dart';
 
@@ -94,6 +96,21 @@ final Provider<HuyaArchiveProgress> soopArchiveProgressProvider = Provider((ref)
   );
 });
 
+/// Public CHZZK creator replays and HLS details.
+final Provider<ChzzkArchiveApi> chzzkArchiveProvider = Provider(
+  (ref) => ChzzkArchiveApi(ref.watch(appServicesProvider).http),
+);
+
+/// Separate local CHZZK resume positions.
+final Provider<HuyaArchiveProgress> chzzkArchiveProgressProvider = Provider((ref) {
+  final meta = ref.watch(storeProvider).meta;
+  return HuyaArchiveProgress(
+    read: () => meta.get('chzzk-archive-progress-v1'),
+    write: (value) => meta.set('chzzk-archive-progress-v1', value),
+    idPattern: r'^[1-9][0-9]{0,18}:1$',
+  );
+});
+
 /// Stops an existing floating decoder before a standalone catalog starts another.
 final beforeArchivePlaybackProvider = Provider<Future<void> Function()>((ref) => FloatingRoom.instance.close);
 
@@ -109,6 +126,8 @@ ArchivePlaybackController Function(ArchiveRecording) roomArchiveFactory(
   final douyuProgress = ref.read(douyuVodProgressProvider);
   final bili = ref.read(bilibiliReplayProvider);
   final biliProgress = ref.read(bilibiliReplayProgressProvider);
+  final chzzk = ref.read(chzzkArchiveProvider);
+  final chzzkProgress = ref.read(chzzkArchiveProgressProvider);
   final soop = ref.read(soopArchiveProvider);
   final soopProgress = ref.read(soopArchiveProgressProvider);
   final proxy = ref.read(appServicesProvider).proxy;
@@ -117,6 +136,17 @@ ArchivePlaybackController Function(ArchiveRecording) roomArchiveFactory(
     final volume = initial ?? session.state.volume;
     initial = null;
     return switch (recording.video) {
+      final ChzzkArchiveVideo video => PartArchiveController<ChzzkArchivePart, ChzzkArchiveQuality>(
+        site: SiteIds.chzzk,
+        recordingId: video.id,
+        loadParts: chzzk.detail,
+        qualitiesOf: (part) => [part.quality],
+        lineFor: (q) => LivePlayLine(q.url, headers: ChzzkArchiveApi.headers, format: StreamFormat.hls),
+        session: session,
+        progress: chzzkProgress,
+        initialVolume: volume,
+        ownsSession: false,
+      ),
       final SoopArchiveVideo video => SoopArchiveController(
         source: soop,
         session: session,

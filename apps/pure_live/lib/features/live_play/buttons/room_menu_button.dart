@@ -314,7 +314,13 @@ List<List<RoomMenuItem>> roomMenuItems(
   return [
     for (final group in roomMenuGroups(
       iptv: controller.site.id == SiteIds.iptv,
-      replay: {SiteIds.huya, SiteIds.douyu, SiteIds.bilibili, SiteIds.soop}.contains(controller.room.platform),
+      replay: {
+        SiteIds.huya,
+        SiteIds.douyu,
+        SiteIds.bilibili,
+        SiteIds.soop,
+        SiteIds.chzzk,
+      }.contains(controller.room.platform),
       newWindow: DesktopWindow.offersNewWindow(settings),
       local: settings.get(Settings.localInteractionEnabled),
       cast: castSupported(defaultTargetPlatform),

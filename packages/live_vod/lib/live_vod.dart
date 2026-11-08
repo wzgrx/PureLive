@@ -6,6 +6,7 @@ library;
 
 export 'src/archive.dart';
 export 'src/bilibili_replay.dart';
+export 'src/chzzk/replay.dart';
 export 'src/client.dart';
 export 'src/danmaku.dart';
 export 'src/douyu/api.dart';
