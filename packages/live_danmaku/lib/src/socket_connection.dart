@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:live_core/live_core.dart';
 import 'package:live_danmaku/src/connection.dart';
 import 'package:live_danmaku/src/connection_base.dart';
+import 'package:live_danmaku/src/frame_decode.dart';
 import 'package:live_net/live_net.dart';
 import 'package:meta/meta.dart';
 
@@ -230,6 +231,7 @@ final class DanmakuSocketSession {
 
   LiveSocket? _socket;
   Timer? _joinTimer;
+  final FrameDecode _frames = FrameDecode();
 
   /// The last socket failure (a close code and reason, an error), for
   /// diagnostics.
@@ -263,6 +265,17 @@ final class DanmakuSocketSession {
 
   /// Reports a message.
   void message(LiveMessage message) => run.message(message);
+
+  /// Reads a binary frame with the platform's pure [decode] and gives the
+  /// result to [dispatch] (D04.2 c1): a burst frame is read in another
+  /// isolate so the frames behind it, and the danmaku on screen, do not wait
+  /// on it, and [dispatch] — the platform's messages, its acknowledgement —
+  /// runs on this isolate, in the order the frames arrived, only while the
+  /// run is current.
+  void decodeFrame<T>(List<int> data, T Function(List<int> data) decode, void Function(T result) dispatch) =>
+      _frames.run(data, decode, (result) {
+        if (run.isActive) dispatch(result);
+      });
 
   /// No longer joined, without a notice (a join being renegotiated).
   void markDisconnected() => run.markDisconnected();

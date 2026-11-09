@@ -446,8 +446,10 @@ abstract final class DouyuDanmakuProtocol {
 ///
 /// The app registers it as `SiteIds.douyu: () => DouyuDanmakuConnection(proxy:
 /// …, filterSuspectedAutomatedMessages: () => …)`, reading 3.x's
-/// `filterDouyuSuspectedAutomatedMessages` setting (default off) on every
-/// call, so a change applies to the next message without reconnecting.
+/// `filterDouyuSuspectedAutomatedMessages` setting (default off) at every
+/// frame, so a change applies to the next messages without reconnecting
+/// (D04.2: a frame may be read in another isolate, which cannot call back
+/// here).
 final class DouyuDanmakuConnection extends DanmakuSocketConnection<DouyuDanmakuArgs> {
   /// Creates the connection. [proxy] routes the handshake;
   /// `filterSuspectedAutomatedMessages` drops chat 3.x deems automated when
@@ -512,14 +514,29 @@ final class DouyuDanmakuConnection extends DanmakuSocketConnection<DouyuDanmakuA
   void onData(DanmakuSocketSession session, Object? data) {
     // Douyu only sends binary frames.
     if (data is! List<int>) return;
-    final (:messages, :ended) = DouyuDanmakuProtocol.read(
+    // What the read needs, held as it is at the frame: the catalogue the
+    // connection may still merge into is the one this frame was sent for.
+    final roomId = _roomId;
+    final gifts = _gifts;
+    // Read here, once per frame: what reaches the other isolate is the
+    // setting's value, not the app's closure, which holds what cannot be
+    // sent. A change applies to the next frame.
+    final filterSuspectedAutomated = _filterSuspectedAutomatedMessages?.call();
+    // D04.2 c1: a frame can hold many packets, each unescaped and split here
+    // no more; it is read off this isolate, the run answered on this one.
+    session.decodeFrame(
       data,
-      roomId: _roomId,
-      filterSuspectedAutomated: _filterSuspectedAutomatedMessages,
-      gifts: _gifts,
+      (bytes) => DouyuDanmakuProtocol.read(
+        bytes,
+        roomId: roomId,
+        filterSuspectedAutomated: filterSuspectedAutomated == null ? null : () => filterSuspectedAutomated,
+        gifts: gifts,
+      ),
+      (frame) {
+        frame.messages.forEach(session.message);
+        if (frame.ended) session.run.closed(DanmakuCloseReason.connectionFailed, detail: broadcastEnded);
+      },
     );
-    messages.forEach(session.message);
-    if (ended) session.run.closed(DanmakuCloseReason.connectionFailed, detail: broadcastEnded);
   }
 
   @override

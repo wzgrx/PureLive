@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:pure_live/features/live_play/danmaku/chat_feed.dart';
 import 'package:pure_live/shared/danmaku/danmaku_overlay.dart';
 import 'package:pure_live/shared/danmaku/emotes.dart';
 
@@ -96,14 +97,37 @@ class PortraitChatOverlayState extends State<PortraitChatOverlay> implements Dan
 
   void _take(LiveMessage message) {
     if (!mounted || !widget.visible || _held || (!widget.running && !message.isLocal)) return;
-    if (EmoteText.plainText(_segments(message)).trim().isEmpty) return;
+    final parts = _segments(message);
+    if (EmoteText.plainText(parts).trim().isEmpty) return;
     final limit = widget.maxVisible.clamp(0, 6);
     if (limit == 0) return;
-    setState(() {
-      _rows.add(_PortraitLine(message, _clock(message)));
-      if (_rows.length > limit) _rows.removeRange(0, _rows.length - limit);
-    });
+    final row = _PortraitLine(message, _clock(message))..parts = parts;
+    _rows.add(row);
+    if (_rows.length > limit) _rows.removeRange(0, _rows.length - limit);
+    // A message sent on this device is what the user just did; the build
+    // waits for no frame (D04.2 c2).
+    _changed(now: message.isLocal);
     _syncTimer();
+  }
+
+  bool _notified = false;
+
+  /// Tells the overlay of its rows at most once a frame (D04.2 c2: a busy
+  /// room's 200 messages a second used to be 200 `setState` calls). The rows
+  /// change at once, as [ChatFeed] does; [now] builds them at once.
+  void _changed({bool now = false}) {
+    if (!mounted) return;
+    if (now) {
+      _notified = false;
+      setState(() {});
+      return;
+    }
+    if (_notified) return;
+    _notified = true;
+    scheduleChatFlushForNextFrame(() {
+      _notified = false;
+      if (mounted) setState(() {});
+    });
   }
 
   void _syncTimer() {
@@ -138,7 +162,14 @@ class PortraitChatOverlayState extends State<PortraitChatOverlay> implements Dan
       _rows.clear();
       _pinned = null;
     }
-    _rows.removeWhere((row) => EmoteText.plainText(_segments(row.message)).trim().isEmpty);
+    if (!identical(oldWidget.emotes, widget.emotes) || oldWidget.look.textOnly != widget.look.textOnly) {
+      // The rows keep what they were parsed and measured for; these two are
+      // not part of that, so the next build takes them anew (D04.2 c2).
+      for (final row in _rows) {
+        row.invalidate();
+      }
+    }
+    _rows.removeWhere((row) => (row.text ??= EmoteText.plainText(row.parts ??= _segments(row.message))).trim().isEmpty);
     final limit = widget.maxVisible.clamp(0, 6);
     if (_rows.length > limit) _rows.removeRange(0, _rows.length - limit);
     _syncTimer();
@@ -207,15 +238,33 @@ class PortraitChatOverlayState extends State<PortraitChatOverlay> implements Dan
             final named = row.message.userName.trim();
             final nameWidth = (named.isEmpty ? 0 : math.min(width * 0.30, 90)).toDouble();
             final bodyWidth = math.max(1, width - nameWidth - 16).toDouble();
-            final parts = _segments(row.message);
-            final painter = TextPainter(
-              text: TextSpan(text: EmoteText.plainText(parts), style: base),
-              maxLines: 2,
-              textDirection: Directionality.of(context),
-              textScaler: scale,
-            )..layout(maxWidth: bodyWidth);
-            final rowHeight = math.max(scale.scale(size) * 1.4, painter.height) + 8;
-            painter.dispose();
+            final parts = row.parts ??= _segments(row.message);
+            final text = row.text ??= EmoteText.plainText(parts);
+            // D04.2 c2: a row measured for this same look and width keeps its
+            // height — a busy room used to lay every visible row out again on
+            // every frame, and the rows never changed between two of them.
+            final measured = (
+              text: text,
+              bodyWidth: bodyWidth,
+              size: size,
+              scaled: scale.scale(size),
+              font: base?.fontFamily,
+              weight: base?.fontWeight?.value,
+              direction: Directionality.of(context),
+            );
+            if (row.measured != measured) {
+              final painter = TextPainter(
+                text: TextSpan(text: text, style: base),
+                maxLines: 2,
+                textDirection: measured.direction,
+                textScaler: scale,
+              )..layout(maxWidth: bodyWidth);
+              row
+                ..height = math.max(measured.scaled * 1.4, painter.height) + 8
+                ..measured = measured;
+              painter.dispose();
+            }
+            final rowHeight = row.height;
             if (offset + rowHeight > height || width < 40) break;
             final color = row.message.color;
             children.add(
@@ -291,4 +340,22 @@ final class _PortraitLine {
   final LiveMessage message;
   final Duration born;
   final GlobalKey key = GlobalKey();
+
+  /// The row's pieces and their text, taken once: the parse of the message
+  /// itself is already shared with the chat list and the flying layer (B09
+  /// c7), so this only keeps it off the next build (D04.2 c2).
+  List<ChatSegment>? parts;
+  String? text;
+
+  /// What [height] was measured for: the row's text, the width it has for it
+  /// and what the text is drawn with. A build that asks for the same thing
+  /// lays no text out again.
+  Object? measured;
+  double height = 0;
+
+  void invalidate() {
+    parts = null;
+    text = null;
+    measured = null;
+  }
 }

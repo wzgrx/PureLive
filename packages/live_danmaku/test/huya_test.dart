@@ -1035,6 +1035,24 @@ void main() {
   });
 
   group('connection', () {
+    test('D04.2 c1: a burst frame is read off this isolate, and the frame behind it waits for it', () async {
+      final burst = _chat('a' * 9000);
+      expect(burst.length, greaterThan(8 * 1024));
+      final connector = _Connector();
+      final connection = HuyaDanmakuConnection(connector: connector.call);
+      final events = _record(connection);
+      await connection.connect(_args());
+      final channel = connector.channels.single;
+      channel.incoming
+        ..add(burst)
+        ..add(_chat('after the burst'));
+      await _until(() => _messages(events).length == 2);
+      final messages = _messages(events);
+      expect(messages.first.message, 'a' * 9000, reason: 'the same text, whatever isolate read the frame');
+      expect(messages.last.message, 'after the burst', reason: 'it waited for the burst before it');
+      await connection.close();
+    });
+
     test('opens the one endpoint without headers, is ready at once, registers and sends a heartbeat', () async {
       final connector = _Connector();
       final connection = HuyaDanmakuConnection(connector: connector.call);

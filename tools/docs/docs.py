@@ -95,6 +95,12 @@ def find_dir(parent: Path, prefix: str) -> Path | None:
     return None
 
 
+def rel(target: Path, base: Path) -> str:
+    """[target] seen from [base], as a Markdown link: always with `/`, also on
+    Windows, where `os.path.relpath` would write `\\` and break the link."""
+    return os.path.relpath(target, base).replace(os.sep, '/')
+
+
 def load() -> dict:
     with REGISTRY.open('rb') as f:
         return tomllib.load(f)
@@ -197,17 +203,17 @@ class Project:
             want = f'{g["id"]}-{safe(g["title"])}'
             found = find_dir(DOCS, g['id'])
             if found and found.name != want:
-                self.problems.append(f'组文件夹名应为 {want}：{found.relative_to(ROOT)}')
+                self.problems.append(f'组文件夹名应为 {want}：{rel(found, ROOT)}')
         for s in self.subs:
             want = f'{s["id"]}-{safe(s["title"])}'
             found = find_dir(self.group_dir(s['id'][:1]), s['id'])
             if found and found.name != want:
-                self.problems.append(f'子分类文件夹名应为 {want}：{found.relative_to(ROOT)}')
+                self.problems.append(f'子分类文件夹名应为 {want}：{rel(found, ROOT)}')
         for path in DOCS.glob('?-*/???-*/*'):
             if path.is_dir():
                 tid = path.name.split('-', 1)[0]
                 if TASK_RX.fullmatch(tid) and tid not in seen:
-                    self.problems.append(f'没登记的任务文件夹：{path.relative_to(ROOT)}')
+                    self.problems.append(f'没登记的任务文件夹：{rel(path, ROOT)}')
 
     def group_tasks(self, gid: str) -> list[dict]:
         return [t for s in self.subs if s['id'][:1] == gid for t in self.tasks_of_sub[s['id']]]
@@ -237,12 +243,12 @@ class Project:
             ('review.md', '合并审查'),
         ]
         links = [
-            f'[{label}]({os.path.relpath(folder / name, base)})' for name, label in names if (folder / name).exists()
+            f'[{label}]({rel(folder / name, base)})' for name, label in names if (folder / name).exists()
         ]
         if (folder / 'page').is_dir():
             first = sorted((folder / 'page').iterdir())
             if first:
-                links.append(f'[评审页]({os.path.relpath(first[0], base)})')
+                links.append(f'[评审页]({rel(first[0], base)})')
         return '、'.join(links) or '—'
 
     def to_text(self, task: dict, base: Path) -> str:
@@ -254,7 +260,7 @@ class Project:
     def task_link(self, tid: str, base: Path) -> str:
         folder = self.task_dir(tid)
         target = folder / 'README.md' if (folder / 'README.md').exists() else self.sub_dir(tid[:3]) / 'README.md'
-        return f'[{tid}]({os.path.relpath(target, base)})'
+        return f'[{tid}]({rel(target, base)})'
 
     # ---- generated files
     def status_md(self) -> str:
@@ -287,7 +293,7 @@ class Project:
                 (t for t in gt if t['status'] in ('未开始', '已确认')),
                 key=lambda t: (t.get('tier', 9), t['id']),
             )
-            link = f'[{g["id"]} {g["title"]}]({os.path.relpath(self.group_dir(g["id"]) / "README.md", base)})'
+            link = f'[{g["id"]} {g["title"]}]({rel(self.group_dir(g["id"]) / "README.md", base)})'
             out.append(
                 f'| {link} | {bar(ratio(gt))} | {done} / {len(gt)} | {"、".join(doing) or "—"} | '
                 f'{nxt[0]["id"] + " " + nxt[0]["title"] if nxt else "—"} |'
@@ -353,7 +359,7 @@ class Project:
             out.append(f'## {g["id"]} {g["title"]}\n\n{g["scope"]}\n\n{bar(ratio(self.group_tasks(g["id"])))}\n')
             for s in (s for s in self.subs if s['id'][:1] == g['id']):
                 tasks = self.tasks_of_sub[s['id']]
-                out.append(f'### [{s["id"]} {s["title"]}]({os.path.relpath(self.sub_dir(s["id"]) / "README.md", base)})\n')
+                out.append(f'### [{s["id"]} {s["title"]}]({rel(self.sub_dir(s["id"]) / "README.md", base)})\n')
                 if not tasks:
                     out.append('还没有任务。\n')
                     continue
@@ -418,7 +424,7 @@ class Project:
         for s in (s for s in self.subs if s['id'][:1] == g['id']):
             st = counted(self.tasks_of_sub[s['id']])
             done = sum(1 for t in st if t['status'] == '完成')
-            out.append(f'| [{s["id"]} {s["title"]}]({os.path.relpath(self.sub_dir(s["id"]) / "README.md", base)}) | {s["scope"]} | {bar(ratio(st)) if st else "—"} | {done} / {len(st)} |')
+            out.append(f'| [{s["id"]} {s["title"]}]({rel(self.sub_dir(s["id"]) / "README.md", base)}) | {s["scope"]} | {bar(ratio(st)) if st else "—"} | {done} / {len(st)} |')
         out.append('')
         left = [t for t in tasks if t['status'] in OPEN or t['status'] == '待真机']
         out.append(f'## 还没完成的（{len(left)}）\n')
@@ -478,7 +484,7 @@ class Project:
             out.append('\n## 资料\n')
             for p in extra:
                 target = p / 'README.md' if p.is_dir() and (p / 'README.md').exists() else p
-                out.append(f'- [{p.name}{"/" if p.is_dir() else ""}]({os.path.relpath(target, base)})')
+                out.append(f'- [{p.name}{"/" if p.is_dir() else ""}]({rel(target, base)})')
         return '\n'.join(out) + '\n'
 
     def generated(self) -> dict[Path, str]:
@@ -514,9 +520,9 @@ def check_links(contents: dict[Path, str]) -> list[str]:
         for target in LINK_RX.findall(text):
             if re.match(r'^[a-z]+:', target) or target.startswith('#'):
                 continue
-            rel = target.split('#', 1)[0]
-            if not (path.parent / rel).exists() and (path.parent / rel) not in contents:
-                problems.append(f'{path.relative_to(ROOT)}：链接找不到 {target}')
+            href = target.split('#', 1)[0]
+            if not (path.parent / href).exists() and (path.parent / href) not in contents:
+                problems.append(f'{rel(path, ROOT)}：链接找不到 {target}')
     return problems
 
 
@@ -543,10 +549,10 @@ def check_code_paths() -> list[str]:
             # (Z06.4): the regex stops before the '/', and what is left may
             # well exist (`docs/README.md/` + an old file name).
             if text[m.end():m.end() + 2] in ('/\n', '/\r'):
-                problems.append(f'{p.relative_to(ROOT)}：提到的 {ref}/ 在注释里换行了，写成一行完整路径')
+                problems.append(f'{rel(p, ROOT)}：提到的 {ref}/ 在注释里换行了，写成一行完整路径')
                 continue
             if not (ROOT / ref).exists():
-                problems.append(f'{p.relative_to(ROOT)}：提到的 {ref} 不存在')
+                problems.append(f'{rel(p, ROOT)}：提到的 {ref} 不存在')
     return problems
 
 
@@ -560,7 +566,7 @@ def main() -> int:
         old = path.read_text(encoding='utf-8') if path.exists() else None
         if old != text:
             if check:
-                stale.append(str(path.relative_to(ROOT)))
+                stale.append(rel(path, ROOT))
             else:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(text, encoding='utf-8')

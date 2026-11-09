@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -188,16 +189,8 @@ List<ChatSegment> _parse(LiveMessage message, EmoteTable table) {
   };
   if (named.isEmpty && table.codes.isEmpty) return [ChatTextSegment(text)];
   // The table's own pattern, compiled once; a message naming its own codes
-  // puts them first.
-  final pattern = named.isEmpty
-      ? table._pattern!
-      : RegExp(
-          [
-            ([...named.keys]..sort((a, b) => b.length.compareTo(a.length))).map(RegExp.escape).join('|'),
-            if (table.codes.isNotEmpty) EmoteTable._bracket.pattern,
-            ?table._others,
-          ].join('|'),
-        );
+  // puts them first, and that pattern is kept for the next one of them.
+  final pattern = named.isEmpty ? table._pattern! : _namedPattern(table, named.keys);
   final segments = <ChatSegment>[];
   var start = 0;
   for (final match in pattern.allMatches(text)) {
@@ -212,6 +205,30 @@ List<ChatSegment> _parse(LiveMessage message, EmoteTable table) {
   if (segments.isEmpty) return [ChatTextSegment(text)];
   if (start < text.length) segments.add(ChatTextSegment(text.substring(start)));
   return segments;
+}
+
+/// How many of the patterns of a table with the codes a message names itself
+/// are kept (D04.2 c3): a busy room writes the same few dozen codes over and
+/// over, and each message used to compile this pattern again.
+const int _maxNamedPatterns = 16;
+
+final LinkedHashMap<(EmoteTable, String), RegExp> _namedPatterns = LinkedHashMap();
+
+/// [table]'s pattern with the escaped [codes] in front of it, longest first,
+/// cached for the table and that set of codes.
+RegExp _namedPattern(EmoteTable table, Iterable<String> codes) {
+  final key = (table, ([...codes]..sort((a, b) => b.length.compareTo(a.length))).map(RegExp.escape).join('|'));
+  final cached = _namedPatterns.remove(key);
+  if (cached != null) {
+    _namedPatterns[key] = cached;
+    return cached;
+  }
+  final pattern = RegExp([key.$2, if (table.codes.isNotEmpty) EmoteTable._bracket.pattern, ?table._others].join('|'));
+  _namedPatterns[key] = pattern;
+  while (_namedPatterns.length > _maxNamedPatterns) {
+    _namedPatterns.remove(_namedPatterns.keys.first);
+  }
+  return pattern;
 }
 
 /// How the filter reads a message of [platform] for "屏蔽只有表情的弹幕" and
