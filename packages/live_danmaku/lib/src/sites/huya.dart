@@ -389,22 +389,27 @@ final class HuyaDanmakuConnection extends DanmakuSocketConnection<HuyaDanmakuArg
   void onData(DanmakuSocketSession session, Object? data) {
     // Huya only sends binary frames.
     if (data is! List<int>) return;
-    final frame = HuyaDanmakuProtocol.decode(data, now: _now());
-    for (final message in frame.messages) {
-      if (message.data case final LiveSuperChatMessage entry) {
-        _superChats?.report(entry);
-      } else {
-        session.message(message);
+    final now = _now();
+    // D04.2 c1: a batch frame (command 35) holds every item of it; it is read
+    // off this isolate, and the board entries and the stream end are answered
+    // here, where the connection's own state lives.
+    session.decodeFrame(data, (bytes) => HuyaDanmakuProtocol.decode(bytes, now: now), (frame) {
+      for (final message in frame.messages) {
+        if (message.data case final LiveSuperChatMessage entry) {
+          _superChats?.report(entry);
+        } else {
+          session.message(message);
+        }
       }
-    }
-    for (var notice = 0; notice < frame.superChatNotices; notice++) {
-      _superChats?.schedule();
-    }
-    // C-10: the web client leaves the room at the stream end; a notice that
-    // names another streamer is not this room's.
-    if (frame.ended.any((uid) => uid == _uid || uid <= 0)) {
-      session.run.closed(DanmakuCloseReason.connectionFailed, detail: HuyaDanmakuProtocol.broadcastEnded);
-    }
+      for (var notice = 0; notice < frame.superChatNotices; notice++) {
+        _superChats?.schedule();
+      }
+      // C-10: the web client leaves the room at the stream end; a notice that
+      // names another streamer is not this room's.
+      if (frame.ended.any((uid) => uid == _uid || uid <= 0)) {
+        session.run.closed(DanmakuCloseReason.connectionFailed, detail: HuyaDanmakuProtocol.broadcastEnded);
+      }
+    });
   }
 
   @override

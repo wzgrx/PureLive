@@ -845,7 +845,7 @@ void main() {
       await connection.close();
     });
 
-    test('the suspected-automated setting is read for each message, without reconnecting', () async {
+    test('the suspected-automated setting is taken once per frame, without reconnecting', () async {
       var enabled = false;
       var reads = 0;
       final connector = _Connector();
@@ -871,8 +871,34 @@ void main() {
         ..add(chat('marked', 'dms@=4/'));
       await _until(() => _messages(events).length == 2);
       expect(_messages(events).map((message) => message.message), ['first', 'marked']);
-      expect(reads, 2, reason: 'only suspected chat reads the setting');
+      // D04.2 c1: a frame may be read in another isolate, which cannot call
+      // back here, so the value is taken where the frame arrived — once for
+      // every frame, whatever messages it holds.
+      expect(reads, 3, reason: 'the frame, not each message');
       expect(connector.channels, hasLength(1));
+      await connection.close();
+    });
+
+    test('D04.2 c1: a burst frame is read off this isolate, and the frame behind it waits for it', () async {
+      Uint8List frame(String text) => DouyuDanmakuProtocol.packet(
+        'type@=chatmsg/rid@=$_roomId/uid@=1/nn@=A/txt@=$text/cid@=1',
+        type: DouyuDanmakuProtocol.serverPacketType,
+      );
+
+      final burst = frame('a' * 9000);
+      expect(burst.length, greaterThan(8 * 1024));
+      final connector = _Connector();
+      final connection = DouyuDanmakuConnection(connector: connector.call);
+      final events = _record(connection);
+      await connection.connect(_args);
+      final channel = connector.channels.single;
+      channel.incoming
+        ..add(burst)
+        ..add(frame('after the burst'));
+      await _until(() => _messages(events).length == 2);
+      final messages = _messages(events);
+      expect(messages.first.message, 'a' * 9000, reason: 'the same text, whatever isolate read the frame');
+      expect(messages.last.message, 'after the burst', reason: 'it waited for the burst before it');
       await connection.close();
     });
 

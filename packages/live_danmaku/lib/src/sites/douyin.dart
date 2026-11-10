@@ -551,12 +551,17 @@ final class DouyinDanmakuConnection extends DanmakuSocketConnection<DouyinDanmak
     // Douyin only sends binary frames.
     final broadcast = _of(session);
     if (data is! List<int> || broadcast == null) return;
-    final frame = DouyinDanmakuProtocol.decode(data, roomId: broadcast.args.roomId);
-    if (frame.envelopes > 0) broadcast.heard = true;
-    if (frame.ack case final ack?) session.send(ack);
-    for (final message in frame.messages) {
-      if (broadcast.gifts.accept(message)) session.message(message);
-    }
+    final roomId = broadcast.args.roomId;
+    // D04.2 c1: one frame carries a batch of envelopes, gzip and a protobuf
+    // each; it is read off this isolate, and its acknowledgement and messages
+    // are answered here in the order the frames arrived.
+    session.decodeFrame(data, (bytes) => DouyinDanmakuProtocol.decode(bytes, roomId: roomId), (frame) {
+      if (frame.envelopes > 0) broadcast.heard = true;
+      if (frame.ack case final ack?) session.send(ack);
+      for (final message in frame.messages) {
+        if (broadcast.gifts.accept(message)) session.message(message);
+      }
+    });
   }
 
   /// B-5: before giving up, one check of the room's broadcast; a new one is

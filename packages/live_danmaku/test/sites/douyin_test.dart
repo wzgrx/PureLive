@@ -776,6 +776,33 @@ void main() {
       now: () => DateTime.fromMillisecondsSinceEpoch(1790519970273),
     );
 
+    test('D04.2 c1: a burst frame is read off this isolate, and the frame behind it waits for it', () async {
+      // One frame with a batch of envelopes, as a busy room sends them: the
+      // gzip-free case still costs a protobuf per message, which used to be
+      // paid on the isolate that paints the danmaku.
+      List<(String, Uint8List)> batch(int count) => [
+        for (var i = 0; i < count; i++)
+          ('WebcastChatMessage', _chatPayload('burst ${i.toString().padLeft(2, '0')}', roomId: _args.roomId)),
+      ];
+
+      final burst = _pushFrame(batch(120));
+      expect(burst.length, greaterThan(8 * 1024));
+      final connector = _Connector();
+      final douyin = connection(connector);
+      final events = _record(douyin);
+      await douyin.connect(_args);
+      final channel = connector.channels.single;
+      channel.incoming
+        ..add(burst)
+        ..add(_pushFrame([('WebcastChatMessage', _chatPayload('after the burst', roomId: _args.roomId))]));
+      await _until(() => _messages(events).length == 121);
+      expect(_messages(events).map((message) => message.message), [
+        for (var i = 0; i < 120; i++) 'burst ${i.toString().padLeft(2, '0')}',
+        'after the burst',
+      ], reason: 'the same messages in the same order, whatever isolate read them');
+      await douyin.close();
+    });
+
     test('opens the first edge, signed, with the room headers; ready at once, then a heartbeat', () async {
       final connector = _Connector();
       final douyin = connection(connector);

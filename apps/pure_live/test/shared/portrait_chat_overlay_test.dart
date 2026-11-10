@@ -171,4 +171,49 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('D04.2 c2: rows of one frame build once, and an older row keeps its measured height', (tester) async {
+    await pump(tester);
+    messages
+      ..add(_message(1))
+      ..add(_message(2))
+      ..add(_message(3));
+    await tester.pump();
+    final before = tester.getRect(find.text('第1条聊天内容'));
+    messages
+      ..add(_message(4))
+      ..add(_message(5));
+    await tester.pump();
+    expect(find.text('第5条聊天内容'), findsOneWidget, reason: 'in the frame it arrived in');
+    expect(
+      tester.getRect(find.text('第1条聊天内容')),
+      before,
+      reason: 'its height came from the cache, not from laying it out again',
+    );
+    expect(key.currentState!.visibleCount, 5);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('D04.2 c2: a message written here is on the screen at once; the rows change before the build does', (
+    tester,
+  ) async {
+    await pump(tester);
+    messages.add(
+      const LiveMessage(
+        type: LiveMessageType.chat,
+        userName: '我',
+        message: '刚发的一条',
+        color: LiveMessageColor.white,
+        isLocal: true,
+      ),
+    );
+    await tester.pump();
+    expect(find.text('刚发的一条'), findsOneWidget);
+    messages.add(_message(7));
+    expect(key.currentState!.visibleCount, 2, reason: 'the rows change at once; only the build waits for the frame');
+    await tester.pump();
+    expect(find.text('第7条聊天内容'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

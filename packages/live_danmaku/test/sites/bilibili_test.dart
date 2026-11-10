@@ -1762,6 +1762,27 @@ void main() {
       await connection.close();
     });
 
+    test('D04.2 c1: a burst frame is read off this isolate, and the frame behind it waits for it', () async {
+      // One packet per danmaku, as a room's high-energy moment sends them:
+      // this is the size that used to hold the socket callback for longer
+      // than a frame of the screen.
+      final burst = [for (var i = 0; i < 60; i++) ..._notice(_danmu('burst ${i.toString().padLeft(2, '0')}'))];
+      expect(burst.length, greaterThan(8 * 1024));
+      final connector = _Connector();
+      final connection = BilibiliDanmakuConnection(connector: connector.call, policy: _quiet);
+      final events = _record(connection);
+      await connection.connect(_args());
+      await connector.channels.single.receive(burst);
+      final after = _notice(_danmu('after the burst'));
+      await connector.channels.single.receive(after);
+      await _until(() => _texts(events).length == 61);
+      expect(_texts(events), [
+        ..._decoded(burst),
+        'after the burst',
+      ], reason: 'the same messages in the same order, whatever isolate read them');
+      await connection.close();
+    });
+
     group('credentials', () {
       test('a start without a token refreshes first: three attempts, 1× and 2× the step apart', () async {
         final connector = _Connector();
