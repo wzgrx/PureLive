@@ -1109,6 +1109,76 @@ void main() {
       expect(http.requests, isEmpty);
     });
   });
+
+  group('follow batch', () {
+    /// A synthetic batch answer of [count] user envelopes.
+    List<Object?> _userBatch(int count, {required List<String> logins}) {
+      return [
+        for (var i = 0; i < count; i++)
+          {
+            'data': {
+              'user': {
+                'id': '100$i',
+                'login': logins[i],
+                'displayName': 'Stream $i',
+                'description': '',
+                'profileImageURL': 'https://img.example/$i.png',
+                'stream': {
+                  'id': 's$i',
+                  'title': 'Live $i',
+                  'type': 'live',
+                  'viewersCount': 100 + i,
+                  'createdAt': '2026-09-27T12:00:00Z',
+                  'previewImageURL': 'https://img.example/prev$i.jpg',
+                  'game': {'id': '1', 'name': 'IRL', 'displayName': 'IRL', 'slug': 'irl'},
+                },
+                'lastBroadcast': null,
+              },
+            },
+          }
+      ];
+    }
+
+    test('two rooms in one batch: both answered', () async {
+      final ops = [
+        TwitchApi.userOperation('alice'),
+        TwitchApi.userOperation('bob'),
+      ];
+      final batch = _answer(ops, body: _userBatch(2, logins: ['alice', 'bob']));
+      final setup = _setup([batch]);
+      final updates = await setup.site.refreshFollowBatch([
+        LiveRoom(platform: 'twitch', roomId: 'alice'),
+        LiveRoom(platform: 'twitch', roomId: 'bob'),
+      ]);
+      expect(updates.keys, {'twitch:alice', 'twitch:bob'});
+      expect(updates['twitch:alice']!.liveStatus, LiveStatus.live);
+      expect(updates['twitch:alice']!.watching, '100');
+      expect(updates['twitch:bob']!.liveStatus, LiveStatus.live);
+      expect(updates['twitch:bob']!.watching, '101');
+    });
+
+    test('one room, or non-channel ids: no batch request', () async {
+      final setup = _setup([]);
+      expect(await setup.site.refreshFollowBatch([LiveRoom(platform: 'twitch', roomId: 'alice')]), isEmpty);
+      expect(setup.http.requests, isEmpty);
+      expect(await setup.site.refreshFollowBatch([LiveRoom(platform: 'twitch', roomId: 'not a channel!')]), isEmpty);
+      expect(setup.http.requests, isEmpty);
+    });
+
+    test('a failed batch drops all its rooms', () async {
+      final ops = [
+        TwitchApi.userOperation('alice'),
+        TwitchApi.userOperation('bob'),
+      ];
+      final failing = _answer(ops, status: 500, body: jsonEncode({'errors': [{'message': 'boom'}]}));
+      final setup = _setup([failing]);
+      final updates = await setup.site.refreshFollowBatch([
+        LiveRoom(platform: 'twitch', roomId: 'alice'),
+        LiveRoom(platform: 'twitch', roomId: 'bob'),
+      ]);
+      expect(updates, isEmpty, reason: 'a failed batch drops its rooms');
+    });
+  });
 }
 
 /// Fails every request that asks for English (the tag names), passing the

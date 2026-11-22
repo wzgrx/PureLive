@@ -117,6 +117,7 @@ final class TwitchSite extends LiveSite
     with LiveSiteLinks
     implements
         LiveSiteRoomRefresher,
+        LiveSiteFollowBatchRefresher,
         LiveSiteRecordRoomResolver,
         LivePlayUrlResolver,
         LivePlayRecoveryResolver,
@@ -475,6 +476,47 @@ final class TwitchSite extends LiveSite
   /// "offline".
   @override
   Future<bool> getLiveStatus({required String roomId}) async => (await _detail(roomId)).isLiveNow;
+
+  // Follow batch ---------------------------------------------------------------
+
+  /// Follow-card batch refresh: Twitch GraphQL user queries, batched in
+  /// groups of [TwitchApi.batchLimit] (35). Each room's live status, viewer
+  /// count and title are answered by the same query used at room entry
+  /// ([TwitchApi.roomDetail]); no login cookie is required.
+  @override
+  Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async {
+    final eligible = rooms.where((room) => TwitchApi.loginPattern.hasMatch(room.roomId.trim().toLowerCase())).toList();
+    if (eligible.length < 2) return const {};
+
+    final updates = <String, LiveRoom>{};
+    for (var start = 0; start < eligible.length; start += TwitchApi.batchLimit) {
+      final chunk = eligible.sublist(start, min(start + TwitchApi.batchLimit, eligible.length));
+      try {
+        final answer = await _gql(
+          [for (final room in chunk) TwitchApi.userOperation(room.roomId.trim().toLowerCase())],
+          what: 'user batch',
+        );
+        final envelopes = TwitchApi.batch(answer, expected: chunk.length, what: 'user batch');
+        for (var i = 0; i < chunk.length; i++) {
+          final room = chunk[i];
+          try {
+            final detail = TwitchApi.roomDetail(envelopes[i], requestedId: room.roomId, now: _now(), chat: _chat());
+            updates[room.identityKey] = detail;
+          } on SiteError {
+            // A single failed user in a batch drops that room; the rest
+            // still answer.
+          }
+        }
+      } on RiskControl {
+        // An integrity challenge ends the batch quietly; the caller
+        // refreshes the unconfirmed rooms individually.
+      } on SiteError {
+        // A failed batch drops its rooms; the caller refreshes them
+        // individually.
+      }
+    }
+    return updates;
+  }
 
   // Streams -------------------------------------------------------------------
 
