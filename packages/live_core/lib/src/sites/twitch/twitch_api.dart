@@ -148,6 +148,15 @@ abstract final class TwitchApi {
       'previewImageURL(width: 640, height: 360) restriction { type } game { id name displayName slug } } '
       'lastBroadcast { title game { name displayName } } } }';
 
+  /// Batch version of [userQuery]: up to [batchLimit] logins in one request.
+  /// Answers are the same user nodes as [userQuery] (order matches the
+  /// request's `logins`); a missing channel is a `null` entry in the list.
+  static const String usersBatchQuery =
+      r'query($logins: [String!]!) { users(logins: $logins) { id login displayName description '
+      'profileImageURL(width: 300) stream { id title type viewersCount createdAt '
+      'previewImageURL(width: 640, height: 360) restriction { type } game { id name displayName slug } } '
+      'lastBroadcast { title game { name displayName } } } }';
+
   /// The busiest live streams of the whole site, in the broadcast
   /// `languages` when given (the recommendations, 8-3). The web client has
   /// no persisted query for it; `first` is at most 30 and pages after the
@@ -268,6 +277,81 @@ abstract final class TwitchApi {
     'query': userQuery,
     'variables': {'login': login},
   };
+
+  /// A [usersBatchQuery] for [logins] (at most [batchLimit]).
+  static Map<String, Object?> usersBatchOperation(List<String> logins) => {
+    'query': usersBatchQuery,
+    'variables': {'logins': logins},
+  };
+
+  /// Parses a [usersBatchQuery] answer into `{identityKey: LiveRoom}`.
+  /// [requestedLogins] is the logins sent (same order); a `null` entry in
+  /// the answer or a login mismatch drops that room (missing or
+  /// [ApiChanged]).
+  static Map<String, LiveRoom> usersBatchDetail(
+    Object? decoded, {
+    required List<String> requestedLogins,
+    required DateTime now,
+    TwitchChatLogin? chat,
+  }) {
+    final users = _list(_data(decoded, 'users batch')['users']);
+    if (users.length != requestedLogins.length) {
+      throw ApiChanged(_site, 'users batch: ${users.length} answers for ${requestedLogins.length} logins');
+    }
+    final result = <String, LiveRoom>{};
+    for (var i = 0; i < requestedLogins.length; i++) {
+      final login = requestedLogins[i].trim().toLowerCase();
+      final node = users[i];
+      if (node == null) continue;
+      if (node is! Map<String, dynamic>) continue;
+      final answered = jsonString(node['login'])?.toLowerCase();
+      if (answered != login) continue;
+      final room = _userNode(node, login, now, chat);
+      result['$_site:$login'] = room;
+    }
+    return result;
+  }
+
+  /// Builds a [LiveRoom] from one user node of [userQuery] or
+  /// [usersBatchQuery].
+  static LiveRoom _userNode(
+    Map<String, dynamic> user,
+    String login,
+    DateTime now,
+    TwitchChatLogin? chat,
+  ) {
+    final stream = _object(user['stream']);
+    final status = switch (stream?['type']) {
+      'live' => LiveStatus.live,
+      'rerun' => LiveStatus.replay,
+      _ => LiveStatus.offline,
+    };
+    final onAir = status != LiveStatus.offline;
+    final viewers = onAir ? _text(stream!['viewersCount'] ?? 0) : '0';
+    final game = _object(stream?['game']);
+    final profile = _text(user['profileImageURL']);
+    final preview = onAir ? _cover(stream!['previewImageURL'], now) : '';
+    return LiveRoom(
+      roomId: login,
+      platform: _site,
+      userId: login,
+      link: '$origin/$login',
+      title: _text(_object(user['lastBroadcast'])?['title']),
+      nick: _text(user['displayName']),
+      avatar: profile,
+      cover: preview.isEmpty ? profile : preview,
+      area: game == null ? null : _gameName(game),
+      watching: viewers,
+      onlineViewers: viewers,
+      audienceMetricType: AudienceMetricType.onlineViewers,
+      liveStatus: status,
+      startedAt: onAir ? _time(stream!['createdAt']) : null,
+      restriction: onAir ? restriction(stream) : null,
+      introduction: _text(user['description']).trim(),
+      notice: '',
+      danmakuData: TwitchDanmakuArgs(channel: login, chat: chat),
+    );
+  }
 
   /// `PlaybackAccessToken` of a live channel.
   static Map<String, Object?> accessTokenOperation(String login) => persisted('PlaybackAccessToken', _accessTokenHash, {

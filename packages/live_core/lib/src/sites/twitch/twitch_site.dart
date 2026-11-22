@@ -479,10 +479,9 @@ final class TwitchSite extends LiveSite
 
   // Follow batch ---------------------------------------------------------------
 
-  /// Follow-card batch refresh: Twitch GraphQL user queries, batched in
-  /// groups of [TwitchApi.batchLimit] (35). Each room's live status, viewer
-  /// count and title are answered by the same query used at room entry
-  /// ([TwitchApi.roomDetail]); no login cookie is required.
+  /// Follow-card batch refresh: [TwitchApi.usersBatchQuery] (up to
+  /// [TwitchApi.batchLimit] logins per request), the batch version of the
+  /// single-user query used at room entry. No login cookie is required.
   @override
   Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async {
     final eligible = rooms.where((room) => TwitchApi.loginPattern.hasMatch(room.roomId.trim().toLowerCase())).toList();
@@ -491,22 +490,10 @@ final class TwitchSite extends LiveSite
     final updates = <String, LiveRoom>{};
     for (var start = 0; start < eligible.length; start += TwitchApi.batchLimit) {
       final chunk = eligible.sublist(start, min(start + TwitchApi.batchLimit, eligible.length));
+      final logins = [for (final room in chunk) room.roomId.trim().toLowerCase()];
       try {
-        final answer = await _gql(
-          [for (final room in chunk) TwitchApi.userOperation(room.roomId.trim().toLowerCase())],
-          what: 'user batch',
-        );
-        final envelopes = TwitchApi.batch(answer, expected: chunk.length, what: 'user batch');
-        for (var i = 0; i < chunk.length; i++) {
-          final room = chunk[i];
-          try {
-            final detail = TwitchApi.roomDetail(envelopes[i], requestedId: room.roomId, now: _now(), chat: _chat());
-            updates[room.identityKey] = detail;
-          } on SiteError {
-            // A single failed user in a batch drops that room; the rest
-            // still answer.
-          }
-        }
+        final answer = await _gql(TwitchApi.usersBatchOperation(logins), what: 'users batch');
+        updates.addAll(TwitchApi.usersBatchDetail(answer, requestedLogins: logins, now: _now(), chat: _chat()));
       } on RiskControl {
         // An integrity challenge ends the batch quietly; the caller
         // refreshes the unconfirmed rooms individually.
