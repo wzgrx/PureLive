@@ -29,3 +29,19 @@
 - Windows采用官方0.42 LGPL包，核对发布摘要；实际本地和公网HTTPS解码通过，验证保持yes。官方包内FFmpeg报告其Git快照，不能冒充同版录制用FFmpeg9.1。
 - Linux先捕获静态libplacebo的C++转换符号缺失和新增XPresent动态依赖，改为C++链接器、严格未解析符号检查并静态链接XPresent。保持glibc2.28、X11/VAAPI/VDPAU，播放器启用GPL，录制仍是LGPL基础包。受下载代理环境影响的一次公网探针未在时限内推进，清空该环境后本地/公网HTTPS解码通过；不据此宣称修复所有代理场景。
 - Apple录制云构建已通过Xcode27.2/Python3.15.2/CocoaPods检查及宿主cargo-c准备，仍在编译。播放器单独提供构建工作流，补齐静态C++链接和旧OS数值转换保护；最终运行结果尚待取得。
+
+
+## 客户端集成修正
+
+旧窗口适配在Windows隐藏启动时只查active window，会遗漏本程序的隐藏HWND。改由runner的既有startup通道返回自身句柄，Dart显式绑定，异步初始化共享一次请求；并核对拒绝关闭后仍保留下一次确认。窗口和启动回归、分析通过。
+
+精简内核可能没有长编码描述，新增缺失描述的回归先失败，补实际短名回退后通过。Android Downloads系统provider的downloads/raw目录ID按AOSP定义映射，拒绝跨用户、越界和仅provider可解析的ID；红绿回归通过。
+
+本地已验证播放与录制组件已上传native预发布依赖，GitHub摘要核对通过；旧客户端更新通道仍未改动。各工作区使用新版本独立录制缓存，旧缓存保留。新Apple工作流未在默认分支注册，改由已注册FFmpegKit Apple工作流的player-only入口执行；源码验证后再触发。
+
+
+## Apple平台分架构校验
+
+24a6836e云运行的录制Build、Check and hash及录制artifact上传成功，后续播放器失败不作为录制包失败或客户端通过的证据。播放器iOS编译暴露avfoundation自动检测选中macOS专用音频代码；iOS明确禁用该后端，保留AudioUnit。改为五个独立slice任务并行构建，再严格核对同一源码、工具链、最低系统和每个二进制SHA后组合通用框架；不足五个或来源不一致拒绝组装。
+
+5.7.0本地集成首轮全部测试通过，仅Downloads URI代码的一条多行if风格检查未通过；已补block。新增组装契约测试覆盖缺slice、跨源码和字节变化；重新通过静态检查后再跑完整门禁。

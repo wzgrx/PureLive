@@ -2,6 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pure_live/platform/directory_picker_path.dart';
 
 void main() {
+  test('the Android Downloads provider maps only this user downloads tree', () {
+    String? pick(String id) => pickedDirectoryPath(
+      Uri(scheme: 'content', host: 'com.android.providers.downloads.documents', pathSegments: ['tree', id]),
+      windows: false,
+      externalStorageRoot: '/storage/emulated/10',
+    );
+    expect(pick('downloads'), '/storage/emulated/10/Download');
+    expect(pick('raw:/storage/emulated/10/Download/Live Records'), '/storage/emulated/10/Download/Live Records');
+    expect(pick('raw:/storage/emulated/0/Download/Other User'), isNull);
+    expect(pick('raw:/storage/emulated/10/Download/../outside'), isNull);
+    expect(pick('msd:123'), isNull);
+  });
+
   test('directory picks preserve desktop paths and the Android user-specific primary volume', () {
     expect(pickedDirectoryPath(Uri.parse('file:///home/user/My%20Records'), windows: false), '/home/user/My Records');
     expect(pickedDirectoryPath(Uri.parse('file:///C:/Records'), windows: true), r'C:\Records');

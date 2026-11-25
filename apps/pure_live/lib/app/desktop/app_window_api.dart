@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:ffi' show Pointer, Void;
+import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:nativeapi/nativeapi.dart' as native;
 import 'package:window_manager/window_manager.dart';
@@ -76,18 +79,28 @@ final class AppWindowApi {
   /// Creates an unresolved host adapter. Native boundaries are injectable
   /// so event ownership can be tested without opening a real window.
   new({
-    native.Window? Function()? resolve,
+    FutureOr<native.Window?> Function()? resolve,
     native.ListenerId Function(FutureOr<void> Function(native.WindowEvent))? listen,
     void Function(native.ListenerId)? unlisten,
-  }) : _resolve = resolve ?? native.WindowManager.instance.getCurrent,
+  }) : _resolve = resolve ?? _resolveHostWindow,
        _listen = listen ?? native.WindowManager.instance.addListener,
        _unlisten = unlisten ?? native.WindowManager.instance.removeListener;
 
-  final native.Window? Function() _resolve;
+  final FutureOr<native.Window?> Function() _resolve;
   final native.ListenerId Function(FutureOr<void> Function(native.WindowEvent)) _listen;
   final void Function(native.ListenerId) _unlisten;
 
+  static Future<native.Window?> _resolveHostWindow() async {
+    if (!Platform.isWindows) return native.WindowManager.instance.getCurrent();
+    // The runner owns the hidden Flutter host before any window is active.
+    // Address that exact HWND instead of relying on desktop focus.
+    final handle = await const MethodChannel('pure_live/window_startup').invokeMethod<int>('getWindowHandle');
+    if (handle == null || handle == 0) return null;
+    return native.Window.createWithNativeWindow(Pointer<Void>.fromAddress(handle));
+  }
+
   native.Window? _window;
+  Future<void>? _initializing;
   native.ListenerId? _nativeListener;
   final _listeners = <AppWindowListener>{};
   Timer? _settled;
@@ -98,11 +111,15 @@ final class AppWindowApi {
   native.Window get _target => _window ?? (throw StateError('The desktop host window is not initialized'));
 
   /// Finds the current process window before its first visible frame.
-  Future<void> ensureInitialized() async {
-    if (_window != null) return;
+  Future<void> ensureInitialized() {
+    if (_window != null) return Future<void>.value();
+    return _initializing ??= _initializeHost().whenComplete(() => _initializing = null);
+  }
+
+  Future<void> _initializeHost() async {
     final deadline = DateTime.now().add(const Duration(seconds: 5));
     native.Window? window;
-    while ((window = _resolve()) == null) {
+    while ((window = await _resolve()) == null) {
       if (DateTime.now().isAfter(deadline)) throw StateError('The native desktop host window was not found');
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
@@ -184,7 +201,12 @@ final class AppWindowApi {
   /// Closes through the native event-voting API after app approval.
   Future<void> destroy() async {
     _destroying = true;
-    _target.close();
+    try {
+      if (!_target.close()) _destroying = false;
+    } on Object {
+      _destroying = false;
+      rethrow;
+    }
   }
 
   /// Shows or restores the addressed window.

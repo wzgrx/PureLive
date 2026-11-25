@@ -15,6 +15,11 @@ cmake_bin="$cmake_dir/CMake.app/Contents/bin"
 "$cmake_bin/cmake" --version
 echo "$cmake_bin" >> "$GITHUB_PATH"
 python3 -m venv "$RUNNER_TEMP/player-python"
-"$RUNNER_TEMP/player-python/bin/python" -m pip install meson==1.12.1 ninja jinja2 packaging
+"$RUNNER_TEMP/player-python/bin/python" -m pip install meson==1.12.1 jinja2 packaging
+read -r version url expected < <(python3 -c 'import json,sys; x=json.load(open(sys.argv[1]))["ninja"]; print(x["version"], x["url"], x["sha256"])' "$here/host_tools.json")
+[[ "$version" == "$NINJA_VERSION" ]]
+curl --fail --location --retry 4 "$url" -o "$RUNNER_TEMP/player-ninja.zip"
+echo "$expected  $RUNNER_TEMP/player-ninja.zip" | shasum -a 256 --check
+unzip -o "$RUNNER_TEMP/player-ninja.zip" -d "$RUNNER_TEMP/player-python/bin"
 [[ "$("$RUNNER_TEMP/player-python/bin/ninja" --version)" == "$NINJA_VERSION" ]]
 echo "$RUNNER_TEMP/player-python/bin" >> "$GITHUB_PATH"

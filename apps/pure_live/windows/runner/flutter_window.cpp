@@ -1,4 +1,6 @@
 #include "flutter_window.h"
+
+#include <cstdint>
 #include "uninstall_shutdown.h"
 
 #include <algorithm>
@@ -68,6 +70,11 @@ bool FlutterWindow::OnCreate() {
           flutter_controller_->engine()->messenger(), "pure_live/window_startup",
           &flutter::StandardMethodCodec::GetInstance());
   startup_channel_->SetMethodCallHandler([this](const auto& call, auto result) {
+    if (call.method_name() == "getWindowHandle") {
+      result->Success(flutter::EncodableValue(
+          static_cast<int64_t>(reinterpret_cast<intptr_t>(GetHandle()))));
+      return;
+    }
     if (call.method_name() == "uninstallReady") {
       uninstall_ready_ = true;
       result->Success();

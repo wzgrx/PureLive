@@ -38,7 +38,7 @@ final class PlaybackStats {
   /// Short video format (`video-format`: `h264`, `hevc`, `av1`, …).
   final String? videoFormat;
 
-  /// The full video codec description (`video-codec`), for the copied text.
+  /// The video description (`video-codec`), falling back to its short format.
   final String? videoCodec;
 
   /// The encoder the streamer wrote into the stream's metadata
@@ -54,7 +54,7 @@ final class PlaybackStats {
   /// Estimated audio bitrate (`audio-bitrate`), bits a second.
   final int? audioBitrate;
 
-  /// The full audio codec description (`audio-codec`), for the copied text.
+  /// The audio description (`audio-codec`), falling back to its short name.
   final String? audioCodec;
 
   /// Frames dropped by the renderer (`frame-drop-count`, else the decoder's
@@ -120,18 +120,19 @@ Future<PlaybackStats> readPlaybackStats(
     value('cache-speed'),
     value('mpv-version'),
     value('ffmpeg-version'),
+    value('audio-codec-name'),
   ]);
   String? at(int index) => values[index];
   return PlaybackStats(
     width: _positiveInt(at(0)),
     height: _positiveInt(at(1)),
     videoFormat: at(2),
-    videoCodec: at(3),
+    videoCodec: at(3) ?? at(2),
     encoder: await _encoder(value),
     sampleRate: _positiveInt(at(4)),
     channels: _positiveInt(at(5)),
     audioBitrate: _positiveInt(at(6)),
-    audioCodec: at(7),
+    audioCodec: at(7) ?? at(16),
     droppedFrames: _nonNegativeInt(at(8)) ?? _nonNegativeInt(at(9)),
     decodedFrames: _nonNegativeInt(at(10)) ?? _positiveInt(at(11)),
     bufferSeconds: _nonNegativeDouble(at(12)),

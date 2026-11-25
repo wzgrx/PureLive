@@ -95,7 +95,7 @@ def framework(root, name, binary, platform):
     return folder
 
 
-def build(work, dist):
+def build(work, dist, target=None):
     dependencies = json.loads((HERE / 'dependencies.json').read_text())
     for asset in dependencies['assets']:
         archive = fetch(asset['url'], work / 'downloads' / asset['name'], asset['sha256'])
@@ -141,7 +141,9 @@ def build(work, dist):
     receipts = []
     frameworks = {}
     jobs = str(min(12, os.cpu_count() or 4))
-    for name, sdk, label, arch, target in TARGETS:
+    for name, sdk, label, arch, triple in TARGETS:
+        if target is not None and name != target:
+            continue
         prefix = work / name / 'prefix'
         prefix.mkdir(parents=True, exist_ok=True)
         include = prefix / 'include'; libraries = prefix / 'lib'; pcs = libraries / 'pkgconfig'
@@ -158,7 +160,7 @@ def build(work, dist):
                 (pcs / pc.name).write_text(value)
         (pcs / 'zlib.pc').write_text('Name: zlib\nDescription: Apple SDK zlib\nVersion: 1.2.13\nLibs: -lz\n')
         sysroot = output('xcrun', '--sdk', sdk, '--show-sdk-path')
-        flags = ['-target', target, '-isysroot', sysroot, '-fPIC']
+        flags = ['-target', triple, '-isysroot', sysroot, '-fPIC']
         machine = work / name / 'cross.ini'
         crossfile(machine, arch, flags, [str(pcs)])
         env = os.environ.copy()
@@ -209,7 +211,7 @@ def build(work, dist):
                    '-Dlua=disabled', '-Djavascript=disabled', '-Dlcms2=disabled', '-Dswift-build=disabled',
                    '-Dmacos-cocoa-cb=disabled', '-Dmacos-media-player=disabled', '-Dmacos-touchbar=disabled']
         options += (['-Dcocoa=enabled', '-Dcoreaudio=enabled', '-Dgl-cocoa=enabled', '-Dvideotoolbox-gl=enabled']
-                    if sdk == 'macosx' else ['-Dcocoa=disabled', '-Dcoreaudio=disabled', '-Daudiounit=enabled', '-Dios-gl=enabled', '-Dvideotoolbox-gl=disabled'])
+                    if sdk == 'macosx' else ['-Dcocoa=disabled', '-Dcoreaudio=disabled', '-Davfoundation=disabled', '-Daudiounit=enabled', '-Dios-gl=enabled', '-Dvideotoolbox-gl=disabled'])
         if not (mbuild / 'build.ninja').exists():
             run(['meson', 'setup', mbuild, mpv, '--prefix', prefix, '--cross-file', machine,
                  '--buildtype', 'release', '--default-library', 'shared', *options], env=env)
@@ -218,8 +220,14 @@ def build(work, dist):
         if not binary.is_file():raise ValueError(f'Missing native output: {binary}')
         frameworks[name] = framework(work / 'frameworks', name, binary,
                                      'MacOSX' if sdk == 'macosx' else 'iPhoneSimulator' if label == 'isimulator' else 'iPhoneOS')
-        receipts.append({'target': name, 'sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
-                         'load_commands': output('otool', '-l', binary)})
+        receipts.append({'target': name, 'sha256': hashlib.sha256((frameworks[name] / 'Mpv').read_bytes()).hexdigest(),
+                         'unstripped_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+                         'load_commands': output('otool', '-l', frameworks[name] / 'Mpv')})
+    if target is not None:
+        dist.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(frameworks[target], dist / target / 'Mpv.framework', dirs_exist_ok=True)
+        write_provenance(dist, ffmpeg, dav1d, dependencies, receipts)
+        return
     for label, names in [('ios-simulator', ['ios-sim-arm64', 'ios-sim-x64']), ('macos-universal', ['macos-arm64', 'macos-x64'])]:
         folder = work / 'frameworks' / label / 'Mpv.framework'
         folder.mkdir(parents=True, exist_ok=True)
@@ -233,15 +241,29 @@ def build(work, dist):
         run(['xcodebuild', '-create-xcframework', *[arg for name in names for arg in ['-framework', frameworks[name]]], '-output', out])
         archive = dist / f'libmpv-{platform}-0.42.0-ffmpeg-9.1.tar.gz'
         with tarfile.open(archive, 'w:gz') as tar:tar.add(out, arcname='Mpv.xcframework')
-    (dist / 'provenance.json').write_text(json.dumps({'mpv': MPV, 'libplacebo': PLACEBO,
-        'ffmpeg': output('git', '-C', ffmpeg, 'rev-parse', 'HEAD'),
-        'dav1d': output('git', '-C', dav1d, 'rev-parse', 'HEAD'),
-        'dependencies': dependencies, 'targets': receipts}, indent=2) + '\n')
+    write_provenance(dist, ffmpeg, dav1d, dependencies, receipts)
+
+
+def write_provenance(dist, ffmpeg, dav1d, dependencies, receipts):
+    data = {'mpv': MPV, 'libplacebo': PLACEBO,
+            'ffmpeg': output('git', '-C', ffmpeg, 'rev-parse', 'HEAD'),
+            'dav1d': output('git', '-C', dav1d, 'rev-parse', 'HEAD'),
+            'source_ref': os.environ.get('GITHUB_SHA', ''),
+            'dependencies': dependencies, 'targets': receipts,
+            'tools': {'python': output('python3', '--version'),
+                      'cmake': output('cmake', '--version').splitlines()[0],
+                      'ninja': output('ninja', '--version'),
+                      'meson': output('meson', '--version'),
+                      'xcode': output('xcodebuild', '-version'),
+                      'clang': output('clang', '--version').splitlines()[0]}}
+    (dist / 'provenance.json').write_text(json.dumps(data, indent=2) + '\n')
+
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--work', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--target', choices=[item[0] for item in TARGETS])
     args = parser.parse_args()
-    build(args.work.resolve(), args.output.resolve())
+    build(args.work.resolve(), args.output.resolve(), args.target)

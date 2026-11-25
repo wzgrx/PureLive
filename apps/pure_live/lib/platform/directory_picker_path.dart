@@ -14,10 +14,30 @@ String? pickedDirectoryPath(Uri? uri, {required bool windows, String? externalSt
     }
     return uri.toFilePath(windows: windows);
   }
-  if (windows || uri.scheme != 'content' || uri.host != 'com.android.externalstorage.documents') return null;
+  if (windows || uri.scheme != 'content') return null;
   final segments = uri.pathSegments;
   if (segments.length != 2 || segments.first != 'tree') return null;
   final document = segments[1];
+  // AOSP DownloadStorageProvider uses `downloads` for its root and `raw:`
+  // for folder document IDs. MediaStore IDs require provider access and
+  // cannot be guessed as filesystem paths.
+  if (uri.host == 'com.android.providers.downloads.documents') {
+    final root = externalStorageRoot;
+    if (root == null || !p.posix.isAbsolute(root)) return null;
+    final downloads = p.posix.join(root, 'Download');
+    if (document == 'downloads') return downloads;
+    if (!document.startsWith('raw:')) return null;
+    final path = document.substring(4);
+    if (!p.posix.isAbsolute(path) ||
+        path.contains(r'\') ||
+        path.contains('\u0000') ||
+        path.split('/').any((part) => part == '..' || part == '.')) {
+      return null;
+    }
+    return path == downloads || p.posix.isWithin(downloads, path) ? path : null;
+  }
+  if (uri.host != 'com.android.externalstorage.documents') return null;
+
   final colon = document.indexOf(':');
   if (colon < 1) return null;
   final volume = document.substring(0, colon);

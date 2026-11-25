@@ -8,6 +8,7 @@ final class _Window extends native.Window {
   new() : super.borrowed(0);
   int released = 0;
   int closes = 0;
+  bool acceptClose = true;
   @override
   native.WindowId get id => 42;
   @override
@@ -15,7 +16,7 @@ final class _Window extends native.Window {
   @override
   bool close() {
     closes++;
-    return true;
+    return acceptClose;
   }
 
   @override
@@ -49,6 +50,54 @@ final class _Shell with AppWindowListener {
 }
 
 void main() {
+  test('a refused native close does not bypass the next confirmation', () async {
+    final window = _Window()..acceptClose = false;
+    final shell = _Shell();
+    FutureOr<void> Function(native.WindowEvent)? deliver;
+    final host = AppWindowApi(
+      resolve: () => window,
+      listen: (callback) {
+        deliver = callback;
+        return 1;
+      },
+      unlisten: (_) {},
+    )..addListener(shell);
+    await host.ensureInitialized();
+    await host.setPreventClose(true);
+    await host.destroy();
+    final request = _Request();
+    await deliver!(native.WindowCloseRequestedEvent(windowId: 42, request: request));
+    expect(request.cancellations, 1);
+    expect(shell.confirmations, 1);
+  });
+
+  test('the hidden host may resolve asynchronously before event ownership begins', () async {
+    final ready = Completer<native.Window?>();
+    var resolves = 0;
+    final window = _Window();
+    var listens = 0;
+    final host = AppWindowApi(
+      resolve: () {
+        resolves++;
+        return ready.future;
+      },
+      listen: (_) {
+        listens++;
+        return 1;
+      },
+      unlisten: (_) {},
+    );
+    final initialized = host.ensureInitialized();
+    final concurrent = host.ensureInitialized();
+    expect(resolves, 1);
+    expect(listens, 0);
+    ready.complete(window);
+    await Future.wait([initialized, concurrent]);
+    expect(listens, 1);
+    await host.ensureInitialized();
+    expect(listens, 1);
+  });
+
   test('one native subscription owns close confirmation, forced exit and final handle release', () async {
     final window = _Window();
     final shell = _Shell();
