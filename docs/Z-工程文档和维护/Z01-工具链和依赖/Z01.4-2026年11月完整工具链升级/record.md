@@ -77,3 +77,19 @@ Apple五slice已通过目标选择并实际编译FFmpeg9.1。macOS arm64在mpv�
 
 
 完整门禁一次在SDK测试加载前出现本地握手中断，尚未执行测试断言。保留原运行日志；去掉测试进程的代理变量、显式直连localhost后，独立语义测试7项通过，再重新执行完整门禁。不修改断言，不将中断的运行记为通过。
+
+
+## Apple嵌入式构建边界与分包预检
+
+306461c5源码完整all/14通过。Android三ABI正式签名分包构建成功，包名、实际ABI拆分版本码6146/7146/9146、原证书、字体/通知资源、ZIP/ELF16KB及mpv/FFmpeg原生字节来源全部通过。外部校验脚本在Python3.15移除load_module后改为标准spec.loader.exec_module再验证；不重建未变化的包，不把脚本兼容错误当成产品构建失败。构建首次Maven传输中断及NativeAssets缓存重试原日志保留，最终三包构建成功。
+
+Apple45632843349已通过iconv配置，三个iOS目标最终链接缺AVAudioSession/EAGLContext，两个Mac目标编译原生剪贴板引用缺失的Swift生成头。对照mpv0.42固定源码修正：AudioUnit明确链接AVFAudio、iOS GL明确链接OpenGLES；仅在Cocoa和Swift均启用时加入mpv自身的Mac剪贴板源及后端。PureLive的剪贴板由Flutter实现；保留Cocoa、CoreAudio、OpenGL和VideoToolbox能力，未为修构建而关闭播放后端。形成严格应用到固定上游的独立补丁，单独验证应用/反向检查，并在每个slice来源清单中写补丁SHA，组合时强制一致。仍须同源五slice重建通过后才替换Apple清单。
+
+Android与Windows实际Flutter录制API生成RIFF/WAVE通过。Linux以实际FfmpegCommand生成捕获/分段/合并参数，调用分发库C API处理本地H264/AAC HLS并得到有效MP4，两步退出码均0；测试只加48视频帧退出条件。独立-t3诊断在新库中空输出保留，应用录制命令没有-t，实际应用命令流另行验收，不宣称泛用CLI短时长行为已修复。
+
+
+## 隐藏启动与SDK测试网络根因
+
+不含日志插桩的Windows正常包复验发现进程和主页逻辑已运行，但窗口仍隐藏。对照nativeapi0.6.2 ShowWindow实现和微软首次ShowWindow采用STARTUPINFO的文档，显式show在父进程SW_HIDE启动时可被首次调用吞掉。新增主/非激活显示回归先两项失败，边界适配改为仅当首次显示后仍不可见时按原激活策略重发一次，六项窗口API测试全部通过；无需预先显示窗口，也不修改用户的窗口/焦点策略。仍须新正常包实际冷启动复验。
+
+SDK测试握手问题随后用verbose及固定SDK配置确认：测试设备已连接，失败来自SDK全局配置在注册非图像语义测试前访问Skia Gold，TLS异常不在其离线回退捕获类型内。此前代理隔离后偶然通过并非根因修复。现临时逐字节复制该固定上游测试及唯一辅助文件，保留原SDK调试/泄漏配置，仅移除其未使用的Gold初始化；发现任何golden/image断言或未知配置会拒绝，不跳过测试。七项原语义断言和七项bootstrap/隔离保护检查通过，原SDK文件未更改。失败和verbose日志保留。

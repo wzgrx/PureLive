@@ -214,6 +214,10 @@ final class AppWindowApi {
     final window = _target;
     if (window.isMinimized) window.restore();
     inactive ? window.showInactive() : window.show();
+    // Win32 may consume the first ShowWindow using the launcher's SW_HIDE.
+    // This is an explicit app show request: confirm it took effect, once,
+    // while retaining the caller's inactive/focus policy.
+    if (!window.isVisible) inactive ? window.showInactive() : window.show();
   }
 
   /// Hides the host without closing playback.

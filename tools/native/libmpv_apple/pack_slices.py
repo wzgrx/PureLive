@@ -10,7 +10,7 @@ import subprocess
 import tarfile
 
 TARGETS = ['ios-arm64', 'ios-sim-arm64', 'ios-sim-x64', 'macos-arm64', 'macos-x64']
-COMMON = ['mpv', 'ffmpeg', 'libplacebo', 'dav1d', 'source_ref', 'dependencies', 'tools']
+COMMON = ['mpv', 'ffmpeg', 'libplacebo', 'dav1d', 'source_ref', 'dependencies', 'tools', 'patches']
 
 
 def load_slices(root):

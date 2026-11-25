@@ -63,6 +63,18 @@ def git_source(root, name, repo, ref):
     return source
 
 
+
+def apply_mpv_embedding_patch(source):
+    patch = HERE / 'mpv-embedded-apple.patch'
+    check = subprocess.run(['git', '-C', str(source), 'apply', '--check', str(patch)], capture_output=True)
+    if check.returncode == 0:
+        run(['git', '-C', source, 'apply', patch])
+    else:
+        reverse = subprocess.run(['git', '-C', str(source), 'apply', '--reverse', '--check', str(patch)], capture_output=True)
+        if reverse.returncode != 0:
+            raise ValueError('Pinned Apple embedding patch does not apply cleanly')
+
+
 def crossfile(path, arch, flags, pkgdirs):
     text = "[binaries]\nc = 'clang'\ncpp = 'clang++'\nobjc = 'clang'\nobjcpp = 'clang++'\nar = 'ar'\nstrip = 'strip'\npkg-config = 'pkg-config'\n"
     text += f"[host_machine]\nsystem = 'darwin'\ncpu_family = '{'aarch64' if arch == 'arm64' else 'x86_64'}'\ncpu = '{arch}'\nendian = 'little'\n"
@@ -112,6 +124,7 @@ def build(work, dist, target=None):
             with zipfile.ZipFile(archive) as source:
                 source.extractall(dest)
     mpv = git_source(work, 'mpv', 'https://github.com/mpv-player/mpv.git', MPV)
+    apply_mpv_embedding_patch(mpv)
     placebo = git_source(work, 'libplacebo', 'https://github.com/haasn/libplacebo.git', PLACEBO)
     run(['git', '-C', placebo, 'submodule', 'update', '--init', '--recursive'])
     # Static C++ dependencies need a C++ linker even though libmpv's own
@@ -124,15 +137,6 @@ def build(work, dist, target=None):
         if meson_target not in text:raise ValueError('Unexpected libmpv target')
         text = text.replace(meson_target, meson_target + "\n                 link_language: 'cpp',", 1)
         meson_file.write_text(text)
-    # Apple SDK iconv is a system dylib stub, not a static archive. Keep
-    # third-party dependencies static without making this system-only
-    # dependency disappear under Meson's prefer_static setting.
-    text = meson_file.read_text()
-    original_iconv = "iconv = dependency('iconv', required: get_option('iconv'))"
-    system_iconv = "iconv = dependency('iconv', required: get_option('iconv'), static: false)"
-    if system_iconv not in text:
-        if text.count(original_iconv) != 1:raise ValueError('Unexpected iconv dependency declaration')
-        meson_file.write_text(text.replace(original_iconv, system_iconv, 1))
     # Keep numeric conversion compatible with iOS15/macOS12; newer SDK
     # declarations alone do not make newer libc++ entry points available.
     convert = placebo / 'src/convert.cc'
@@ -260,6 +264,7 @@ def build(work, dist, target=None):
 
 def write_provenance(dist, ffmpeg, dav1d, dependencies, receipts):
     data = {'mpv': MPV, 'libplacebo': PLACEBO,
+            'patches': {'mpv-embedded-apple.patch': hashlib.sha256((HERE / 'mpv-embedded-apple.patch').read_bytes()).hexdigest()},
             'ffmpeg': output('git', '-C', ffmpeg, 'rev-parse', 'HEAD'),
             'dav1d': output('git', '-C', dav1d, 'rev-parse', 'HEAD'),
             'source_ref': os.environ.get('GITHUB_SHA', ''),

@@ -63,3 +63,46 @@ class BootstrapTests(unittest.TestCase):
                 PREPARE.bootstrap_tests(self.sdk)
         run.assert_not_called()
         self.assertEqual(self.lock.read_bytes(), b"user edit")
+
+
+class SemanticsIsolationTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.sdk = Path(self.temp.name) / "sdk"
+        self.source = self.sdk / "packages/flutter/test"
+        (self.source / "semantics").mkdir(parents=True)
+        (self.source / "widgets").mkdir()
+        self.test = self.source / "semantics/semantics_update_test.dart"
+        self.test.write_bytes(b"// exact fixture\nvoid main() { expect(value, 1); }\n")
+        self.helper = self.source / "widgets/button_tester.dart"
+        self.helper.write_bytes(b"// original helper\n")
+        self.config = "\n".join([
+            "import '_goldens_io.dart' if (dart.library.js_interop) '_goldens_web.dart' as flutter_goldens;",
+            "debugCheckIntrinsicSizes = true;",
+            "WidgetController.hitTestWarningShouldBeFatal = true;",
+            "if (leakTracking) LeakTesting.enable();",
+            "return flutter_goldens.testExecutable(testMain);",
+        ])
+        (self.source / "flutter_test_config.dart").write_text(self.config)
+        self.destination = Path(self.temp.name) / "isolated/test"
+
+    def test_assertions_helpers_and_sdk_sources_remain_byte_exact(self):
+        selected = PREPARE.stage_semantics_test(self.sdk, self.destination)
+        self.assertEqual(selected.read_bytes(), self.test.read_bytes())
+        self.assertEqual((self.destination / "widgets/button_tester.dart").read_bytes(), self.helper.read_bytes())
+        config = (self.destination / "flutter_test_config.dart").read_text()
+        for check in ["debugCheckIntrinsicSizes = true", "hitTestWarningShouldBeFatal = true", "LeakTesting.enable()"]:
+            self.assertIn(check, config)
+        self.assertIn("Future<void>.sync(testMain)", config)
+        self.assertEqual((self.source / "flutter_test_config.dart").read_text(), self.config)
+
+    def test_image_assertions_cannot_be_silently_excluded(self):
+        self.test.write_text("expect(image, matchesGoldenFile('image.png'));")
+        with self.assertRaisesRegex(ValueError, "refuses image assertions"):
+            PREPARE.stage_semantics_test(self.sdk, self.destination)
+
+    def test_unrecognized_sdk_configuration_requires_review(self):
+        (self.source / "flutter_test_config.dart").write_text("new configuration")
+        with self.assertRaisesRegex(ValueError, "configuration changed"):
+            PREPARE.stage_semantics_test(self.sdk, self.destination)

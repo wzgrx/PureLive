@@ -9,6 +9,34 @@ final class _Window extends native.Window {
   int released = 0;
   int closes = 0;
   bool acceptClose = true;
+  bool visible = false;
+  bool consumeFirstShow = false;
+  int activeShows = 0;
+  int inactiveShows = 0;
+  @override
+  bool get isMinimized => false;
+  @override
+  bool get isVisible => visible;
+  void _show() {
+    if (consumeFirstShow) {
+      consumeFirstShow = false;
+    } else {
+      visible = true;
+    }
+  }
+
+  @override
+  void show() {
+    activeShows++;
+    _show();
+  }
+
+  @override
+  void showInactive() {
+    inactiveShows++;
+    _show();
+  }
+
   @override
   native.WindowId get id => 42;
   @override
@@ -50,6 +78,26 @@ final class _Shell with AppWindowListener {
 }
 
 void main() {
+  for (final inactive in [false, true]) {
+    test('explicit show survives a hidden first native show: inactive=$inactive', () async {
+      final window = _Window()..consumeFirstShow = true;
+      final host = AppWindowApi(resolve: () => window, listen: (_) => 1, unlisten: (_) {});
+      await host.ensureInitialized();
+      await host.show(inactive: inactive);
+      expect(window.visible, isTrue);
+      expect(window.activeShows, inactive ? 0 : 2);
+      expect(window.inactiveShows, inactive ? 2 : 0);
+    });
+  }
+  test('an already effective show does not run a second native show', () async {
+    final window = _Window();
+    final host = AppWindowApi(resolve: () => window, listen: (_) => 1, unlisten: (_) {});
+    await host.ensureInitialized();
+    await host.show();
+    expect(window.visible, isTrue);
+    expect(window.activeShows, 1);
+  });
+
   test('a refused native close does not bypass the next confirmation', () async {
     final window = _Window()..acceptClose = false;
     final shell = _Shell();
