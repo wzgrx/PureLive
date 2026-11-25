@@ -20,8 +20,8 @@ on:
         description: akashskypatel/ffmpeg-kit-builders commit
         default: fac2076d06a473b8e1c1ed5a1fabe52ee974a5c0 # tag v0.11.2-android
       ffmpeg:
-        description: FFmpeg tag
-        default: n9.0.2
+        description: FFmpeg tag, or player-only to rebuild just the playback frameworks
+        default: n9.1
 
 permissions:
   contents: read
@@ -32,6 +32,7 @@ defaults:
 
 jobs:
   apple:
+    if: ${{ inputs.ffmpeg != 'player-only' }}
     name: FFmpegKit Apple
     runs-on: xcode-27
     timeout-minutes: 360
@@ -54,27 +55,41 @@ jobs:
       - name: Tools
         run: |
           set -euo pipefail
-          find scripts FFmpegKit -type f -name '*.sh' -exec chmod +x {} +
-          scripts/toolchain/setup-macos-tools.sh
+          if [[ "${{ inputs.ffmpeg }}" != player-only ]]; then
+            find scripts FFmpegKit -type f -name '*.sh' -exec chmod +x {} +
+            scripts/toolchain/setup-macos-tools.sh
+          fi
           sudo xcodebuild -license accept
           bash purelive-config/tools/toolchain/apple.sh
+          # Build host tools before the runner switches SDKROOT to iOS.
+          # Installing cargo-c afterward compiles libgit2 against iOS headers.
+          if [[ "${{ inputs.ffmpeg }}" != player-only ]]; then
+            brew list cargo-c >/dev/null 2>&1 || brew install cargo-c
+            cargo cinstall --version
+          fi
 
       - name: Pin FFmpeg
+        if: ${{ inputs.ffmpeg != 'player-only' }}
         env:
           FFMPEG_TAG: ${{ inputs.ffmpeg }}
         run: |
           set -euo pipefail
           perl -pi -e 's/^export ffmpeg_git_checkout_version=.*/export ffmpeg_git_checkout_version="$ENV{FFMPEG_TAG}"/' scripts/variable.sh
           grep -n '^export ffmpeg_git_checkout_version=' scripts/variable.sh
+          git apply purelive-config/tools/ffmpeg_kit/rebuild/ffmpeg-9.1-compat.patch
 
       - name: Build
+        if: ${{ inputs.ffmpeg != 'player-only' }}
         run: |
           set -euo pipefail
+          export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
+          export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
           sudo -E "$HOMEBREW_BASH" scripts/build_all.sh \
             --platform=ios-aarch64,iphonesimulator-aarch64,macos-aarch64,macos-x86_64 \
             --build=ffmpeg,kit,bundle --bundle=base --license=lgpl --not-small --local --reset --deps
 
       - name: Check and hash
+        if: ${{ inputs.ffmpeg != 'player-only' }}
         env:
           FFMPEG_TAG: ${{ inputs.ffmpeg }}
         run: |
@@ -96,6 +111,7 @@ jobs:
           (cd dist && shasum -a 256 *.zip | tee SHA256SUMS)
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ inputs.ffmpeg != 'player-only' }}
         with:
           name: ffmpeg-kit-apple
           path: dist
@@ -106,5 +122,11 @@ jobs:
         if: failure()
         with:
           name: ffmpeg-kit-apple-log
-          path: build.log
+          path: |
+            build.log
+            logs/**
           if-no-files-found: ignore
+
+  player:
+    if: ${{ inputs.ffmpeg == 'player-only' }}
+    uses: ./.github/workflows/libmpv-apple.yml

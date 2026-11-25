@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The fixed colours of the TV interface (docs/A-界面设计/A17-电视界面/A17.1-电视设计系统和通用组件). Everything
 /// else on the TV comes from the phone's dark colour roles, seeded with the

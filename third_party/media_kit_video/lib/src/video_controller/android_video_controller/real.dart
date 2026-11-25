@@ -3,20 +3,18 @@
 // Copyright © 2021 & onwards, Hitesh Kumar Saini <saini123hitesh@gmail.com>.
 // All rights reserved.
 // Use of this source code is governed by MIT license that can be found in the LICENSE file.
-import 'dart:io';
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 
-import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
-import 'package:synchronized/synchronized.dart';
-
+import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
-
 import 'package:media_kit_video/src/utils/query_decoders.dart';
 import 'package:media_kit_video/src/video_controller/platform_video_controller.dart';
 import 'package:media_kit_video/src/video_controller/video_output_policy.dart';
 import 'package:media_kit_video/src/video_controller/video_params_geometry.dart';
+import 'package:synchronized/synchronized.dart';
 
 /// {@template android_video_controller}
 ///

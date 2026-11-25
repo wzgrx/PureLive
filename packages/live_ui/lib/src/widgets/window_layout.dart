@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/grid_columns.dart';
+import 'package:material_ui/material_ui.dart';
 
 // The window's size classes and its fold (docs/specs/UI.md §5.1,
 // research V03.2 §3, A04.1): layouts read the

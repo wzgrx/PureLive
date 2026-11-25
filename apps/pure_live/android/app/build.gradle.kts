@@ -106,9 +106,9 @@ flutter {
 
 // "开播提醒" after the app is frozen or cleared (O01.2).
 dependencies {
-    implementation("androidx.work:work-runtime-ktx:2.11.2")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
     // Match the existing WebView plugin; isolate visitor storage with MULTI_PROFILE.
-    implementation("androidx.webkit:webkit:1.14.0")
+    implementation("androidx.webkit:webkit:1.18.0")
 }
 
 // Flutter's build tasks use Project at execution time; keep them out of the

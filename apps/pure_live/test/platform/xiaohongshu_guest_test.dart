@@ -165,6 +165,90 @@ void main() {
     expect(calls, ['run', 'cancel', 'run', 'cancel']);
   });
 
+  test('native WebView diagnostics keep the phase and feature but redact untrusted values', () async {
+    const channel = MethodChannel('pure_live/xiaohongshu_guest');
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final calls = <String>[];
+    var error = PlatformException(
+      code: 'timeout',
+      message: 'private synthetic data',
+      details: {'stage': 'profile_clear', 'token': 'synthetic-token'},
+    );
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call.method);
+      if (call.method == 'run') throw error;
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final browser = InAppXiaohongshuGuestBrowser();
+    final page = Uri.parse('https://www.xiaohongshu.com/livelist');
+    await expectLater(
+      browser.androidRequest(page, 'return 1;', null),
+      throwsA(
+        isA<TransportFailure>()
+            .having((e) => e.reason, 'reason', TransportReason.timeout)
+            .having(
+              (e) => e.detail,
+              'safe detail',
+              'Visitor initialization timed out (directory, stage=profile_clear)',
+            ),
+      ),
+    );
+    error = PlatformException(
+      code: 'unsupported',
+      details: {
+        'missing': ['MULTI_PROFILE', 'synthetic-token'],
+      },
+    );
+    await expectLater(
+      browser.androidRequest(page, 'return 1;', null),
+      throwsA(
+        isA<TransportFailure>()
+            .having((e) => e.reason, 'reason', TransportReason.protocol)
+            .having(
+              (e) => e.detail,
+              'safe detail',
+              'WebView visitor isolation unavailable (directory, missing=MULTI_PROFILE)',
+            ),
+      ),
+    );
+    expect(calls, ['run', 'cancel', 'run', 'cancel']);
+  });
+
+  test('a failed cancellation does not mask a native visitor capability failure', () async {
+    const channel = MethodChannel('pure_live/xiaohongshu_guest');
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    var successfulRun = false;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'cancel') throw PlatformException(code: 'cancel-transport-lost');
+      if (successfulRun) return '{"ok":true,"value":"synthetic"}';
+      throw PlatformException(
+        code: 'unsupported',
+        details: {
+          'missing': ['MULTI_PROFILE'],
+        },
+      );
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final browser = InAppXiaohongshuGuestBrowser();
+    final page = Uri.parse('https://www.xiaohongshu.com/livelist');
+    await expectLater(
+      browser.androidRequest(page, 'return 1;', null),
+      throwsA(
+        isA<TransportFailure>().having(
+          (e) => e.detail,
+          'detail',
+          'WebView visitor isolation unavailable (directory, missing=MULTI_PROFILE)',
+        ),
+      ),
+    );
+    successfulRun = true;
+    await expectLater(
+      browser.androidRequest(page, 'return 1;', null),
+      throwsA(isA<TransportFailure>().having((e) => e.detail, 'detail', 'Visitor cleanup not acknowledged')),
+    );
+  });
+
   test('cancelling a native visitor job closes its exact request and suppresses a late result', () async {
     const channel = MethodChannel('pure_live/xiaohongshu_guest');
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;

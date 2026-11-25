@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/widgets/focus_ring.dart';
 import 'package:live_ui/src/widgets/network_image.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A round avatar (3.x `CommonAvatar`, docs/A-界面设计/A02-组件/A02.1-通用组件 c9): the
 /// picture (decoded at its shown size); while it loads a light grey disc;

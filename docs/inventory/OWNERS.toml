@@ -62,6 +62,7 @@ path = [
   { glob = "apps/pure_live/lib/platform/twitch_webview_http.dart", sub = "Q03" },
   { glob = "apps/pure_live/lib/platform/xiaohongshu_guest.dart", sub = "E02" },
   { glob = "apps/pure_live/lib/platform/platform_services.dart", sub = "L01", note = "GBK 解码和组播锁" },
+  { glob = "apps/pure_live/lib/platform/directory_picker_path.dart", sub = "I01", note = "目录选择URI映射和存储位置校验" },
   { glob = "apps/pure_live/lib/platform/plugins.dart", sub = "I01" },
   { glob = "apps/pure_live/lib/platform/recording_platform.dart", sub = "H01" },
   { glob = "apps/pure_live/lib/platform/secret_cipher.dart", sub = "J02" },
@@ -427,6 +428,9 @@ setting = [
   { key = "portraitRoomOverrides", sub = "A07" },
   { key = "livePlayChatCollapsed", sub = "A07" },
   { key = "livePlayWideFooter", sub = "A07" },
+  { key = "livePlayPickersInVideo", sub = "A07" },
+  { key = "livePlayLongPressSwitchRoom", sub = "A07" },
+  { key = "livePlayRewind", sub = "A07" },
   { key = "multiviewProjectionDisplay", sub = "A13" },
   { key = "roomSwitcherLayout", sub = "A07" },
   # danmaku 分节（默认 D05）

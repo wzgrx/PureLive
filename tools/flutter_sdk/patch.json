@@ -1,16 +1,20 @@
 {
-  "base_revision": "737ba8f885dc774b53b442759999a312c9461e4e",
+  "base_revision": "ae9b586f34a8443573f82ef57c3bf914a908cbf7",
   "upstream_merged_commit": "b304cf18b6864d141cf08e26a07898901cddb4b5",
   "patch": "flutter-193372.patch",
   "patch_sha256": "f5fd56c5a0b6e73b31411f6820dcb4c1eecad672e28ccad8cbb3698eeaaf8dd3",
   "files": {
     "packages/flutter/lib/src/semantics/semantics.dart": {
-      "before_lf_sha256": "b76165c41486de81d1b5df499b616064966ec3fc1509b100c42c296829c7590b",
-      "after_lf_sha256": "a2a4da249162739403ed5cd410b8e7241def868f20bd79d2faac8a5275ab690a"
+      "before_lf_sha256": "4a891b8710de0c69111347b82dbe1b5e77f072faa3e30436087e5eddc29d3a95",
+      "after_lf_sha256": "668a55eae37903266313f56f7160386a98b76b02073d0c1f04eada8e3baece08"
     },
     "packages/flutter/test/semantics/semantics_update_test.dart": {
       "before_lf_sha256": "d6357aa4986af6c3b4fce0624378e9fe8e34034d47f5894c7e5540f8edc11587",
       "after_lf_sha256": "3b3ec482fa9f3d34886296305932559f3b4fa1e30e6647a8e53bd05a225149a1"
     }
+  },
+  "test_bootstrap_lock": {
+    "before_lf_sha256": "9c61653df6b9cb6098b072a28d56ceefe586005a9b2dbd1bb764bb465fb98b15",
+    "resolved_lf_sha256": "806755a04f03f23fc7e80027a922199f6ba1d17d929975c2c3197d4503abd32a"
   }
 }

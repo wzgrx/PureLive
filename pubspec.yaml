@@ -5,7 +5,7 @@ name: pure_live_workspace
 publish_to: none
 
 environment:
-  sdk: ^3.13.0
+  sdk: ^3.14.0
 
 workspace:
   - apps/pure_live
@@ -29,10 +29,6 @@ dependency_overrides:
   # Source, license and minimal patch are in PURELIVE_PATCH.md.
   flutter_webrtc:
     path: third_party/flutter_webrtc
-  # Latest window_manager 0.5.2, with its display utility migrated to the
-  # screen_retriever 0.3 native API; original MIT license is retained.
-  window_manager:
-    path: third_party/window_manager
   # Self-maintained fork of Predidit/media-kit (toolchain.env pins the
   # upstream commit; patches in third_party/media_kit_video/PURELIVE_PATCH.md).
   media_kit:
@@ -43,20 +39,19 @@ dependency_overrides:
   # ^6.5.0; media_kit_video: wakelock_plus 1.3.3) but only uses APIs that are
   # unchanged in the latest ones (XmlDocument in the Apple hook;
   # WakelockPlus.enable/disable).
-  wakelock_plus: 1.8.2
-  xml: 7.1.0
-  # Flutter 3.47.8's flutter_test pins test_api 0.7.12, below what test 1.33.0
+  wakelock_plus: ^1.8.2
+  xml: ^7.1.0
+  # Flutter 3.50.1's flutter_test pins test_api 0.7.14, below what test 1.33.0
   # (the pure Dart members) needs exactly 0.7.15; flutter_test runs on it.
   test_api: 0.7.15
   # The Linux build offers no in-app browser (InAppWeb.available is false);
   # this stand-in has no native code, so it does not need WPE WebKit (X02.1).
   flutter_inappwebview_linux:
     path: third_party/flutter_inappwebview_linux_stub
-  # ffmpeg_kit_extended_flutter 0.6.2 (the recorder's FFmpeg) declares
-  # code_assets ^1.2.1 while the media_kit fork needs ^2.1.0; its build hook
-  # only uses APIs unchanged in 2.x (3.x shipped the same override).
-  code_assets: 2.1.0
-  # connectivity_plus 7.3.1 (the app's network type, M12.3) declares
+  # The newest recorder hook needs code_assets 2.2.0. Keep one workspace
+  # version shared with the media_kit Native Assets hook.
+  code_assets: 2.2.0
+  # connectivity_plus 7.3.2 (the app's network type, M12.3) declares
   # nm ^0.5.0, whose dbus ^0.7.0 conflicts with wakelock_plus 1.8.1's
   # dbus ^0.8.0. nm 0.6.0 is the same NetworkManager client on dbus 0.8 and
   # is only used on Linux (3.x shipped the same override).
@@ -64,14 +59,14 @@ dependency_overrides:
   # bonsoir 7.1.5's Linux part (device sync's mDNS, M12.3) declares
   # dbus ^0.7.12; the Avahi calls it makes are unchanged in dbus 0.8.0, which
   # wakelock_plus 1.8.1 needs (3.x shipped the same override). Linux only.
-  dbus: 0.8.0
+  dbus: 0.8.1
 
 # Native FFmpeg of the recorder (apps/pure_live depends on
-# ffmpeg_kit_extended_flutter 1.0.0, native API FFmpegKit 0.11.2). The
+# ffmpeg_kit_extended_flutter 1.0.2, native API FFmpegKit 0.11.2). The
 # plugin's build hook reads this block from the pubspec next to
 # .dart_tool/package_config.json, which in a pub workspace is this one. The
-# bundles are our FFmpeg 9.0.2 builds for that API (release
-# native-ffmpeg-9.0.2-b2, listed with their SHA-256 in
+# bundles are our FFmpeg 9.1 builds for that API (release
+# native-ffmpeg-9.1-b1, listed with their SHA-256 in
 # tools/ffmpeg_kit/bundles.txt; rebuilt with tools/ffmpeg_kit/rebuild/ and the
 # FFmpegKit Apple workflow). The hook downloads a remote URL on every build,
 # so the paths are local (relative to this file): run

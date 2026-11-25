@@ -1,0 +1,76 @@
+diff --git a/libavformat/tls_mbedtls.c b/libavformat/tls_mbedtls.c
+index 211652d..9d26e13 100644
+--- a/libavformat/tls_mbedtls.c
++++ b/libavformat/tls_mbedtls.c
+@@ -19,6 +19,10 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+  */
+ 
++#if defined(__ANDROID__)
++#include <unistd.h>
++#endif
++
+ #include <mbedtls/version.h>
+ #include <mbedtls/ctr_drbg.h>
+ #include <mbedtls/entropy.h>
+@@ -555,6 +559,19 @@ static int tls_open(URLContext *h, const char *uri, int flags, AVDictionary **op
+             av_log(h, AV_LOG_ERROR, "mbedtls_x509_crt_parse_file for CA cert returned %d\n", ret);
+             goto fail;
+         }
++#if defined(__ANDROID__)
++    } else if (shr->verify) {
++        // Conscrypt owns Android's system roots. Prefer its updated APEX
++        // store where available; use the legacy store on older releases.
++        // An explicit ca_file keeps its existing replacement semantics.
++        const char *path = access("/apex/com.android.conscrypt/cacerts", R_OK | X_OK) == 0
++                         ? "/apex/com.android.conscrypt/cacerts"
++                         : "/system/etc/security/cacerts";
++        if ((ret = mbedtls_x509_crt_parse_path(&tls_ctx->ca_cert, path)) < 0) {
++            av_log(h, AV_LOG_ERROR, "Unable to load Android system certificate authorities: %d\n", ret);
++            goto fail;
++        }
++#endif
+     }
+ 
+     // load own certificate
+diff --git a/libavformat/tls_openssl.c b/libavformat/tls_openssl.c
+index 0075288..4a0395c 100644
+--- a/libavformat/tls_openssl.c
++++ b/libavformat/tls_openssl.c
+@@ -31,6 +31,11 @@
+ #include "libavutil/opt.h"
+ 
+ #include <openssl/bio.h>
++#if defined(__linux__) && !defined(__ANDROID__)
++#include <stdlib.h>
++#include <unistd.h>
++#endif
++
+ #include <openssl/ssl.h>
+ #include <openssl/err.h>
+ #include <openssl/x509v3.h>
+@@ -714,6 +719,24 @@ static av_cold int openssl_init_ca_key_cert(URLContext *h)
+         if (!SSL_CTX_load_verify_locations(c->ctx, s->ca_file, NULL))
+             av_log(h, AV_LOG_ERROR, "SSL_CTX_load_verify_locations %s\n", openssl_get_error(c));
+     } else {
++#if defined(__linux__) && !defined(__ANDROID__)
++        // Static OpenSSL builds must not look for roots in their build
++        // prefix. Keep explicit SSL_CERT_* environment choices intact.
++        if (s->verify && !getenv("SSL_CERT_FILE") && !getenv("SSL_CERT_DIR")) {
++            static const char *const roots[] = {
++                "/etc/ssl/certs/ca-certificates.crt",
++                "/etc/pki/tls/certs/ca-bundle.crt",
++                "/etc/ssl/cert.pem",
++            };
++            for (int i = 0; i < FF_ARRAY_ELEMS(roots); i++) {
++                if (access(roots[i], R_OK) == 0) {
++                    if (!SSL_CTX_load_verify_locations(c->ctx, roots[i], NULL))
++                        av_log(h, AV_LOG_WARNING, "Unable to load Linux system certificate authorities\n");
++                    break;
++                }
++            }
++        }
++#endif
+         if (!SSL_CTX_set_default_verify_paths(c->ctx)) {
+             // Only log the failure but do not error out, as this is not fatal
+             av_log(h, AV_LOG_WARNING, "Failure setting default verify locations: %s\n",

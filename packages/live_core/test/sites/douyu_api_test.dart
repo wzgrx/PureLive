@@ -36,6 +36,26 @@ String _jwt(Map<String, Object?> payload) =>
 DateTime _seconds(int value) => DateTime.fromMillisecondsSinceEpoch(value * 1000, isUtc: true);
 
 void main() {
+  test('opt-in HEVC identity is stable when the primary disappears at renewal', () {
+    const primary = 'https://video.example.test/live_123.flv?expire=60';
+    const hevc = 'https://video.example.test/live_123h.flv?expire=60';
+    final now = DateTime.utc(2026, 11, 8);
+    List<({LivePlayLine line, int? rate})> read(Map<String, dynamic> data) =>
+        DouyuApi.codecAnswers(data, roomId: '9999', cdn: 'hw-h5', cookie: '', issuedAt: now);
+    final both = read({'rtmp_live': primary, 'player_1': hevc, 'rate': 0});
+    expect(both.map((item) => item.line.codec), ['avc', 'hevc']);
+    expect(both.first.line.lineId, 'hw-h5');
+    expect(both.last.line.lease, isNotNull);
+    final renewed = read({'player_1': '$hevc&new=1', 'rate': 0}).single;
+    expect(renewed.line.lineId, both.last.line.lineId);
+    expect(renewed.line.codec, 'hevc');
+    expect(read({'rtmp_live': primary, 'player_1': 'https://video.example.test/unknown.flv'}), hasLength(1));
+    expect(DouyuApi.resolution([both.last, both.first], requestedRate: 0).lines.map((line) => line.codec), [
+      'avc',
+      'hevc',
+    ]);
+  });
+
   test('issue135 stream absence and play refusal export different fixed reasons', () {
     expect(
       () => DouyuApi.qualities({'streamStatus': 0}),

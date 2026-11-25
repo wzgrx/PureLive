@@ -96,6 +96,7 @@ void main() {
     final proxy = await ServerSocket.bind('127.0.0.1', 0);
     proxy.listen((client) {
       final head = <int>[];
+      // ignore: ended with the tunnel
       // ignore: cancel_subscriptions, ended with the tunnel
       late StreamSubscription<List<int>> sub;
       sub = client.listen((data) async {

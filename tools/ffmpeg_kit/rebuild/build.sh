@@ -17,7 +17,7 @@
 set -euo pipefail
 
 builders_commit=fac2076d06a473b8e1c1ed5a1fabe52ee974a5c0 # tag v0.11.2-android
-ndk=29.0.14206865
+ndk=30.0.16248370
 image=purelive/ffmpeg-kit-builders:${builders_commit:0:7}
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -32,6 +32,7 @@ if [[ ! -d "$builders/.git" ]]; then
   git clone -q https://github.com/akashskypatel/ffmpeg-kit-builders "$builders"
   git -C "$builders" -c advice.detachedHead=false checkout -q "$builders_commit"
   git -C "$builders" apply "$here/builders.patch"
+  git -C "$builders" apply "$here/ffmpeg-9.1-compat.patch"
 fi
 [[ "$(git -C "$builders" rev-parse HEAD)" == "$builders_commit" ]] || { echo "builders is not at $builders_commit" >&2; exit 1; }
 
@@ -61,8 +62,28 @@ if ! docker image inspect "$tools" >/dev/null 2>&1; then
   docker rm "$setup" >/dev/null
 fi
 
-docker run --rm --network host --user root -e NDK_VERSION="$ndk" \
+baseline="$work/ffmpeg-kit-api-0.11.2.aar"
+if [[ " ${targets[*]} " == *" android "* ]]; then
+  [[ -f "$baseline" ]] || curl --fail --location --retry 3 \
+    https://github.com/wzgrx/PureLive/releases/download/native-ffmpeg-9.0.2-b2/bundle-base-shared-lgpl-release.aar -o "$baseline"
+  echo "b4809b1b6d5cca73f13c7fe1640642a0dd6507a64e82264d83eeba8992b848b6  $baseline" | sha256sum --check
+else
+  # The unused read-only mount still needs an existing file.
+  baseline="$here/pack_android.py"
+fi
+
+ndk_mount=()
+if [[ " ${targets[*]} " == *" android "* ]]; then
+  sdk="${ANDROID_HOME:?ANDROID_HOME (source the PureLive environment)}"
+  [[ -d "$sdk/ndk/$ndk" ]] || { echo "Pinned NDK $ndk is missing" >&2; exit 1; }
+  # A cached tools image may contain an earlier NDK. Always use this pinned
+  # host copy, as in the verified 9.1 build, without rewriting either SDK.
+  ndk_mount=(-v "$sdk/ndk/$ndk:/usr/local/android-sdk/ndk/$ndk:ro")
+fi
+
+docker run --rm --network host --user root -e NDK_VERSION="$ndk" "${ndk_mount[@]}" \
   -v "$builders:/workspace" -v "$here/in_container.sh:/usr/local/bin/in_container.sh:ro" \
++  -v "$here:/usr/local/share/purelive-ffmpeg:ro" -v "$baseline:/usr/local/share/ffmpeg-kit-api-baseline.aar:ro" \
   --entrypoint bash "$tools" -c "in_container.sh ${targets[*]}; status=\$?; chown -R $(id -u):$(id -g) /workspace; exit \$status"
 
 out="$work/out"

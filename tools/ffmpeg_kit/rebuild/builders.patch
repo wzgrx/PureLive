@@ -76,7 +76,7 @@ index 4741c27..1cbd128 100755
  export prefer_stable=y # Only for x264 and x265.
  export build_amd_amf=y
 -export ffmpeg_git_checkout_version="release/9.0"
-+export ffmpeg_git_checkout_version="n9.0.2"
++export ffmpeg_git_checkout_version="n9.1"
  export build_ismindex=n
  export build_gpl=n
  export build_nonfree=n

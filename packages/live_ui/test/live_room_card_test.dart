@@ -1,8 +1,8 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 const _live = RoomCardData(
   platformId: 'douyu',
@@ -203,7 +203,7 @@ void main() {
       final cover = tester.getRect(find.byType(AspectRatio).first);
       // A single-platform list has no badge: the heart is in its place.
       expect(tester.getRect(heart), Rect.fromLTWH(cover.left + 8, cover.top + 8, 22, 22));
-      expect(find.byTooltip('已关注'), findsOneWidget);
+      expect(find.byWidgetPredicate((widget) => widget is Tooltip && widget.message == '已关注'), findsOneWidget);
       final icon = tester.widget<Icon>(find.descendant(of: heart, matching: find.byType(Icon)));
       expect(icon.icon, AppIcons.followedHeart);
       expect(icon.color, LiveRoomCardColors.followed);

@@ -6,6 +6,18 @@ import 'package:live_player/live_player.dart';
 
 void main() {
   group('G01.5: playback stats', () {
+    test('small native builds keep codec names when long descriptions are absent', () async {
+      final stats = await readPlaybackStats(
+        (name) async => switch (name) {
+          'video-format' => 'h264',
+          'audio-codec-name' => 'aac',
+          _ => '',
+        },
+      );
+      expect(stats.videoCodec, 'h264');
+      expect(stats.audioCodec, 'aac');
+    });
+
     test('reads the properties the playback information panel shows', () async {
       final properties = {
         'video-params/w': '2560',

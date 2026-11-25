@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/live_play/layout/room_panel.dart';
 import 'package:pure_live/features/live_play/logic/room_controller.dart';
@@ -15,6 +15,8 @@ import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/rooms/room_cards.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
+import 'package:pure_live/shared/rooms/room_rotation_dialog.dart';
+import 'package:pure_live/shared/rooms/room_schedule_dialog.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 
 /// What the panel needs from the follows: set by the app (`app/app.dart`),
@@ -81,6 +83,9 @@ class RoomSwitchPanel extends ConsumerStatefulWidget {
     this.source = const [],
     this.group,
     this.dragToClose = false,
+    this.rotationActive = false,
+    this.onStartRotation,
+    this.onStopRotation,
     this.now = DateTime.now,
     super.key,
   });
@@ -103,6 +108,15 @@ class RoomSwitchPanel extends ConsumerStatefulWidget {
   /// A downward drag on the header closes it (portrait).
   final bool dragToClose;
 
+  /// Whether this room is running a saved queue.
+  final bool rotationActive;
+
+  /// Starts an explicitly selected rotation in the owning live page.
+  final void Function(List<LiveRoom> rooms, RoomRotationOptions options)? onStartRotation;
+
+  /// Stops the owning page's rotation.
+  final VoidCallback? onStopRotation;
+
   /// The clock.
   final DateTime Function() now;
 
@@ -113,9 +127,13 @@ class RoomSwitchPanel extends ConsumerStatefulWidget {
   ConsumerState<RoomSwitchPanel> createState() => _RoomSwitchPanelState();
 }
 
+enum _SavedRoomAction { moveUp, moveDown, remove }
+
 class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
   StreamSubscription<List<LiveRoom>>? _followsSub;
   StreamSubscription<List<LiveRoom>>? _historySub;
+  StreamSubscription<List<LiveRoom>>? _savedSub;
+  List<LiveRoom> _saved = const [];
   List<LiveRoom>? _follows;
   List<LiveRoom>? _history;
   Object? _error;
@@ -143,6 +161,7 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
     final store = ref.read(storeProvider);
     unawaited(_followsSub?.cancel());
     unawaited(_historySub?.cancel());
+    unawaited(_savedSub?.cancel());
     void failed(Object error) {
       if (mounted) setState(() => _error = error);
     }
@@ -153,6 +172,14 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
     _historySub = store.history.watchAll().listen((rooms) {
       if (mounted) setState(() => _history = rooms);
     }, onError: (Object error, StackTrace _) => failed(error));
+    _savedSub = store.savedRoomQueue.watch().listen(
+      (rooms) {
+        if (mounted) setState(() => _saved = rooms);
+      },
+      onError: (Object _, StackTrace _) {
+        if (mounted) setState(() => _saved = const []);
+      },
+    );
   }
 
   void _retry() {
@@ -169,6 +196,7 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
     _clock?.cancel();
     unawaited(_followsSub?.cancel());
     unawaited(_historySub?.cancel());
+    unawaited(_savedSub?.cancel());
     _query.dispose();
     super.dispose();
   }
@@ -226,6 +254,65 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
   Future<void> _menu(LiveRoom room) =>
       showRoomMenu(context, store: ref.read(storeProvider), room: room, onOpen: () => _open(room, const []));
 
+  Future<void> _chooseRotation() async {
+    final options = await showRoomRotationOptions(context);
+    if (mounted && options != null) widget.onStartRotation?.call(_saved, options);
+  }
+
+  Future<void> _editCurrentSaved() async {
+    final room = widget.controller.room;
+    final store = ref.read(storeProvider).savedRoomQueue;
+    try {
+      final saved = _saved.any(room.hasSameIdentity);
+      if (!await (saved ? store.remove(room) : store.add(room)) && mounted) {
+        AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+      }
+    } on Object {
+      if (mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+    }
+  }
+
+  Future<void> _manageSaved(LiveRoom room) async {
+    final index = _saved.indexWhere(room.hasSameIdentity);
+    if (index < 0) return;
+    final action = await showDialog<_SavedRoomAction>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text(i18n('room_switch_saved')),
+        children: [
+          if (index > 0)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, _SavedRoomAction.moveUp),
+              child: Text(i18n('room_switch_saved_move_up')),
+            ),
+          if (index + 1 < _saved.length)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, _SavedRoomAction.moveDown),
+              child: Text(i18n('room_switch_saved_move_down')),
+            ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, _SavedRoomAction.remove),
+            child: Text(i18n('room_switch_saved_remove')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || action == null) return;
+    final position = _saved.indexWhere(room.hasSameIdentity);
+    if (position < 0) return;
+    final store = ref.read(storeProvider).savedRoomQueue;
+    try {
+      final changed = await switch (action) {
+        _SavedRoomAction.moveUp => store.move(room, position - 1),
+        _SavedRoomAction.moveDown => store.move(room, position + 1),
+        _SavedRoomAction.remove => store.remove(room),
+      };
+      if (!changed && mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+    } on Object {
+      if (mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+    }
+  }
+
   void _open(LiveRoom room, List<LiveRoom> group) => widget.onPick(room, group);
 
   @override
@@ -240,6 +327,7 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
             follows: follows,
             history: history,
             source: widget.source,
+            saved: _saved,
             current: widget.controller.room,
             rank: policy.rank,
           );
@@ -303,6 +391,43 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
                 ),
               ),
             ),
+          if (group == RoomSwitchGroup.saved)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Wrap(
+                spacing: 4,
+                children: [
+                  TextButton(
+                    key: const ValueKey('switch-saved-toggle-current'),
+                    onPressed: () => unawaited(_editCurrentSaved()),
+                    child: Text(
+                      i18n(
+                        _saved.any(widget.controller.room.hasSameIdentity)
+                            ? 'room_switch_saved_remove_current'
+                            : 'room_switch_saved_add_current',
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    key: const ValueKey('switch-saved-schedule'),
+                    onPressed: () => unawaited(
+                      showRoomAppointmentMenu(context, ref.read(storeProvider).roomSchedules, widget.controller.room),
+                    ),
+                    child: Text(i18n('room_schedule_title')),
+                  ),
+                  if (widget.onStartRotation != null)
+                    TextButton(
+                      key: const ValueKey('switch-saved-rotation'),
+                      onPressed: widget.rotationActive
+                          ? widget.onStopRotation
+                          : _saved.length > 1 && _saved.any(widget.controller.room.hasSameIdentity)
+                          ? () => unawaited(_chooseRotation())
+                          : null,
+                      child: Text(i18n(widget.rotationActive ? 'room_rotation_stop' : 'room_rotation_start')),
+                    ),
+                ],
+              ),
+            ),
           _WatchingLine(controller: widget.controller),
           Expanded(child: _content(lists, group, layout, policy)),
         ],
@@ -340,6 +465,7 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
           RoomSwitchGroup.source => 'room_switch_empty_source',
           RoomSwitchGroup.history => 'room_switch_empty_history',
           RoomSwitchGroup.replays => 'room_switch_empty_replays',
+          RoomSwitchGroup.saved => 'room_switch_empty_saved',
         }),
         subtitle: group == RoomSwitchGroup.onAir ? i18n('room_switch_empty_on_air_hint') : null,
       );
@@ -349,6 +475,7 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
     RoomSwitchTileData data(LiveRoom room) =>
         RoomSwitchTileData.of(room, policy: policy, now: now, history: group == RoomSwitchGroup.history);
     void open(LiveRoom room) => _open(room, all);
+    Future<void> menu(LiveRoom room) => group == RoomSwitchGroup.saved ? _manageSaved(room) : _menu(room);
     return switch (layout) {
       RoomSwitchLayout.grid => LayoutBuilder(
         builder: (context, constraints) {
@@ -378,7 +505,7 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
                 footer: footer,
                 showPlatform: mixed,
                 onTap: () => open(room),
-                onLongPress: () => unawaited(_menu(room)),
+                onLongPress: () => unawaited(menu(room)),
               );
             },
           );
@@ -396,7 +523,7 @@ class _RoomSwitchPanelState extends ConsumerState<RoomSwitchPanel> {
             key: ValueKey('switch-room-${room.platform}-${room.roomId}'),
             data: data(room),
             onTap: () => open(room),
-            onLongPress: () => unawaited(_menu(room)),
+            onLongPress: () => unawaited(menu(room)),
           );
         },
       ),
@@ -490,6 +617,7 @@ class _GroupBar extends StatelessWidget {
         RoomSwitchGroup.source => 'room_switch_source',
         RoomSwitchGroup.history => 'watch_history',
         RoomSwitchGroup.replays => 'room_switch_replays',
+        RoomSwitchGroup.saved => 'room_switch_saved',
       });
       final count = lists.of(group).length;
       return group == RoomSwitchGroup.history || count == 0 ? name : '$name $count';

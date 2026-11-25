@@ -19,7 +19,8 @@ VideoDisplaySize? resolveVideoParamsDisplaySize(VideoParams params) {
   final rawWidth = params.w;
   final rawHeight = params.h;
 
-  final hasCorrectedPair = correctedWidth != null &&
+  final hasCorrectedPair =
+      correctedWidth != null &&
       correctedWidth > 0 &&
       correctedHeight != null &&
       correctedHeight > 0;

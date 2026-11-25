@@ -12,6 +12,14 @@ if (-not $Iscc) {
 if (-not $Iscc -or -not (Test-Path -LiteralPath $Iscc)) { throw 'Pinned Inno Setup is missing; set PURELIVE_ISCC or pass -Iscc.' }
 $toolchain = @{}
 Get-Content -LiteralPath "$root\toolchain.env" | ForEach-Object { if ($_ -match '^([A-Z_]+)=(.+)$') { $toolchain[$Matches[1]] = $Matches[2] } }
+# Resolve NuGet before configuring native WebView dependencies; a stale CMake
+# cache must not hide a missing command on a fresh toolchain.
+$nuget = Get-Command nuget.exe -ErrorAction SilentlyContinue
+if (-not $nuget) { throw 'Pinned NuGet is missing; add its directory to PATH.' }
+$nugetVersion = [Reflection.AssemblyName]::GetAssemblyName($nuget.Source).Version
+if ("$($nugetVersion.Major).$($nugetVersion.Minor).$($nugetVersion.Build)" -ne $toolchain.NUGET_VERSION) {
+  throw 'NuGet does not match toolchain.env'
+}
 # ISCC intentionally has no useful PE file version; ask its preprocessor.
 & $Iscc /Q "/DExpectedInnoVersion=$($toolchain.INNO_SETUP_VERSION)" "$root\tools\toolchain\inno-version.iss"
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup does not match toolchain.env' }

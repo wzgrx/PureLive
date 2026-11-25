@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 // 3.x's settings builders (`AppLayoutFactory`: `buildGroupTitle`,
 // `buildModernCard`, `buildSwitchTile`, `buildTile`, `buildSliderTile`,

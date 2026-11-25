@@ -1,16 +1,12 @@
 import 'package:dynamic_color/dynamic_color.dart';
-import 'package:flutter/material.dart' as flutter;
+import 'package:material_ui/material_ui.dart' as flutter;
 import 'package:material_ui/material_ui.dart' as material;
 
 // From 3.x lib/common/styles/dynamic_color_adapter.dart.
 
-/// Converts the decoupled Material color model used by dynamic_color 2.x to
-/// Flutter's framework ColorScheme, harmonised.
-///
-/// dynamic_color deliberately moved its public scheme type to material_ui in
-/// 2.0.0. Keeping the conversion at this boundary prevents that independent
-/// widget library from leaking into the rest of the application while still
-/// preserving every Material 3 role supplied by the operating system.
+/// Harmonizes the system palette while preserving every Material 3 role.
+/// The legacy function name remains available to callers after the migration
+/// to the shared material_ui model.
 flutter.ColorScheme toFlutterColorScheme(material.ColorScheme source) {
   final scheme = source.harmonized();
   return flutter.ColorScheme(
@@ -64,127 +60,25 @@ flutter.ColorScheme toFlutterColorScheme(material.ColorScheme source) {
   );
 }
 
-/// Converts the framework color model back to the independent Material widget
-/// library used by a few upgraded packages.
-///
-/// [material.ColorScheme]'s public constructor intentionally exposes only its
-/// compatibility roles. Start with those required roles and use `copyWith` to
-/// preserve the complete Material 3 palette instead of regenerating colors from
-/// a seed (which would subtly change dynamic and user-selected themes).
-material.ColorScheme toMaterialUiColorScheme(flutter.ColorScheme source) {
-  return material.ColorScheme(
-    brightness: source.brightness,
-    primary: source.primary,
-    onPrimary: source.onPrimary,
-    secondary: source.secondary,
-    onSecondary: source.onSecondary,
-    error: source.error,
-    onError: source.onError,
-    surface: source.surface,
-    onSurface: source.onSurface,
-  ).copyWith(
-    primaryContainer: source.primaryContainer,
-    onPrimaryContainer: source.onPrimaryContainer,
-    primaryFixed: source.primaryFixed,
-    primaryFixedDim: source.primaryFixedDim,
-    onPrimaryFixed: source.onPrimaryFixed,
-    onPrimaryFixedVariant: source.onPrimaryFixedVariant,
-    secondaryContainer: source.secondaryContainer,
-    onSecondaryContainer: source.onSecondaryContainer,
-    secondaryFixed: source.secondaryFixed,
-    secondaryFixedDim: source.secondaryFixedDim,
-    onSecondaryFixed: source.onSecondaryFixed,
-    onSecondaryFixedVariant: source.onSecondaryFixedVariant,
-    tertiary: source.tertiary,
-    onTertiary: source.onTertiary,
-    tertiaryContainer: source.tertiaryContainer,
-    onTertiaryContainer: source.onTertiaryContainer,
-    tertiaryFixed: source.tertiaryFixed,
-    tertiaryFixedDim: source.tertiaryFixedDim,
-    onTertiaryFixed: source.onTertiaryFixed,
-    onTertiaryFixedVariant: source.onTertiaryFixedVariant,
-    errorContainer: source.errorContainer,
-    onErrorContainer: source.onErrorContainer,
-    surfaceDim: source.surfaceDim,
-    surfaceBright: source.surfaceBright,
-    surfaceContainerLowest: source.surfaceContainerLowest,
-    surfaceContainerLow: source.surfaceContainerLow,
-    surfaceContainer: source.surfaceContainer,
-    surfaceContainerHigh: source.surfaceContainerHigh,
-    surfaceContainerHighest: source.surfaceContainerHighest,
-    onSurfaceVariant: source.onSurfaceVariant,
-    outline: source.outline,
-    outlineVariant: source.outlineVariant,
-    shadow: source.shadow,
-    scrim: source.scrim,
-    inverseSurface: source.inverseSurface,
-    onInverseSurface: source.onInverseSurface,
-    inversePrimary: source.inversePrimary,
-    surfaceTint: source.surfaceTint,
-  );
-}
+/// Preserves the shared Material palette without regenerating its roles.
+/// Flutter 3.50 applications and dynamic_color now use the same model.
+material.ColorScheme toMaterialUiColorScheme(flutter.ColorScheme source) => source;
 
-material.TextTheme _toMaterialUiTextTheme(flutter.TextTheme source) {
-  return material.TextTheme(
-    displayLarge: source.displayLarge,
-    displayMedium: source.displayMedium,
-    displaySmall: source.displaySmall,
-    headlineLarge: source.headlineLarge,
-    headlineMedium: source.headlineMedium,
-    headlineSmall: source.headlineSmall,
-    titleLarge: source.titleLarge,
-    titleMedium: source.titleMedium,
-    titleSmall: source.titleSmall,
-    bodyLarge: source.bodyLarge,
-    bodyMedium: source.bodyMedium,
-    bodySmall: source.bodySmall,
-    labelLarge: source.labelLarge,
-    labelMedium: source.labelMedium,
-    labelSmall: source.labelSmall,
-  );
-}
+/// Preserves the complete shared theme, including component styles and
+/// extensions. The old cross-library field copy would discard those styles.
+material.ThemeData toMaterialUiThemeData(flutter.ThemeData source) => source;
 
-/// Mirrors the active Flutter theme into `material_ui`.
-///
-/// Flutter 3.47 decoupled some Material packages from `flutter/material.dart`.
-/// Without this bridge those widgets silently use a light fallback theme, so a
-/// color-picker dialog can look unrelated to the application's selected mode.
-material.ThemeData toMaterialUiThemeData(flutter.ThemeData source) {
-  return material.ThemeData(
-    brightness: source.brightness,
-    colorScheme: toMaterialUiColorScheme(source.colorScheme),
-    platform: source.platform,
-    useMaterial3: source.useMaterial3,
-    canvasColor: source.canvasColor,
-    cardColor: source.cardColor,
-    disabledColor: source.disabledColor,
-    dividerColor: source.dividerColor,
-    focusColor: source.focusColor,
-    highlightColor: source.highlightColor,
-    hintColor: source.hintColor,
-    hoverColor: source.hoverColor,
-    scaffoldBackgroundColor: source.scaffoldBackgroundColor,
-    shadowColor: source.shadowColor,
-    splashColor: source.splashColor,
-    textTheme: _toMaterialUiTextTheme(source.textTheme),
-    primaryTextTheme: _toMaterialUiTextTheme(source.primaryTextTheme),
-  );
-}
-
-/// Supplies the matching `material_ui` inherited theme to packages that have
-/// migrated ahead of the rest of this application (put it in the app's
-/// `builder`, below the [flutter.MaterialApp]'s theme).
+/// Compatibility boundary for callers which used the pre-3.50 theme bridge.
+/// Both sides now share material_ui's inherited theme, so no copy is needed.
 class MaterialUiThemeBridge extends flutter.StatelessWidget {
-  /// Mirrors the theme in scope for [child].
+  /// Leaves the complete inherited theme available to [child].
   const new({required this.child, super.key});
 
   /// The subtree.
   final flutter.Widget child;
 
   @override
-  flutter.Widget build(flutter.BuildContext context) {
-    return material.Theme(data: toMaterialUiThemeData(flutter.Theme.of(context)), child: child);
-  }
+  flutter.Widget build(flutter.BuildContext context) => child;
 }
 
 /// [DynamicColorBuilder] with the system palettes already converted by

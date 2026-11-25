@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,8 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_danmaku/live_danmaku.dart';
 import 'package:live_iptv/live_iptv.dart';
+import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/app.dart';
 import 'package:pure_live/app/iptv_library.dart';
 import 'package:pure_live/app/recording.dart';
@@ -30,6 +31,7 @@ import 'package:pure_live/features/settings/settings_page.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/danmaku/danmaku_overlay.dart';
+import 'package:pure_live/shared/rooms/room_live_alert.dart';
 import 'package:pure_live/shared/rooms/share_code.dart';
 import 'package:pure_live/tv/home/tv_home_page.dart';
 import 'package:pure_live/tv/pages/tv_favorites_pane.dart';
@@ -38,6 +40,7 @@ import 'package:pure_live/tv/room/tv_live_play_page.dart';
 import 'package:pure_live/tv/settings/tv_settings_catalog.dart';
 import 'package:pure_live/tv/settings/tv_settings_section_page.dart';
 import 'package:pure_live/tv/tv_theme.dart';
+import 'package:pure_live/tv/wallpaper/tv_wallpaper_layer.dart';
 import 'package:pure_live/tv/widgets/tv_button.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
@@ -222,6 +225,8 @@ Future<AppServices> _pumpApp(
   List<LiveRoom> extraFollows = const [],
   bool taggedFollows = false,
   bool singleQuality = false,
+  bool liveRewind = false,
+  FakeEngine Function()? engine,
   Stream<IptvOverview>? iptvOverview,
   Stream<List<LiveRoom>>? history,
   Size viewport = const Size(1920, 1080),
@@ -236,6 +241,7 @@ Future<AppServices> _pumpApp(
     final settings = base.store.settings;
     await settings.set(Settings.showSplashPage, false);
     await settings.set(Settings.enableAutoCheckUpdate, false);
+    if (liveRewind) await settings.set(Settings.livePlayRewind, true);
     await settings.set(Settings.hotAreasList, [
       SiteIds.bilibili,
       if (iptvEnabled) SiteIds.iptv,
@@ -295,7 +301,7 @@ Future<AppServices> _pumpApp(
         if (iptvOverview != null) iptvOverviewProvider.overrideWith((ref) => iptvOverview),
         televisionDeviceProvider.overrideWithValue(television),
         danmakuProvider.overrideWithValue(DanmakuRegistry({SiteIds.bilibili: FakeDanmaku.new})),
-        playbackSessionFactoryProvider.overrideWithValue(({config}) => fakeSession(FakeEngine())),
+        playbackSessionFactoryProvider.overrideWithValue(({config}) => fakeSession(engine?.call() ?? FakeEngine())),
       ],
       child: RepaintBoundary(
         key: _menuFrame,
@@ -431,11 +437,10 @@ void main() {
     addTearDown(() => _close(tester, services));
     await _openMenuWithRemote(tester, 'history');
     final context = tester.element(find.byType(TvHomePage));
-    unawaited(
-      showDialog<void>(
-        context: context,
-        builder: (_) => const AlertDialog(content: Text('覆盖页面')),
-      ),
+
+    showDialog<void>(
+      context: context,
+      builder: (_) => const AlertDialog(content: Text('覆盖页面')),
     );
     await _settle(tester);
     final before = FocusManager.instance.primaryFocus;
@@ -1604,6 +1609,229 @@ void main() {
     expect(find.byKey(const ValueKey('tv-notice')), findsNothing);
     expect(_focused, 'tv menu favorites');
     expect(await tester.runAsync(() => services.store.meta.get(TvHomePage.noticeKey)), '1');
+    await _close(tester, services);
+  });
+
+  testWidgets('TV dual view opens two selected rooms and retires both when leaving the pane', (tester) async {
+    final services = await _pumpApp(tester);
+    final baseline = TvWallpaperVideo.holds.value;
+    await tester.runAsync(() async {
+      await services.store.settings.set(Settings.multiviewMixAudio, true);
+      for (final id in ['1', '2']) {
+        await services.store.savedRoomQueue.add(LiveRoom(platform: SiteIds.bilibili, roomId: id, nick: '双画面频道$id'));
+      }
+    });
+    for (var i = 0; i < 12 && _focused != 'tv menu multiview'; i++) {
+      await _press(tester, LogicalKeyboardKey.arrowDown);
+    }
+    expect(_focused, 'tv menu multiview');
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    final first = find.byKey(const ValueKey('tv-multiview-cell-0'));
+    final second = find.byKey(const ValueKey('tv-multiview-cell-1'));
+    expect(first, findsOneWidget);
+    expect(second, findsOneWidget);
+    expect(find.byKey(const ValueKey('tv-multiview-cell-2')), findsNothing);
+    await tester.tap(first);
+    await _settle(tester);
+    await tester.tap(find.text('双画面频道1'));
+    await _settle(tester, rounds: 10);
+    await tester.tap(second);
+    await _settle(tester);
+    await tester.tap(find.text('双画面频道2'));
+    await _settle(tester, rounds: 10);
+    final left = tester.widget<LiveVideoView>(find.descendant(of: first, matching: find.byType(LiveVideoView)));
+    final right = tester.widget<LiveVideoView>(find.descendant(of: second, matching: find.byType(LiveVideoView)));
+    expect(left.session.state.volume, 0);
+    expect(right.session.state.volume, greaterThan(0));
+    expect(TvWallpaperVideo.holds.value, greaterThan(baseline));
+    final favorites = find.byKey(const ValueKey('tv-menu-favorites'));
+    await tester.ensureVisible(favorites);
+    await tester.tap(favorites);
+    await _settle(tester, rounds: 10);
+    expect(find.byKey(const ValueKey('tv-multiview-cell-0'), skipOffstage: false), findsNothing);
+    expect(TvWallpaperVideo.holds.value, baseline);
+    await _close(tester, services);
+  });
+
+  testWidgets('TV saved room rotation starts from the remote settings and advances past a room that is offline', (
+    tester,
+  ) async {
+    final services = await _pumpApp(tester, offline: {2});
+    await tester.runAsync(() async {
+      for (final id in ['1', '2', '3']) {
+        await services.store.savedRoomQueue.add(LiveRoom(platform: SiteIds.bilibili, roomId: id, nick: '频道$id'));
+      }
+    });
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    final room = tester.state<TvLivePlayPageState>(find.byType(TvLivePlayPage));
+    expect(room.controller!.room.roomId, '1');
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _settle(tester);
+    expect(find.byKey(const ValueKey('tv-room-saved-queue')), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    expect(find.text('开始轮播'), findsOneWidget);
+    await tester.tap(find.text('开始轮播'));
+    await _settle(tester);
+    await tester.tap(find.text('按列表顺序'));
+    await _settle(tester);
+    await tester.enterText(find.byKey(const ValueKey('tv-text-input')), '5');
+    await tester.tap(find.byKey(const ValueKey('tv-input-confirm')));
+    await _settle(tester);
+    expect(room.controller!.room.roomId, '1');
+    expect(find.byKey(const ValueKey('tv-room-settings')), findsNothing);
+    await tester.pump(const Duration(seconds: 6));
+    await _settle(tester, rounds: 10);
+    expect(room.controller!.room.roomId, '2');
+    expect(room.controller!.stage, RoomStage.offline);
+    await tester.pump(const Duration(seconds: 6));
+    await _settle(tester, rounds: 10);
+    expect(room.controller!.room.roomId, '3');
+    expect(room.controller!.stage, RoomStage.playing);
+    await _close(tester, services);
+  });
+
+  testWidgets('TV remote rewinds to the actual cache boundary and goes back to live', (tester) async {
+    final engine = FakeEngine()..liveSeekRanges = const [LiveRewindRange(Duration(seconds: 10), Duration(seconds: 30))];
+    final services = await _pumpApp(tester, liveRewind: true, engine: () => engine);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    engine.emit(const EnginePosition(Duration(seconds: 24)));
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _settle(tester);
+    await tester.tap(find.text('缓存回看'));
+    await _settle(tester);
+    expect(find.text('回退最多 15 秒'), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    expect(engine.seeks, [const Duration(seconds: 10)]);
+    await tester.tap(find.text('缓存回看'));
+    await _settle(tester);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    expect(engine.seeks.last, const Duration(milliseconds: 29800));
+    await _close(tester, services);
+  });
+
+  testWidgets('TV room card configures the same notification watch as the ordinary app', (tester) async {
+    final available = liveAlertsAvailable;
+    liveAlertsAvailable = true;
+    addTearDown(() => liveAlertsAvailable = available);
+    final services = await _pumpApp(tester, follows: [1]);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.contextMenu);
+    await _settle(tester);
+    final alert = find.byKey(const ValueKey('tv-room-dialog-live-alert'));
+    expect(alert, findsOneWidget);
+    await tester.tap(alert);
+    await _settle(tester, rounds: 10);
+    expect(services.store.settings.get(Settings.liveAlertEnabled), isTrue);
+    expect(services.store.settings.get(Settings.liveAlertRoomKeys), ['bilibili:1']);
+    expect(find.text('关闭开播提醒'), findsOneWidget);
+    await _press(tester, LogicalKeyboardKey.escape);
+    await _settle(tester);
+    expect(alert, findsNothing);
+    await _close(tester, services);
+  });
+
+  testWidgets('TV card schedules a room without opening the player', (tester) async {
+    final services = await _pumpApp(tester);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.contextMenu);
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('tv-room-card-appointment')));
+    await _settle(tester, rounds: 10);
+    await tester.tap(find.text('每天'));
+    await _settle(tester);
+    await tester.enterText(find.byKey(const ValueKey('tv-text-input')), '0910');
+    await tester.tap(find.byKey(const ValueKey('tv-input-confirm')));
+    await _settle(tester, rounds: 10);
+    final tasks = (await tester.runAsync(services.store.roomSchedules.all))!;
+    expect(tasks.single.room.roomId, '1');
+    expect(tasks.single.dailyMinute, 550);
+    expect(find.byType(TvLivePlayPage), findsNothing);
+    await _press(tester, LogicalKeyboardKey.escape);
+    await _settle(tester);
+    await _close(tester, services);
+  });
+
+  testWidgets('TV replaces a scheduled room and returns to the original sleep timer', (tester) async {
+    final services = await _pumpApp(tester);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _press(tester, LogicalKeyboardKey.arrowDown);
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _press(tester, LogicalKeyboardKey.select);
+    await _settle(tester);
+    final original = tester.state<TvLivePlayPageState>(find.byType(TvLivePlayPage));
+    expect(original.controller!.room.roomId, '1');
+    await tester.runAsync(() async {
+      final saved = await services.store.roomSchedules.put(
+        RoomOpenSchedule.once(
+          id: 'tv-scheduled',
+          room: LiveRoom(platform: SiteIds.bilibili, roomId: '2'),
+          at: DateTime.now().subtract(const Duration(seconds: 1)),
+        ),
+      );
+      expect(saved, isTrue);
+    });
+    await _settle(tester);
+    await tester.pump(const Duration(seconds: 2));
+    await _settle(tester, rounds: 12);
+    expect(tester.state<TvLivePlayPageState>(find.byType(TvLivePlayPage)).controller!.room.roomId, '2');
+    await tester.runAsync(() async {
+      final saved = await services.store.roomSchedules.put(
+        RoomOpenSchedule.once(
+          id: 'tv-scheduled-next',
+          room: LiveRoom(platform: SiteIds.bilibili, roomId: '3'),
+          at: DateTime.now().subtract(const Duration(seconds: 1)),
+        ),
+      );
+      expect(saved, isTrue);
+    });
+    await _settle(tester);
+    await tester.pump(const Duration(seconds: 2));
+    await _settle(tester, rounds: 12);
+    expect(tester.state<TvLivePlayPageState>(find.byType(TvLivePlayPage)).controller!.room.roomId, '3');
+    await _press(tester, LogicalKeyboardKey.escape);
+    await _settle(tester, rounds: 10);
+    expect(tester.state<TvLivePlayPageState>(find.byType(TvLivePlayPage)), same(original));
+    expect(original.controller!.room.roomId, '1');
+
+    await _press(tester, LogicalKeyboardKey.arrowRight);
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('tv-room-sleep-timer')));
+    await _settle(tester);
+    await tester.ensureVisible(find.text('自定义播放时长'));
+    await _settle(tester);
+    await tester.tap(find.text('自定义播放时长'));
+    await _settle(tester);
+    await tester.enterText(find.byKey(const ValueKey('tv-text-input')), '1');
+    await tester.tap(find.byKey(const ValueKey('tv-input-confirm')));
+    await _settle(tester);
+    expect(original.controller!.sleepDeadline, isNotNull);
+    await tester.pump(const Duration(minutes: 1));
+    await _settle(tester);
+    expect(original.controller!.sleepTimerFinished, isTrue);
+    expect(original.controller!.session.state.status, PlaybackStatus.paused);
     await _close(tester, services);
   });
 

@@ -32,8 +32,12 @@ abstract final class AndroidHelper {
             int Function(Pointer<Void>)
           >('mpv_lavc_set_java_vm')(vm);
     } else {
-      // Custom builds may link FFmpeg dynamically instead of exporting mpv's shim.
-      result = DynamicLibrary.open('libavcodec.so')
+      // Static builds may export FFmpeg JNI directly; dynamic builds keep a
+      // separate avcodec module. Always initialize the decoder module in use.
+      final avcodec = mpv.providesSymbol('av_jni_set_java_vm')
+          ? mpv
+          : DynamicLibrary.open('libavcodec.so');
+      result = avcodec
           .lookupFunction<
             Int32 Function(Pointer<Void>, Pointer<Void>),
             int Function(Pointer<Void>, Pointer<Void>)

@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>Download 5.6.5</b></a>
-  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.6.5.md">Release notes (Chinese)</a>
+  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>Download 5.7.0</b></a>
+  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.7.0.md">Release notes (Chinese)</a>
   &nbsp;·&nbsp; <a href="#features">Features</a>
   &nbsp;·&nbsp; <a href="#supported-platforms">Platforms</a>
   &nbsp;·&nbsp; <a href="#building-from-source">Build</a>
@@ -105,6 +105,8 @@ Pure Live (纯粹直播) is a third-party live-stream aggregator. It brings Chin
 5.6.5 batches known Bilibili follows and preserves Windows shortcuts that already point to the installed app. The widescreen footer is optional, multiview remembers the projection display, and the fullscreen Super Chat entry follows the playback controls.
 
 > The app's interface comes in 15 languages: Simplified and Traditional Chinese, English, Japanese, Korean, Spanish, French, German, Portuguese, Russian, Italian, Vietnamese, Thai, Indonesian and Turkish (switch in Settings → Appearance; until you pick one it follows the system). The foreign languages were machine-assisted and not yet reviewed by native speakers; corrections are welcome. Release notes and in-depth docs are written in Chinese.
+
+5.7.0 upgrades Flutter/Dart, build tools and playback/recording kernels, adapts the split UI packages and window APIs, and fixes Android static-JNI initialization and Windows cold-start content refresh. It integrates saved room queues and rotation, optional long-press room switching, TV dual view, foreground appointments, public CHZZK VOD and live cache rewind. New optional controls remain off by default. Rewind covers the continuous range still held in memory; appointments require the app running in the foreground. Unverified original-device and account reports remain tracked.
 
 > Since 5.0.0 the project lives in this standalone repository, [wzgrx/PureLive](https://github.com/wzgrx/PureLive). The old [wzgrx/pure_live](https://github.com/wzgrx/pure_live) (a fork of [liuchuancong/pure_live](https://github.com/liuchuancong/pure_live)) is kept; devices running 3.x or 4.x still get update prompts and download new versions from here.
 
@@ -327,7 +329,7 @@ Since 4.0 every screen follows the same principles:
 
 Performance:
 
-- **mpv only** (our own media_kit fork, libmpv 0.41.0, FFmpeg 9.0.2); switching quality or line doesn't rebuild the player.
+- **mpv only** (our own media_kit fork, libmpv 0.42.0; self-built Android/Linux/Apple playback uses FFmpeg 9.1, while the official Windows playback bundle carries its own FFmpeg Git snapshot; all recording bundles use FFmpeg 9.1); switching quality or line doesn't rebuild the player.
 - **Refresh rate**: the 3.x power-saving, balanced and performance modes remain; during playback the display rate is matched to the video frame rate, only when the switch is seamless.
 - **Danmaku**: layouts are cached as images, the frame rate is an integer fraction of the refresh rate, and the on-screen count is capped; outlines only, no blur shadows.
 - **Interface**: state changes rebuild only what uses them, lists are lazy, images are decoded at display size with a capped cache and downloaded on a separate isolate; no blur over video.
@@ -404,7 +406,7 @@ Download the package for your platform from [Releases](https://github.com/wzgrx/
 | **Android phones and tablets** | Android 8.0+ | `…-android-arm64-v8a-release.apk` (almost every device; pick this if unsure); `armeabi-v7a` for old 32-bit devices, `x86_64` for emulators |
 | **Android TV and TV boxes** | Android 8.0+ | The same APK as the phone: it starts in the TV interface on a TV (switch in Settings → Appearance → Interface mode) |
 | **Windows** | Windows 10, 11 (64-bit) | `…-windows-x64-setup.exe` (installer) or `…-windows-x64-portable.zip` (portable, data in `UserData` next to the program) |
-| **Linux** | x86_64, GTK 3 desktop | `…-linux-x64.tar.gz`: extract and run `pure_live`; the README.txt inside explains adding it to the app menu |
+| **Linux** | x86_64, GTK 3/OpenGL; glibc ≥ 2.38, GLIBCXX ≥ 3.4.32 | `…-linux-x64.tar.gz`: extract and run `pure_live`; the README.txt inside explains adding it to the app menu |
 | **macOS** | macOS 12+, Intel and Apple silicon | `…-macos-universal.dmg`: open it and drag PureLive into Applications. It is not signed by Apple: if macOS cannot verify the developer the first time, click “Open Anyway” in System Settings → Privacy & Security |
 | **iPhone, iPad** | iOS, iPadOS 15+ | `…-ios-unsigned.ipa` with AltStore or SideStore (signed with your own Apple ID; a free account renews every 7 days); `…-ios-trollstore.ipa` on devices with TrollStore (TrollStore also installs it on iOS 14 and earlier, but it will not open there: Flutter, the framework, needs iOS 15) |
 
@@ -419,7 +421,13 @@ Download the package for your platform from [Releases](https://github.com/wzgrx/
 
 ## Building from source
 
-You need Flutter on Linux or Windows. Toolchain versions are pinned in [`toolchain.env`](toolchain.env) (Flutter 3.47.8, Dart 3.13.7, Gradle 9.8.2, AGP 9.4.1, Kotlin 2.4.21, JDK 27, Android SDK 37.2, build-tools 37.0.0, platform-tools 37.0.1, cmdline-tools 23.0, NDK 30.0.16248370, CMake 4.1.2); upgrade them there only (the Android build reads compileSdk, build-tools, NDK and CMake from it).
+### Build toolchain (2026-11-25)
+
+This upgrade pins Flutter 3.50.1 / Dart 3.14, Gradle 9.9.2 / AGP 9.5.2, and JDK 27.0.1.1+4. Linux uses Clang 23.1.6; Windows uses Visual Studio 18.12.1; Apple uses Xcode 27.2. `toolchain.env` is authoritative. Explicitly prepare the semantics patch in an isolated Flutter SDK before building.
+
+Direct workspace dependencies use current official versions. Six transitive packages remain at the latest versions allowed by the Flutter SDK and upstream constraints; incompatible major-version overrides are not forced. Exact resolutions are in `pubspec.lock`.
+
+You need Flutter on Linux or Windows. Toolchain versions are pinned in [`toolchain.env`](toolchain.env) (Flutter 3.50.1, Dart 3.14.0, Gradle 9.9.2, AGP 9.5.2, Kotlin 2.4.21, JDK 27, Android SDK 37.2, build-tools 37.0.0, platform-tools 37.0.3, cmdline-tools 23.0, NDK 30.0.16248370, CMake 4.1.2); upgrade them there only (the Android build reads compileSdk, build-tools, NDK and CMake from it).
 
 ```bash
 git clone https://github.com/wzgrx/PureLive.git
@@ -427,10 +435,11 @@ cd PureLive
 
 # 1. Environment: install the toolchain from toolchain.env and source an env script before each build
 #    (example paths, use your own)
-export FLUTTER_ROOT="$HOME/tools/flutter-sdk/3.47.8"
+export FLUTTER_ROOT="$HOME/tools/flutter-sdk/3.50.1-purelive"
 export JAVA_HOME="$HOME/tools/jdk-27"
 export ANDROID_HOME="$HOME/Android/Sdk"
 export PATH="$FLUTTER_ROOT/bin:$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+python3 tools/flutter_sdk/prepare.py --apply --bootstrap-tests --sdk "$FLUTTER_ROOT"
 
 # 2. FFmpeg native packages for recording: downloaded once into ~/.cache/pure_live/ffmpeg_kit, offline afterwards
 bash tools/ffmpeg_kit/fetch.sh android
@@ -444,7 +453,7 @@ flutter build apk --release --split-per-abi
 ```
 
 - Output goes to `apps/pure_live/build/app/outputs/flutter-apk/`, one APK per architecture. The libmpv native packages are downloaded by the build.
-- **Windows**: with Flutter, Visual Studio (Desktop development with C++) and NuGet on Windows, run `pwsh tools/release/package_windows.ps1` for the portable ZIP and the Inno Setup 6 installer.
+- **Windows**: with Flutter, Visual Studio (Desktop development with C++) and NuGet 8.0.0 on Windows, run `pwsh tools/release/package_windows.ps1` for the portable ZIP and the Inno Setup 7.1.1 installer.
 - **Linux**: install `clang cmake ninja-build pkg-config libgtk-3-dev` and run `bash tools/release/package_linux.sh` for `linux-x64.tar.gz`.
 - Signing keys are not in the repository: without `apps/pure_live/android/key.properties`, release builds are signed with the debug key.
 - Debug and profile builds use the package name suffix `.v4dev` and the name “纯粹直播 v4dev”, so they install alongside the release.
@@ -478,7 +487,7 @@ Plans and progress: [docs/PLAN.md](docs/PLAN.md); UI design: [docs/specs/UI.md](
 
 Feature requests and development are open under [D-092 / maintenance policy](MAINTENANCE.md). The table records shipped scope; further work depends on feasibility and validation.
 
-| Client | 5.6.5 (now) | Later |
+| Client | 5.7.0 (now) | Later |
 |---|---|---|
 | **Android phones and tablets** | Stable: liquid-glass bottom bar, damped and spring motion, official sign-in for eight platforms, 15 interface languages | Keep up with platform changes |
 | **Android TV** | Stable: Live, Video (Bilibili VOD) and Music modes, wallpapers, TV-style settings, type on your phone via QR code | Verify and tune on more TVs |

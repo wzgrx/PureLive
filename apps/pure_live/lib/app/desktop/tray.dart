@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:nativeapi/nativeapi.dart' show Size;
+import 'package:pure_live/app/desktop/app_window_api.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:tray_manager/tray_manager.dart';
-import 'package:window_manager/window_manager.dart';
 
 /// The rows of the tray menu (3.x `DesktopTrayService`; docs/A-界面设计/A16-桌面界面/A16.1-桌面窗口
 /// c9, T4): while recording, "正在录制 N 个直播间" (greyed) and a separator
@@ -126,7 +126,7 @@ final class DesktopTray {
       }());
     }
     Future<void> toggle() async {
-      if (await windowManager.isVisible()) {
+      if (await appWindow.isVisible()) {
         await onHide();
       } else {
         await onShow();
@@ -208,7 +208,7 @@ final class DesktopTray {
   void relabel({bool visible = true}) => _fill(visible: visible);
 
   Future<void> _openMenu() async {
-    relabel(visible: await windowManager.isVisible());
+    relabel(visible: await appWindow.isVisible());
     _icon.openContextMenu();
   }
 

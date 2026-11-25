@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:live_vod/live_vod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/rooms/archive/archive_time.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
@@ -29,6 +29,7 @@ final class ArchiveRecording {
 
   /// Stable public id.
   String get id => switch (video) {
+    final ChzzkArchiveVideo v => v.id,
     final SoopArchiveVideo v => v.id,
     final HuyaArchiveVideo v => v.id,
     final DouyuVodVideo v => v.id,
@@ -38,6 +39,7 @@ final class ArchiveRecording {
 
   /// Platform proxy/account namespace.
   String get platform => switch (video) {
+    ChzzkArchiveVideo() => SiteIds.chzzk,
     SoopArchiveVideo() => SiteIds.soop,
     HuyaArchiveVideo() => SiteIds.huya,
     DouyuVodVideo() => SiteIds.douyu,
@@ -46,6 +48,7 @@ final class ArchiveRecording {
 
   /// Creator name supplied with metadata, if present.
   String get author => switch (video) {
+    final ChzzkArchiveVideo v => v.authorName,
     final SoopArchiveVideo v => v.authorName,
     final HuyaArchiveVideo v => v.authorName,
     final DouyuVodVideo v => v.authorName,

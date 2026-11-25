@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/live_theme.dart';
 import 'package:live_ui/src/theme/text_styles.dart';
 import 'package:live_ui/src/widgets/scrolling.dart';
 import 'package:live_ui/src/widgets/settings_tiles.dart';
 import 'package:live_ui/src/widgets/window_layout.dart';
+import 'package:material_ui/material_ui.dart';
 
 // The frame of the settings-like pages outside the settings feature
 // (recording settings, backup, WebDAV, device sync; docs/A-界面设计/A10-录制界面/A10.2-录制设置,

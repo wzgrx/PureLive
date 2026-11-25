@@ -1,6 +1,5 @@
 import 'package:flutter/gestures.dart'
     show PointerDeviceKind, kDoubleTapTimeout, kLongPressTimeout, kMiddleMouseButton, kSecondaryMouseButton;
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +8,7 @@ import 'package:live_danmaku/live_danmaku.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/app/desktop/title_bar.dart';
 import 'package:pure_live/app/services.dart';
@@ -878,6 +878,14 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('live-play-menu')), kind: PointerDeviceKind.mouse);
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(const ValueKey('panel-menu')), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      // Flutter 3.50 dismisses an active hover tooltip before propagating
+      // Escape through the focus tree. The next Escape closes the panel,
+      // and must still leave the underlying fullscreen session alone.
+      expect(Tooltip.dismissAllToolTips(), isFalse);
       expect(find.byKey(const ValueKey('panel-menu')), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pump();

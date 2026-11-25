@@ -65,7 +65,22 @@ final class PlaybackRequest {
   final ExternalAudioFor? audio;
 }
 
-/// The session's deadlines, 3.x's `PlayerManager` defaults.
+/// Selects a fresh URL for an existing relay without changing its bitstream
+/// codec. Failure lets the owning session recover by opening a new input.
+@visibleForTesting
+LivePlayLine selectRelayRenewal(LivePlayLine current, List<LivePlayLine> lines, {required int previousIndex}) {
+  bool compatible(LivePlayLine line) => current.codec == null || current.codec == line.codec;
+  final exact = lines.where((line) => current.lineId != null && line.lineId == current.lineId && compatible(line));
+  if (exact.isNotEmpty) return exact.first;
+  if (previousIndex >= 0 && previousIndex < lines.length && compatible(lines[previousIndex])) {
+    return lines[previousIndex];
+  }
+  final sameCodec = lines.where(compatible).firstOrNull;
+  if (sameCodec == null) throw StateError('No compatible codec for the current relay');
+  return sameCodec;
+}
+
+/// The session's deadlines, 3.x's PlayerManager defaults.
 @immutable
 final class SessionTimings {
   /// Creates the timings.
@@ -236,6 +251,7 @@ final class PlaybackSession {
 
   PlaybackTransport _transport = PlaybackTransport();
   PlayerEngine? _engine;
+  Duration? _rewindPosition;
   _EngineCreation? _engineCreating;
   _StoppingEngine? _stoppingEngine;
   Future<void>? _disposing;
@@ -288,6 +304,20 @@ final class PlaybackSession {
 
   /// The current source moved since it opened or resumed.
   bool _moved = false;
+  bool _finiteVodStarted = false;
+
+  /// A finite TS playlist can need multiple origin requests before its
+  /// first position. Subsequent stalls use the ordinary session limits.
+  static const Duration segmentedStartupAllowance = Duration(seconds: 30);
+
+  bool get _waitingForSegmentedVod =>
+      !_finiteVodStarted &&
+      (_plan?.onDemand ?? false) &&
+      _source is LineSource &&
+      (_source! as LineSource).vodPlaylist != null;
+
+  Duration _startupBudget(Duration normal) =>
+      _waitingForSegmentedVod && normal < segmentedStartupAllowance ? segmentedStartupAllowance : normal;
 
   /// A reopened source of a recovery: the engine's flags do not end the
   /// recovery, moving does.
@@ -527,6 +557,57 @@ final class PlaybackSession {
       _emit(_state.copyWith(status: PlaybackStatus.buffering, position: position));
       await engine.play();
     }
+  }
+
+  /// A verified, contiguous rewind window for the current live source.
+  /// An absent, discontinuous or stale native cache is never seekable here.
+  Future<({LiveRewindRange range, Duration position})?> liveRewindWindow() async {
+    final engine = _engine;
+    if (_disposed ||
+        engine is! LiveRewindCache ||
+        (_plan?.onDemand ?? true) ||
+        _state.audioOnly ||
+        _state.recovery != 0 ||
+        !const {PlaybackStatus.playing, PlaybackStatus.paused}.contains(_state.status)) {
+      return null;
+    }
+    final epoch = _session;
+    final open = _fence.generation;
+    final ranges = await (engine! as LiveRewindCache).readLiveSeekRanges();
+    if (!_current(epoch) || _fence.generation != open || !identical(engine, _engine) || _state.recovery != 0) {
+      return null;
+    }
+    final position = _rewindPosition;
+    if (position == null) return null;
+    LiveRewindRange? selected;
+    for (final range in ranges) {
+      if (range.end - range.start < const Duration(seconds: 3) || !range.contains(position)) continue;
+      if (selected == null || range.end > selected.end) selected = range;
+    }
+    return selected == null ? null : (range: selected, position: position);
+  }
+
+  /// Seeks within confirmed cache only, independently of normal VOD seek.
+  Future<bool> seekLiveCache(Duration target) async {
+    final engine = _engine;
+    final epoch = _session;
+    final open = _fence.generation;
+    final window = await liveRewindWindow();
+    if (engine == null ||
+        window == null ||
+        !window.range.contains(target) ||
+        !_current(epoch) ||
+        _fence.generation != open ||
+        !identical(engine, _engine)) {
+      return false;
+    }
+    try {
+      await engine.seek(target);
+    } on Exception {
+      // The native cache may evict the target while a seek is pending.
+      return false;
+    }
+    return _current(epoch) && _fence.generation == open;
   }
 
   /// Plays an on-demand source at [rate] (1 = normal) where the engine can
@@ -799,8 +880,10 @@ final class PlaybackSession {
     final plan = _plan!;
     _cancelWatchdogs();
     _source = source;
+    _finiteVodStarted = false;
     if (source case LineSource(:final line)) _lines.select(line);
     final generation = _fence.begin(source.url);
+    _rewindPosition = null;
     _errorSignatures.clear();
     _openingError = null;
     _playing = false;
@@ -878,7 +961,7 @@ final class PlaybackSession {
             },
           )
           .timeout(
-            timings.sourceOpen,
+            _startupBudget(timings.sourceOpen),
             onTimeout: () {
               // A later open may reuse this transport. Only this source
               // transaction's deadline can cancel its pending input.
@@ -935,8 +1018,7 @@ final class PlaybackSession {
     if (lines.isEmpty) throw StateError('The refreshed plan has no lines');
     final previous = _plan?.lines ?? const <LivePlayLine>[];
     final index = previous.indexWhere((line) => line.url == current.url);
-    return lines.where((line) => current.lineId != null && line.lineId == current.lineId).firstOrNull ??
-        (index >= 0 && index < lines.length ? lines[index] : lines.first);
+    return selectRelayRenewal(current, lines, previousIndex: index);
   };
 
   // Engine events.
@@ -970,7 +1052,11 @@ final class PlaybackSession {
         if (_accepting && fps > 0) _emit(_state.copyWith(frameRate: fps));
       case EnginePosition(:final position):
         if (_accepting) _timingMoved(position);
-        if (_accepting && _state.onDemand) _emit(_state.copyWith(position: position));
+        if (_accepting && _state.onDemand) {
+          if (position > Duration.zero && _waitingForSegmentedVod) _finiteVodStarted = true;
+          _emit(_state.copyWith(position: position));
+        }
+        if (_accepting && !_state.onDemand) _rewindPosition = position;
         if (_accepting) {
           _onPosition(position, session);
           if (_buffering) _onBufferingPosition(position, session);
@@ -1194,7 +1280,7 @@ final class PlaybackSession {
   /// Repeated buffering notifications keep the first deadline (3.x).
   void _armBufferingWatchdog(int session) {
     if (_bufferingTimer != null || !_wantPlaying) return;
-    _bufferingTimer = Timer(timings.bufferingStall, () {
+    _bufferingTimer = Timer(_startupBudget(timings.bufferingStall), () {
       _bufferingTimer = null;
       if (!_current(session) || !_buffering || !_wantPlaying) return;
       if (_accepting && _reconcilable && _progressed()) {
@@ -1254,8 +1340,9 @@ final class PlaybackSession {
       _frameTimer = null;
       if (!_current(session) || !_wantPlaying || _state.audioOnly || _buffering || !_presentationVisible) return;
       final idle = clock.now().difference(_lastFrame ?? clock.now());
-      if (idle < timings.frameStall) {
-        _frameTimer = Timer(timings.frameStall - idle, check);
+      final limit = _startupBudget(timings.frameStall);
+      if (idle < limit) {
+        _frameTimer = Timer(limit - idle, check);
         return;
       }
       _handleError(
@@ -1268,7 +1355,7 @@ final class PlaybackSession {
       );
     }
 
-    _frameTimer = Timer(timings.frameStall, check);
+    _frameTimer = Timer(_startupBudget(timings.frameStall), check);
   }
 
   /// G02.3: a live source that moved, or a recovery's source that has to,

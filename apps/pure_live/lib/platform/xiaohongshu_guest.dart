@@ -222,6 +222,7 @@ final class InAppXiaohongshuGuestBrowser implements XiaohongshuGuestBrowser {
       'capture': WebViewXiaohongshuGuest.captureScript,
       'script': script,
     });
+    var requestFailed = false;
     try {
       final body = await Future.any([
         run,
@@ -229,14 +230,70 @@ final class InAppXiaohongshuGuestBrowser implements XiaohongshuGuestBrowser {
           cancel.whenCancelled.then<String?>(
             (_) => throw const TransportFailure('xiaohongshu', TransportReason.cancelled),
           ),
-      ]).timeout(const Duration(seconds: 30));
+        // The native 29-second job returns its phase only after an
+        // acknowledged cleanup (up to four more seconds).
+      ]).timeout(const Duration(seconds: 36));
       if (body == null || body.length > 2 * 1024 * 1024 + 65536) throw StateError('Invalid visitor result');
       final decoded = jsonDecode(body);
       if (decoded is! Map || decoded['ok'] != true) throw StateError('Visitor request failed');
       return decoded['value'];
+    } on PlatformException catch (error) {
+      requestFailed = true;
+      throw _visitorFailure(page, error);
+    } on Object {
+      requestFailed = true;
+      rethrow;
     } finally {
-      await _channel.invokeMethod<void>('cancel', {'id': id});
+      try {
+        await _channel.invokeMethod<void>('cancel', {'id': id}).timeout(const Duration(seconds: 5));
+      } on Object {
+        // The native operation has its own cleanup deadline. A failed
+        // redundant acknowledgement must not replace its diagnostic.
+        if (!requestFailed) {
+          throw const TransportFailure('xiaohongshu', TransportReason.protocol, 'Visitor cleanup not acknowledged');
+        }
+      }
     }
+  }
+
+  static TransportFailure _visitorFailure(Uri page, PlatformException error) {
+    final reason = switch (error.code) {
+      'cancelled' => TransportReason.cancelled,
+      'timeout' => TransportReason.timeout,
+      'unsupported' || 'cleanup' || 'invalid' => TransportReason.protocol,
+      _ => TransportReason.connect,
+    };
+    final stageData = error.details;
+    final data = stageData is Map<Object?, Object?> ? stageData : const <Object?, Object?>{};
+    final stage = data['stage'];
+    final label = switch (error.code) {
+      'unsupported' => 'WebView visitor isolation unavailable',
+      'cleanup' => 'Visitor cleanup failed',
+      'network' => 'Visitor page request failed',
+      'timeout' => 'Visitor initialization timed out',
+      'cancelled' => 'Visitor initialization cancelled',
+      'busy' => 'Visitor browser busy',
+      _ => 'Visitor initialization failed',
+    };
+    // Do not propagate the native error message or arbitrary diagnostics.
+    final hints = [
+      if (page.path == '/livelist') 'directory' else 'chat',
+      if (stage is String &&
+          const {'created', 'profile_clear', 'load_requested', 'load_started', 'script'}.contains(stage))
+        'stage=$stage',
+      if (data['network_code'] case final int code when code < 0 && code >= -30) 'webview=$code',
+      if (data['missing'] case final List<Object?> missing)
+        for (final feature in const [
+          'MULTI_PROFILE',
+          'DOCUMENT_START_SCRIPT',
+          'WEB_MESSAGE_LISTENER',
+          'DELETE_BROWSING_DATA',
+        ])
+          if (missing.contains(feature)) 'missing=$feature',
+      for (final key in const ['has_headers', 'has_identity', 'signer'])
+        if (data[key] case final bool present) '$key=$present',
+    ];
+    return TransportFailure('xiaohongshu', reason, '$label (${hints.join(', ')})');
   }
 
   @override

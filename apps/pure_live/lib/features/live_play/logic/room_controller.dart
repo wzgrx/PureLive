@@ -326,6 +326,7 @@ class LiveRoomController extends ChangeNotifier {
             'huya' => 'https://v.huya.com/play/${_archiveSelection!.recording.id}.html',
             'douyu' => 'https://v.douyu.com/show/${_archiveSelection!.recording.id}',
             'soop' => 'https://vod.sooplive.com/player/${_archiveSelection!.recording.id}',
+            'chzzk' => 'https://chzzk.naver.com/video/${_archiveSelection!.recording.id}',
             _ => _room.link,
           },
         )

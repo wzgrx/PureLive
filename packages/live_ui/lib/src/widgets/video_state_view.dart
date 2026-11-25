@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/scope.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/widgets/loading_styles.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A button of a [VideoStateView].
 @immutable

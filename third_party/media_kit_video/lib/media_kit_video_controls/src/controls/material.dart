@@ -1,12 +1,12 @@
+// ignore_for_file: non_constant_identifier_names
 /// This file is a part of media_kit (https://github.com/media-kit/media-kit).
 ///
 /// Copyright © 2021 & onwards, Hitesh Kumar Saini <saini123hitesh@gmail.com>.
 /// All rights reserved.
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
-// ignore_for_file: non_constant_identifier_names
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:media_kit_video/media_kit_video_controls/src/controls/extensions/duration.dart';
 import 'package:media_kit_video/media_kit_video_controls/src/controls/methods/video_state.dart';
@@ -18,18 +18,16 @@ import 'package:media_kit_video/media_kit_video_controls/src/controls/widgets/vi
 ///
 /// {@endtemplate}
 Widget MaterialVideoControls(VideoState state) {
-  return const VideoControlsThemeDataInjector(
-    child: _MaterialVideoControls(),
-  );
+  return const VideoControlsThemeDataInjector(child: _MaterialVideoControls());
 }
 
 /// [MaterialVideoControlsThemeData] available in this [context].
 MaterialVideoControlsThemeData _theme(BuildContext context) =>
     FullscreenInheritedWidget.maybeOf(context) == null
-        ? MaterialVideoControlsTheme.maybeOf(context)?.normal ??
-            kDefaultMaterialVideoControlsThemeData
-        : MaterialVideoControlsTheme.maybeOf(context)?.fullscreen ??
-            kDefaultMaterialVideoControlsThemeDataFullscreen;
+    ? MaterialVideoControlsTheme.maybeOf(context)?.normal ??
+          kDefaultMaterialVideoControlsThemeData
+    : MaterialVideoControlsTheme.maybeOf(context)?.fullscreen ??
+          kDefaultMaterialVideoControlsThemeDataFullscreen;
 
 /// Default [MaterialVideoControlsThemeData].
 const kDefaultMaterialVideoControlsThemeData = MaterialVideoControlsThemeData();
@@ -37,66 +35,60 @@ const kDefaultMaterialVideoControlsThemeData = MaterialVideoControlsThemeData();
 /// Default [MaterialVideoControlsThemeData] for fullscreen.
 const kDefaultMaterialVideoControlsThemeDataFullscreen =
     MaterialVideoControlsThemeData(
-  displaySeekBar: true,
-  automaticallyImplySkipNextButton: true,
-  automaticallyImplySkipPreviousButton: true,
-  seekGesture: true,
-  gesturesEnabledWhileControlsVisible: true,
-  seekOnDoubleTap: true,
-  seekOnDoubleTapEnabledWhileControlsVisible: true,
-  visibleOnMount: false,
-  speedUpOnLongPress: false,
-  speedUpFactor: 2.0,
-  verticalGestureSensitivity: 100,
-  horizontalGestureSensitivity: 1000,
-  backdropColor: Color(0x66000000),
-  padding: null,
-  controlsHoverDuration: Duration(seconds: 3),
-  controlsTransitionDuration: Duration(milliseconds: 300),
-  bufferingIndicatorBuilder: null,
-  seekIndicatorBuilder: null,
-  speedUpIndicatorBuilder: null,
-  primaryButtonBar: [
-    Spacer(flex: 2),
-    MaterialSkipPreviousButton(),
-    Spacer(),
-    MaterialPlayOrPauseButton(iconSize: 56.0),
-    Spacer(),
-    MaterialSkipNextButton(),
-    Spacer(flex: 2),
-  ],
-  topButtonBar: [],
-  topButtonBarMargin: EdgeInsets.symmetric(
-    horizontal: 16.0,
-  ),
-  bottomButtonBar: [
-    MaterialPositionIndicator(),
-    Spacer(),
-    MaterialFullscreenButton(),
-  ],
-  bottomButtonBarMargin: EdgeInsets.only(
-    left: 16.0,
-    right: 8.0,
-    bottom: 42.0,
-  ),
-  buttonBarHeight: 56.0,
-  buttonBarButtonSize: 24.0,
-  buttonBarButtonColor: Color(0xFFFFFFFF),
-  seekBarMargin: EdgeInsets.only(
-    left: 16.0,
-    right: 16.0,
-    bottom: 42.0,
-  ),
-  seekBarHeight: 2.4,
-  seekBarContainerHeight: 36.0,
-  seekBarColor: Color(0x3DFFFFFF),
-  seekBarPositionColor: Color(0xFFFF0000),
-  seekBarBufferColor: Color(0x3DFFFFFF),
-  seekBarThumbSize: 12.8,
-  seekBarThumbColor: Color(0xFFFF0000),
-  seekBarAlignment: Alignment.bottomCenter,
-  shiftSubtitlesOnControlsVisibilityChange: false,
-);
+      displaySeekBar: true,
+      automaticallyImplySkipNextButton: true,
+      automaticallyImplySkipPreviousButton: true,
+      seekGesture: true,
+      gesturesEnabledWhileControlsVisible: true,
+      seekOnDoubleTap: true,
+      seekOnDoubleTapEnabledWhileControlsVisible: true,
+      visibleOnMount: false,
+      speedUpOnLongPress: false,
+      speedUpFactor: 2.0,
+      verticalGestureSensitivity: 100,
+      horizontalGestureSensitivity: 1000,
+      backdropColor: Color(0x66000000),
+      padding: null,
+      controlsHoverDuration: Duration(seconds: 3),
+      controlsTransitionDuration: Duration(milliseconds: 300),
+      bufferingIndicatorBuilder: null,
+      seekIndicatorBuilder: null,
+      speedUpIndicatorBuilder: null,
+      primaryButtonBar: [
+        Spacer(flex: 2),
+        MaterialSkipPreviousButton(),
+        Spacer(),
+        MaterialPlayOrPauseButton(iconSize: 56.0),
+        Spacer(),
+        MaterialSkipNextButton(),
+        Spacer(flex: 2),
+      ],
+      topButtonBar: [],
+      topButtonBarMargin: EdgeInsets.symmetric(horizontal: 16.0),
+      bottomButtonBar: [
+        MaterialPositionIndicator(),
+        Spacer(),
+        MaterialFullscreenButton(),
+      ],
+      bottomButtonBarMargin: EdgeInsets.only(
+        left: 16.0,
+        right: 8.0,
+        bottom: 42.0,
+      ),
+      buttonBarHeight: 56.0,
+      buttonBarButtonSize: 24.0,
+      buttonBarButtonColor: Color(0xFFFFFFFF),
+      seekBarMargin: EdgeInsets.only(left: 16.0, right: 16.0, bottom: 42.0),
+      seekBarHeight: 2.4,
+      seekBarContainerHeight: 36.0,
+      seekBarColor: Color(0x3DFFFFFF),
+      seekBarPositionColor: Color(0xFFFF0000),
+      seekBarBufferColor: Color(0x3DFFFFFF),
+      seekBarThumbSize: 12.8,
+      seekBarThumbColor: Color(0xFFFF0000),
+      seekBarAlignment: Alignment.bottomCenter,
+      shiftSubtitlesOnControlsVisibilityChange: false,
+    );
 
 /// {@template material_video_controls_theme_data}
 ///
@@ -359,24 +351,28 @@ class MaterialVideoControlsThemeData {
   }) {
     return MaterialVideoControlsThemeData(
       displaySeekBar: displaySeekBar ?? this.displaySeekBar,
-      automaticallyImplySkipNextButton: automaticallyImplySkipNextButton ??
+      automaticallyImplySkipNextButton:
+          automaticallyImplySkipNextButton ??
           this.automaticallyImplySkipNextButton,
       automaticallyImplySkipPreviousButton:
           automaticallyImplySkipPreviousButton ??
-              this.automaticallyImplySkipPreviousButton,
+          this.automaticallyImplySkipPreviousButton,
       seekGesture: seekGesture ?? this.seekGesture,
       gesturesEnabledWhileControlsVisible:
           gesturesEnabledWhileControlsVisible ??
-              this.gesturesEnabledWhileControlsVisible,
+          this.gesturesEnabledWhileControlsVisible,
       seekOnDoubleTap: seekOnDoubleTap ?? this.seekOnDoubleTap,
       seekOnDoubleTapEnabledWhileControlsVisible:
           seekOnDoubleTapEnabledWhileControlsVisible ??
-              this.seekOnDoubleTapEnabledWhileControlsVisible,
-      seekOnDoubleTapLayoutTapsRatios: seekOnDoubleTapLayoutTapsRatios ??
+          this.seekOnDoubleTapEnabledWhileControlsVisible,
+      seekOnDoubleTapLayoutTapsRatios:
+          seekOnDoubleTapLayoutTapsRatios ??
           this.seekOnDoubleTapLayoutTapsRatios,
-      seekOnDoubleTapLayoutWidgetRatios: seekOnDoubleTapLayoutWidgetRatios ??
+      seekOnDoubleTapLayoutWidgetRatios:
+          seekOnDoubleTapLayoutWidgetRatios ??
           this.seekOnDoubleTapLayoutWidgetRatios,
-      seekOnDoubleTapBackwardDuration: seekOnDoubleTapBackwardDuration ??
+      seekOnDoubleTapBackwardDuration:
+          seekOnDoubleTapBackwardDuration ??
           this.seekOnDoubleTapBackwardDuration,
       seekOnDoubleTapForwardDuration:
           seekOnDoubleTapForwardDuration ?? this.seekOnDoubleTapForwardDuration,
@@ -418,7 +414,7 @@ class MaterialVideoControlsThemeData {
       seekBarAlignment: seekBarAlignment ?? this.seekBarAlignment,
       shiftSubtitlesOnControlsVisibilityChange:
           shiftSubtitlesOnControlsVisibilityChange ??
-              this.shiftSubtitlesOnControlsVisibilityChange,
+          this.shiftSubtitlesOnControlsVisibilityChange,
     );
   }
 }
@@ -535,37 +531,28 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (subscriptions.isEmpty) {
-      subscriptions.addAll(
-        [
-          controller(context).player.stream.playlist.listen(
-            (event) {
-              setState(() {
-                playlist = event;
-              });
-            },
-          ),
-          controller(context).player.stream.buffering.listen(
-            (event) {
-              setState(() {
-                buffering = event;
-              });
-            },
-          ),
-        ],
-      );
+      subscriptions.addAll([
+        controller(context).player.stream.playlist.listen((event) {
+          setState(() {
+            playlist = event;
+          });
+        }),
+        controller(context).player.stream.buffering.listen((event) {
+          setState(() {
+            buffering = event;
+          });
+        }),
+      ]);
 
       if (_theme(context).visibleOnMount) {
-        _timer = Timer(
-          _theme(context).controlsHoverDuration,
-          () {
-            if (mounted) {
-              setState(() {
-                visible = false;
-              });
-              unshiftSubtitle();
-            }
-          },
-        );
+        _timer = Timer(_theme(context).controlsHoverDuration, () {
+          if (mounted) {
+            setState(() {
+              visible = false;
+            });
+            unshiftSubtitle();
+          }
+        });
       }
     }
   }
@@ -584,12 +571,7 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
     if (_theme(context).shiftSubtitlesOnControlsVisibilityChange) {
       state(context).setSubtitleViewPadding(
         state(context).widget.subtitleViewConfiguration.padding +
-            EdgeInsets.fromLTRB(
-              0.0,
-              0.0,
-              0.0,
-              subtitleVerticalShiftOffset,
-            ),
+            EdgeInsets.fromLTRB(0.0, 0.0, 0.0, subtitleVerticalShiftOffset),
       );
     }
   }
@@ -665,7 +647,8 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
 
   void onHorizontalDragEnd() {
     if (swipeDuration != 0) {
-      Duration newPosition = controller(context).player.state.position +
+      Duration newPosition =
+          controller(context).player.state.position +
           Duration(seconds: swipeDuration);
       newPosition = newPosition.clamp(
         Duration.zero,
@@ -743,11 +726,15 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
   Widget build(BuildContext context) {
     var seekOnDoubleTapEnabledWhileControlsAreVisible =
         (_theme(context).seekOnDoubleTap &&
-            _theme(context).seekOnDoubleTapEnabledWhileControlsVisible);
-    assert(_theme(context).seekOnDoubleTapLayoutTapsRatios.length == 3,
-        "The number of seekOnDoubleTapLayoutTapsRatios must be 3, i.e. [1, 1, 1]");
-    assert(_theme(context).seekOnDoubleTapLayoutWidgetRatios.length == 3,
-        "The number of seekOnDoubleTapLayoutWidgetRatios must be 3, i.e. [1, 1, 1]");
+        _theme(context).seekOnDoubleTapEnabledWhileControlsVisible);
+    assert(
+      _theme(context).seekOnDoubleTapLayoutTapsRatios.length == 3,
+      "The number of seekOnDoubleTapLayoutTapsRatios must be 3, i.e. [1, 1, 1]",
+    );
+    assert(
+      _theme(context).seekOnDoubleTapLayoutWidgetRatios.length == 3,
+      "The number of seekOnDoubleTapLayoutWidgetRatios must be 3, i.e. [1, 1, 1]",
+    );
     return Theme(
       data: Theme.of(context).copyWith(
         focusColor: const Color(0x00000000),
@@ -785,9 +772,7 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                   alignment: Alignment.center,
                   children: [
                     Positioned.fill(
-                      child: Container(
-                        color: _theme(context).backdropColor,
-                      ),
+                      child: Container(color: _theme(context).backdropColor),
                     ),
                     // We are adding 16.0 boundary around the actual controls (which contain the vertical drag gesture detectors).
                     // This will make the hit-test on edges (e.g. swiping to: show status-bar, show navigation-bar, go back in navigation) not activate the swipe gesture annoyingly.
@@ -829,28 +814,28 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                           onHorizontalDragUpdate: (details) {
                             if ((!mount && _theme(context).seekGesture) ||
                                 (_theme(context).seekGesture &&
-                                    _theme(context)
-                                        .gesturesEnabledWhileControlsVisible)) {
+                                    _theme(
+                                      context,
+                                    ).gesturesEnabledWhileControlsVisible)) {
                               onHorizontalDragUpdate(details);
                             }
                           },
                           onHorizontalDragEnd: (details) {
                             onHorizontalDragEnd();
                           },
-                          child: Container(
-                            color: const Color(0x00000000),
-                          ),
+                          child: Container(color: const Color(0x00000000)),
                         ),
                       ),
                     ),
                     if (mount)
                       Padding(
-                        padding: _theme(context).padding ??
+                        padding:
+                            _theme(context).padding ??
                             (
-                                // Add padding in fullscreen!
-                                isFullscreen(context)
-                                    ? MediaQuery.of(context).padding
-                                    : EdgeInsets.zero),
+                            // Add padding in fullscreen!
+                            isFullscreen(context)
+                                ? MediaQuery.of(context).padding
+                                : EdgeInsets.zero),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.start,
@@ -871,8 +856,9 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                               child: AnimatedOpacity(
                                 curve: Curves.easeInOut,
                                 opacity: buffering ? 0.0 : 1.0,
-                                duration:
-                                    _theme(context).controlsTransitionDuration,
+                                duration: _theme(
+                                  context,
+                                ).controlsTransitionDuration,
                                 child: Center(
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -937,9 +923,7 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                         alignment: Alignment.bottomCenter,
                         children: [
                           if (_theme(context).displaySeekBar)
-                            MaterialSeekBar(
-                              delta: _seekBarDeltaValueNotifier,
-                            ),
+                            MaterialSeekBar(delta: _seekBarDeltaValueNotifier),
                           Container(
                             height: _theme(context).buttonBarHeight,
                             margin: _theme(context).bottomButtonBarMargin,
@@ -951,12 +935,13 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
               // Buffering Indicator.
               IgnorePointer(
                 child: Padding(
-                  padding: _theme(context).padding ??
+                  padding:
+                      _theme(context).padding ??
                       (
-                          // Add padding in fullscreen!
-                          isFullscreen(context)
-                              ? MediaQuery.of(context).padding
-                              : EdgeInsets.zero),
+                      // Add padding in fullscreen!
+                      isFullscreen(context)
+                          ? MediaQuery.of(context).padding
+                          : EdgeInsets.zero),
                   child: Column(
                     children: [
                       Container(
@@ -970,16 +955,17 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                               begin: 0.0,
                               end: buffering ? 1.0 : 0.0,
                             ),
-                            duration:
-                                _theme(context).controlsTransitionDuration,
+                            duration: _theme(
+                              context,
+                            ).controlsTransitionDuration,
                             builder: (context, value, child) {
                               // Only mount the buffering indicator if the opacity is greater than 0.0.
                               // This has been done to prevent redundant resource usage in [CircularProgressIndicator].
                               if (value > 0.0) {
                                 return Opacity(
                                   opacity: value,
-                                  child: _theme(context)
-                                          .bufferingIndicatorBuilder
+                                  child:
+                                      _theme(context).bufferingIndicatorBuilder
                                           ?.call(context) ??
                                       child!,
                                 );
@@ -1003,12 +989,13 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
               // Speedup Indicator.
               IgnorePointer(
                 child: Padding(
-                  padding: _theme(context).padding ??
+                  padding:
+                      _theme(context).padding ??
                       (
-                          // Add padding in fullscreen!
-                          isFullscreen(context)
-                              ? MediaQuery.of(context).padding
-                              : EdgeInsets.zero),
+                      // Add padding in fullscreen!
+                      isFullscreen(context)
+                          ? MediaQuery.of(context).padding
+                          : EdgeInsets.zero),
                   child: Column(
                     children: [
                       Container(
@@ -1019,8 +1006,11 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                         child: AnimatedOpacity(
                           duration: _theme(context).controlsTransitionDuration,
                           opacity: _speedUpIndicator ? 1 : 0,
-                          child: _theme(context).speedUpIndicatorBuilder?.call(
-                                  context, _theme(context).speedUpFactor) ??
+                          child:
+                              _theme(context).speedUpIndicatorBuilder?.call(
+                                context,
+                                _theme(context).speedUpFactor,
+                              ) ??
                               Container(
                                 alignment: Alignment.topCenter,
                                 child: Container(
@@ -1079,9 +1069,11 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                 child: AnimatedOpacity(
                   duration: _theme(context).controlsTransitionDuration,
                   opacity: showSwipeDuration ? 1 : 0,
-                  child: _theme(context)
-                          .seekIndicatorBuilder
-                          ?.call(context, Duration(seconds: swipeDuration)) ??
+                  child:
+                      _theme(context).seekIndicatorBuilder?.call(
+                        context,
+                        Duration(seconds: swipeDuration),
+                      ) ??
                       Container(
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
@@ -1111,15 +1103,17 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                     child: Row(
                       children: [
                         Expanded(
-                          flex: _theme(context)
-                              .seekOnDoubleTapLayoutWidgetRatios[0],
+                          flex: _theme(
+                            context,
+                          ).seekOnDoubleTapLayoutWidgetRatios[0],
                           child: _mountSeekBackwardButton
                               ? AnimatedOpacity(
                                   opacity: _hideSeekBackwardButton ? 0 : 1.0,
                                   duration: const Duration(milliseconds: 200),
                                   child: _BackwardSeekIndicator(
-                                    duration: _theme(context)
-                                        .seekOnDoubleTapBackwardDuration,
+                                    duration: _theme(
+                                      context,
+                                    ).seekOnDoubleTapBackwardDuration,
                                     onChanged: (value) {
                                       _seekBarDeltaValueNotifier.value = -value;
                                     },
@@ -1138,17 +1132,16 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                                       setState(() {
                                         _hideSeekBackwardButton = true;
                                       });
-                                      var result = controller(context)
-                                              .player
-                                              .state
-                                              .position -
+                                      var result =
+                                          controller(
+                                            context,
+                                          ).player.state.position -
                                           value;
                                       result = result.clamp(
                                         Duration.zero,
-                                        controller(context)
-                                            .player
-                                            .state
-                                            .duration,
+                                        controller(
+                                          context,
+                                        ).player.state.duration,
                                       );
                                       controller(context).player.seek(result);
                                     },
@@ -1157,53 +1150,57 @@ class _MaterialVideoControlsState extends State<_MaterialVideoControls> {
                               : const SizedBox(),
                         ),
                         //Area in the middle where the double-tap seek buttons are ignored in
-                        if (_theme(context)
-                                .seekOnDoubleTapLayoutWidgetRatios[1] >
+                        if (_theme(
+                              context,
+                            ).seekOnDoubleTapLayoutWidgetRatios[1] >
                             0)
                           Spacer(
-                            flex: _theme(context)
-                                .seekOnDoubleTapLayoutWidgetRatios[1],
+                            flex: _theme(
+                              context,
+                            ).seekOnDoubleTapLayoutWidgetRatios[1],
                           ),
                         Expanded(
-                          flex: _theme(context)
-                              .seekOnDoubleTapLayoutWidgetRatios[2],
+                          flex: _theme(
+                            context,
+                          ).seekOnDoubleTapLayoutWidgetRatios[2],
                           child: _mountSeekForwardButton
                               ? AnimatedOpacity(
                                   opacity: _hideSeekForwardButton ? 0 : 1.0,
                                   duration: const Duration(milliseconds: 200),
                                   child: _ForwardSeekIndicator(
-                                    duration: _theme(context)
-                                        .seekOnDoubleTapForwardDuration,
+                                    duration: _theme(
+                                      context,
+                                    ).seekOnDoubleTapForwardDuration,
                                     onChanged: (value) {
                                       _seekBarDeltaValueNotifier.value = value;
                                     },
                                     onSubmitted: (value) {
                                       _timerSeekForwardButton?.cancel();
                                       _timerSeekForwardButton = Timer(
-                                          const Duration(milliseconds: 200),
-                                          () {
-                                        if (_hideSeekForwardButton) {
-                                          setState(() {
-                                            _hideSeekForwardButton = false;
-                                            _mountSeekForwardButton = false;
-                                          });
-                                        }
-                                      });
+                                        const Duration(milliseconds: 200),
+                                        () {
+                                          if (_hideSeekForwardButton) {
+                                            setState(() {
+                                              _hideSeekForwardButton = false;
+                                              _mountSeekForwardButton = false;
+                                            });
+                                          }
+                                        },
+                                      );
                                       setState(() {
                                         _hideSeekForwardButton = true;
                                       });
 
-                                      var result = controller(context)
-                                              .player
-                                              .state
-                                              .position +
+                                      var result =
+                                          controller(
+                                            context,
+                                          ).player.state.position +
                                           value;
                                       result = result.clamp(
                                         Duration.zero,
-                                        controller(context)
-                                            .player
-                                            .state
-                                            .duration,
+                                        controller(
+                                          context,
+                                        ).player.state.duration,
                                       );
                                       controller(context).player.seek(result);
                                     },
@@ -1279,37 +1276,35 @@ class MaterialSeekBarState extends State<MaterialSeekBar> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (subscriptions.isEmpty && widget.delta == null) {
-      subscriptions.addAll(
-        [
-          controller(context).player.stream.playing.listen((event) {
-            setState(() {
-              playing = event;
-            });
-          }),
-          controller(context).player.stream.completed.listen((event) {
-            setState(() {
-              position = Duration.zero;
-            });
-          }),
-          controller(context).player.stream.position.listen((event) {
-            setState(() {
-              if (!tapped) {
-                position = event;
-              }
-            });
-          }),
-          controller(context).player.stream.duration.listen((event) {
-            setState(() {
-              duration = event;
-            });
-          }),
-          controller(context).player.stream.buffer.listen((event) {
-            setState(() {
-              buffer = event;
-            });
-          }),
-        ],
-      );
+      subscriptions.addAll([
+        controller(context).player.stream.playing.listen((event) {
+          setState(() {
+            playing = event;
+          });
+        }),
+        controller(context).player.stream.completed.listen((event) {
+          setState(() {
+            position = Duration.zero;
+          });
+        }),
+        controller(context).player.stream.position.listen((event) {
+          setState(() {
+            if (!tapped) {
+              position = event;
+            }
+          });
+        }),
+        controller(context).player.stream.duration.listen((event) {
+          setState(() {
+            duration = event;
+          });
+        }),
+        controller(context).player.stream.buffer.listen((event) {
+          setState(() {
+            buffer = event;
+          });
+        }),
+      ]);
     }
   }
 
@@ -1443,12 +1438,13 @@ class MaterialSeekBarState extends State<MaterialSeekBar> {
                     Positioned(
                       left: tapped
                           ? (constraints.maxWidth -
-                                  _theme(context).seekBarThumbSize / 2) *
-                              slider
+                                    _theme(context).seekBarThumbSize / 2) *
+                                slider
                           : (constraints.maxWidth -
-                                  _theme(context).seekBarThumbSize / 2) *
-                              positionPercent,
-                      bottom: -1.0 * _theme(context).seekBarThumbSize / 2 +
+                                    _theme(context).seekBarThumbSize / 2) *
+                                positionPercent,
+                      bottom:
+                          -1.0 * _theme(context).seekBarThumbSize / 2 +
                           _theme(context).seekBarHeight / 2,
                       child: Container(
                         width: _theme(context).seekBarThumbSize,
@@ -1482,11 +1478,7 @@ class MaterialPlayOrPauseButton extends StatefulWidget {
   /// Overriden icon color for [MaterialSkipPreviousButton].
   final Color? iconColor;
 
-  const MaterialPlayOrPauseButton({
-    super.key,
-    this.iconSize,
-    this.iconColor,
-  });
+  const MaterialPlayOrPauseButton({super.key, this.iconSize, this.iconColor});
 
   @override
   MaterialPlayOrPauseButtonState createState() =>
@@ -1643,7 +1635,8 @@ class MaterialFullscreenButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       onPressed: () => toggleFullscreen(context),
-      icon: icon ??
+      icon:
+          icon ??
           (isFullscreen(context)
               ? const Icon(Icons.fullscreen_exit)
               : const Icon(Icons.fullscreen)),
@@ -1719,20 +1712,18 @@ class MaterialPositionIndicatorState extends State<MaterialPositionIndicator> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (subscriptions.isEmpty) {
-      subscriptions.addAll(
-        [
-          controller(context).player.stream.position.listen((event) {
-            setState(() {
-              position = event;
-            });
-          }),
-          controller(context).player.stream.duration.listen((event) {
-            setState(() {
-              duration = event;
-            });
-          }),
-        ],
-      );
+      subscriptions.addAll([
+        controller(context).player.stream.position.listen((event) {
+          setState(() {
+            position = event;
+          });
+        }),
+        controller(context).player.stream.duration.listen((event) {
+          setState(() {
+            duration = event;
+          });
+        }),
+      ]);
     }
   }
 
@@ -1748,7 +1739,8 @@ class MaterialPositionIndicatorState extends State<MaterialPositionIndicator> {
   Widget build(BuildContext context) {
     return Text(
       '${position.label(reference: duration)} / ${duration.label(reference: duration)}',
-      style: widget.style ??
+      style:
+          widget.style ??
           TextStyle(
             height: 1.0,
             fontSize: 12.0,
@@ -1809,10 +1801,7 @@ class _BackwardSeekIndicatorState extends State<_BackwardSeekIndicator> {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0x88767676),
-            Color(0x00767676),
-          ],
+          colors: [Color(0x88767676), Color(0x00767676)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
@@ -1898,10 +1887,7 @@ class _ForwardSeekIndicatorState extends State<_ForwardSeekIndicator> {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0x00767676),
-            Color(0x88767676),
-          ],
+          colors: [Color(0x00767676), Color(0x88767676)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),

@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 
 HERE = Path(__file__).resolve().parent
@@ -61,6 +62,60 @@ def prepare(sdk, *, apply=False):
     print("Flutter SDK: applied and verified official merged semantics patch")
 
 
+
+def bootstrap_tests(sdk):
+    """Resolve SDK test caches, preserving the pinned upstream source lock."""
+    policy = json.loads((HERE / "patch.json").read_text(encoding="utf-8"))
+    expected = policy["test_bootstrap_lock"]
+    lock = sdk / "pubspec.lock"
+    before = lock.read_bytes()
+    if digest(lock, text=True) != expected["before_lf_sha256"]:
+        raise ValueError("SDK test bootstrap requires the unchanged upstream lock")
+    flutter = sdk / "bin" / ("flutter.bat" if os.name == "nt" else "flutter")
+    try:
+        subprocess.run([str(flutter), "pub", "get"], cwd=sdk, check=True)
+    finally:
+        resolved = digest(lock, text=True)
+        if resolved not in (expected["before_lf_sha256"], expected["resolved_lf_sha256"]):
+            raise ValueError("SDK dependency resolution changed unexpectedly; preserve this SDK for diagnosis")
+        # Pub only raises the SDK floor of this pinned lock on Dart 3.14.
+        # Restore these known bytes; never reset unrelated user changes.
+        lock.write_bytes(before)
+    prepare(sdk)
+    print("Flutter SDK: test dependencies prepared; upstream lock preserved")
+
+
+
+def stage_semantics_test(sdk, destination):
+    """Retain exact upstream semantic assertions without Skia Gold bootstrap.
+
+    The SDK-wide config fetches image expectations before even registering
+    this non-golden file. Stage its exact source/helper and preserve all
+    intrinsic-size, hit-test and leak-tracking setup; change only the unused
+    network image-comparator initialization. Refuse image tests entirely.
+    """
+    test_root = sdk / "packages/flutter/test"
+    inputs = ["semantics/semantics_update_test.dart", "widgets/button_tester.dart"]
+    for name in inputs:
+        data = (test_root / name).read_bytes()
+        if b"golden" in data.lower() or b"matchesReferenceImage" in data:
+            raise ValueError("SDK semantics isolation refuses image assertions")
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+    config = (test_root / "flutter_test_config.dart").read_text(encoding="utf-8")
+    golden_import = "import '_goldens_io.dart' if (dart.library.js_interop) '_goldens_web.dart' as flutter_goldens;"
+    golden_call = "return flutter_goldens.testExecutable(testMain);"
+    if config.count(golden_import) != 1 or config.count(golden_call) != 1:
+        raise ValueError("SDK test configuration changed; preserve it for review")
+    config = config.replace(golden_import, "", 1).replace(golden_call, "return Future<void>.sync(testMain);", 1)
+    config = config.replace("// Enable golden file testing using Skia Gold.",
+                            "// Exact non-golden semantics fixture: no Skia Gold connection is needed.", 1)
+    (destination / "flutter_test_config.dart").write_text(config, encoding="utf-8")
+    print("Flutter SDK: exact non-golden semantics inputs " + json.dumps({name: digest(test_root / name) for name in inputs}))
+    return destination / inputs[0]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sdk", type=Path)
@@ -68,6 +123,7 @@ def main():
     mode.add_argument("--apply", action="store_true", help="Explicitly modify an isolated SDK copy")
     mode.add_argument("--check", action="store_true", help="Check only (the default); never modify SDK sources")
     mode.add_argument("--test", action="store_true", help="Check then run the upstream semantics regression file")
+    parser.add_argument("--bootstrap-tests", action="store_true", help="Explicitly prepare SDK test dependency caches and preserve its known lock")
     args = parser.parse_args()
     sdk = args.sdk
     if sdk is None:
@@ -81,13 +137,17 @@ def main():
             parser.error("Set FLUTTER_ROOT or pass --sdk")
     sdk = sdk.resolve(strict=True)
     prepare(sdk, apply=args.apply)
+    if args.bootstrap_tests:
+        bootstrap_tests(sdk)
     if args.test:
         flutter = sdk / "bin" / ("flutter.bat" if os.name == "nt" else "flutter")
-        subprocess.run(
-            [str(flutter), "test", "test/semantics/semantics_update_test.dart", "--reporter", "expanded"],
-            cwd=sdk / "packages/flutter",
-            check=True,
-        )
+        with tempfile.TemporaryDirectory(prefix="purelive-sdk-semantics-") as temporary:
+            test = stage_semantics_test(sdk, Path(temporary) / "test")
+            subprocess.run(
+                [str(flutter), "test", "--no-pub", str(test), "--reporter", "expanded"],
+                cwd=sdk / "packages/flutter",
+                check=True,
+            )
 
 
 if __name__ == "__main__":

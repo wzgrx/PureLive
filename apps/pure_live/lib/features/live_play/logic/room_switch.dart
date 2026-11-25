@@ -19,6 +19,9 @@ enum RoomSwitchGroup {
 
   /// Followed rooms showing a replay, by audience (3.x "录播").
   replays,
+
+  /// Rooms explicitly saved to the persistent viewing queue.
+  saved,
 }
 
 /// How the panel shows the rooms (the `roomSwitcherLayout` setting, U.2m c4).
@@ -85,7 +88,13 @@ double roomSwitchCardHeight({
 /// The rooms of every group, the room being watched left out.
 final class RoomSwitchLists {
   /// Creates the lists.
-  const new({required this.onAir, required this.source, required this.history, required this.replays});
+  const new({
+    required this.onAir,
+    required this.source,
+    required this.history,
+    required this.replays,
+    this.saved = const [],
+  });
 
   /// No rooms.
   static const empty = RoomSwitchLists(onAir: [], source: [], history: [], replays: []);
@@ -103,6 +112,9 @@ final class RoomSwitchLists {
   /// Followed replays.
   final List<LiveRoom> replays;
 
+  /// The saved queue, in the user's order.
+  final List<LiveRoom> saved;
+
   /// The groups offered: the source only with a list.
   List<RoomSwitchGroup> get groups => [
     for (final group in RoomSwitchGroup.values)
@@ -115,6 +127,7 @@ final class RoomSwitchLists {
     RoomSwitchGroup.source => source,
     RoomSwitchGroup.history => history,
     RoomSwitchGroup.replays => replays,
+    RoomSwitchGroup.saved => saved,
   };
 
   /// The group the panel opens on (U.2m X1): the one picked before on this
@@ -137,9 +150,13 @@ RoomSwitchLists roomSwitchLists({
   required List<LiveRoom> source,
   required LiveRoom current,
   required List<LiveRoom> Function(List<LiveRoom> rooms) rank,
+  List<LiveRoom> saved = const [],
 }) {
   bool other(LiveRoom room) => !room.hasSameIdentity(current);
   final followed = {for (final room in follows) room.identityKey: room};
+  final snapshots = {
+    for (final room in [...history, ...source, ...follows]) room.identityKey: room,
+  };
   final fromFollows = source.isNotEmpty && source.every((room) => followed.containsKey(room.identityKey));
   return RoomSwitchLists(
     onAir: rank([
@@ -157,6 +174,14 @@ RoomSwitchLists roomSwitchLists({
         if (other(room))
           switch (followed[room.identityKey]) {
             final follow? => follow.copyWith(lastWatchedAt: room.lastWatchedAt ?? follow.lastWatchedAt),
+            null => room,
+          },
+    ],
+    saved: [
+      for (final room in saved)
+        if (other(room))
+          switch (snapshots[room.identityKey]) {
+            final snapshot? => room.mergeFrom(snapshot),
             null => room,
           },
     ],

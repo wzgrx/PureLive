@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 // A04.1 (docs/A-界面设计/A04-尺寸和适配/A04.1-尺寸和字号适配): height classes,
 // a phone's split screen, a foldable's hinge and the text size limit

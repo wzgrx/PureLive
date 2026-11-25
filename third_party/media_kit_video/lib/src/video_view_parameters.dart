@@ -4,10 +4,10 @@
 /// All rights reserved.
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
 import 'dart:async';
-import 'package:flutter/widgets.dart';
 
-import 'package:media_kit_video/src/video/video.dart';
+import 'package:flutter/widgets.dart';
 import 'package:media_kit_video/src/subtitle/subtitle_view.dart';
+import 'package:media_kit_video/src/video/video.dart';
 
 /// {@template video_view_parameters}
 ///

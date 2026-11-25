@@ -47,7 +47,7 @@ MpvPlatform? mpvPlatformOf(TargetPlatform platform) => switch (platform) {
 ///   output off (the fork's `setVideoOutputEnabled`), desktop selects
 ///   `vid=no`; Android does not re-send `vid=auto` after an open.
 /// - Windows reports presented frames (the fork's `frameRevision`).
-final class MpvEngine implements PlayerEngine, PlaybackRate, PlaybackStatsSource, VolumeGainControl {
+final class MpvEngine implements PlayerEngine, PlaybackRate, PlaybackStatsSource, VolumeGainControl, LiveRewindCache {
   new _(
     this.player,
     this.controller,
@@ -320,6 +320,27 @@ final class MpvEngine implements PlayerEngine, PlaybackRate, PlaybackStatsSource
 
   @override
   Future<PlaybackStats> readStats() => readPlaybackStats(_readProperty);
+
+  @override
+  Future<List<LiveRewindRange>> readLiveSeekRanges() async {
+    final native = player.platform;
+    if (_disposed || !_hasSource || !config.liveRewindEnabled || native is! NativePlayer) return const [];
+    final current = _diagnosticOpens;
+    try {
+      final ranges = await native.getCacheSeekRangesAsync();
+      if (_disposed || !_hasSource || current != _diagnosticOpens) return const [];
+      return [
+        for (final range in ranges)
+          if (range.start >= 0 && range.end <= 604800)
+            LiveRewindRange(
+              Duration(milliseconds: (range.start * 1000).ceil()),
+              Duration(milliseconds: (range.end * 1000).floor()),
+            ),
+      ];
+    } on Object {
+      return const [];
+    }
+  }
 
   @override
   Future<void> play() => player.play();

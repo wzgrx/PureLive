@@ -1143,7 +1143,8 @@ abstract final class HuyaApi {
   /// 12 iCostPay).
   ///
   /// Entries without text or time left are dropped. Time left is the
-  /// countdown, else the total; the window ends that long after [now] and
+  /// countdown, or the total only if the countdown field is absent. A
+  /// present zero/negative countdown is expired. The window ends after [now] and
   /// starts the total before. The price is iCost, else iCostPay / 100 (at
   /// least 1). The id is `huya:{lMessageId}`, so an event rebuilt on every
   /// poll stays one message.
@@ -1153,8 +1154,8 @@ abstract final class HuyaApi {
       if (raw is! TarsStruct) continue;
       final content = (raw.string(1) ?? '').trim();
       final total = raw.integer(4) ?? 0;
-      final countdown = raw.integer(5) ?? 0;
-      final remaining = countdown > 0 ? countdown : total;
+      final countdown = raw.integer(5);
+      final remaining = countdown ?? total;
       if (content.isEmpty || remaining <= 0) continue;
       final cost = raw.integer(2) ?? 0;
       final paid = raw.integer(12) ?? 0;

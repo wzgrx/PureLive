@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/custom_icons.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:remixicon/remixicon.dart';
 
 /// The app's icons by what they are for (docs/specs/UI.md §6.4).

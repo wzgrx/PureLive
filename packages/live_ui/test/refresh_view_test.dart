@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 // docs/A-界面设计/A03-动效和手感/A03.1-主列表手感/brief.md: the refreshable lists feel like 3.x's
 // (easy_refresh 3.5.1's `_ERScrollPhysics` and `ClassicHeader`), on the

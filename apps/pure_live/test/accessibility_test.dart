@@ -8,7 +8,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +17,7 @@ import 'package:live_player/live_player.dart';
 import 'package:live_record/live_record.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/app.dart';
 import 'package:pure_live/app/recording.dart';
 import 'package:pure_live/app/services.dart';
@@ -184,6 +184,7 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 Future<void> _open(WidgetTester tester, String path, {Object? arguments}) async {
+  // ignore: the page stays until [_back]
   // ignore: unawaited_futures, the page stays until [_back]
   AppNavigator.toNamed<void>(path, arguments: arguments);
   await _settle(tester);
@@ -260,6 +261,7 @@ void main() {
 
     testWidgets('$mode: the room in portrait, a portrait stream and fullscreen, with its panels', (tester) async {
       final engine = await _pumpApp(tester, mode);
+      // ignore: the room stays open
       // ignore: unawaited_futures, the room stays open
       AppNavigator.toLiveRoomDetail(liveRoom: _room(6));
       await _settle(tester);

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 // The TV look (docs/A-界面设计/A17-电视界面/A17.1-电视设计系统和通用组件): the phone's dark colour roles seeded
 // with the user's theme colour (choice A2), sizes drafted on the 960 x 540

@@ -2,10 +2,10 @@
 // row on the video page, its page with this phone's checks and the
 // vendor's steps, the system pages and their fallbacks, the three away
 // switches, and the one-time hint after background play turns on.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/settings/background_guide_tiles.dart';
 import 'package:pure_live/platform/background_guide.dart';
 import 'package:pure_live/platform/system_permissions.dart';

@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Esc does on a page what Back does (UI_PLAN §5.4, docs/TASKS.md §7 from
 /// U.5a–U.5c): [onEscape] (close a filter first, then leave), by default the

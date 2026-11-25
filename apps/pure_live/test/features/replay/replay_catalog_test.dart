@@ -1,16 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_net/live_net.dart';
+import 'package:live_net/testing.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:live_vod/live_vod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/app/vod.dart';
 import 'package:pure_live/features/replay/replay_catalog_page.dart';
@@ -25,6 +26,79 @@ import '../douyu_vod/vod_support.dart';
 import '../huya_replay/huya_archive_support.dart';
 import '../live_play/live_play_support.dart';
 import 'replay_test_support.dart';
+
+const chzzkChannel = '0123456789abcdef0123456789abcdef';
+const chzzkRecording = '12345678';
+
+ReplayHttp fakeChzzkReplay() {
+  const metadata = {
+    'videoNo': 12345678,
+    'videoTitle': 'CHZZK直播回放',
+    'videoType': 'REPLAY',
+    'channel': {'channelId': chzzkChannel, 'channelName': '测试主播'},
+    'duration': 3600,
+    'adult': false,
+  };
+  ReplaySample reply(Uri url, Object payload) =>
+      ReplaySample(method: 'GET', url: url, status: 200, bytes: utf8.encode(jsonEncode(payload)));
+  return ReplayHttp([
+    reply(
+      Uri.https('api.chzzk.naver.com', '/service/v1/channels/$chzzkChannel/videos', {
+        'size': '20',
+        'page': '0',
+        'videoType': 'REPLAY',
+        'sortType': 'LATEST',
+      }),
+      {
+        'code': 200,
+        'content': {
+          'page': 0,
+          'totalPages': 1,
+          'data': [metadata],
+        },
+      },
+    ),
+    reply(Uri.https('api.chzzk.naver.com', '/service/v3/videos/$chzzkRecording'), {
+      'code': 200,
+      'content': {
+        ...metadata,
+        'exposure': true,
+        'vodStatus': 'ABR_HLS',
+        'videoId': 'EXAMPLE_RECORDING_123',
+        'inKey': 'synthetic',
+      },
+    }),
+    reply(
+      Uri.https('apis.naver.com', '/neonplayer/vodplay/v1/playback/EXAMPLE_RECORDING_123', {
+        'key': 'synthetic',
+        'env': 'real',
+        'lc': 'en_US',
+        'cpl': 'en_US',
+      }),
+      {
+        'type': 'STATIC',
+        'period': [
+          {
+            'adaptationSet': [
+              {
+                'mimeType': 'video/mp4',
+                'representation': [
+                  {
+                    'codecs': 'avc1.64002a,mp4a.40.2',
+                    'height': 144,
+                    'baseURL': [
+                      {'value': 'https://sample.akamaized.net/replay.mp4'},
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ),
+  ]);
+}
 
 const soopRecording = SoopArchiveVideo(
   id: '1234567',
@@ -70,6 +144,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
   double scale = 1,
   bool standalone = false,
   bool tv = false,
+  bool pickersInVideo = false,
   PlaybackSession Function()? playbackFactory,
   FakeBiliReplay? biliSource,
   FakeHuyaArchive? huyaSource,
@@ -83,6 +158,9 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
   addTearDown(() => tester.runAsync(services.close));
   final strings = (await tester.runAsync(loadStrings))!;
   if (tv) await tester.runAsync(() => services.store.settings.set(Settings.uiMode, 'tv'));
+  if (pickersInVideo) {
+    await tester.runAsync(() => services.store.settings.set(Settings.livePlayPickersInVideo, true));
+  }
   final engine = FakeEngine();
   final huya = huyaSource ?? FakeHuyaArchive();
   await tester.pumpWidget(
@@ -94,6 +172,7 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
         douyuVodProvider.overrideWithValue(FakeVodSource(testSigner())),
         bilibiliReplayProvider.overrideWithValue(biliSource ?? FakeBiliReplay()),
         soopArchiveProvider.overrideWithValue(FakeSoopReplay()),
+        chzzkArchiveProvider.overrideWithValue(ChzzkArchiveApi(fakeChzzkReplay())),
         playbackSessionFactoryProvider.overrideWithValue(({config}) => playbackFactory?.call() ?? fakeSession(engine)),
       ],
       child: LiveUiScope(
@@ -105,7 +184,9 @@ Future<(FakeEngine, FakeHuyaArchive)> page(
             child: tv ? TvAppFrame(child: child!) : child!,
           ),
           home: ReplayCatalogPage(
-            room: standalone ? null : LiveRoom(platform: platform, roomId: '998', nick: '测试主播'),
+            room: standalone
+                ? null
+                : LiveRoom(platform: platform, roomId: platform == SiteIds.chzzk ? chzzkChannel : '998', nick: '测试主播'),
           ),
         ),
       ),
@@ -136,6 +217,40 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await settle(tester);
   });
+
+  for (final pickersInVideo in [false, true]) {
+    testWidgets('A07.46 wide replay keeps reachable actions after folding chat (pickers=$pickersInVideo)', (
+      tester,
+    ) async {
+      final (engine, _) = await page(
+        tester,
+        platform: SiteIds.soop,
+        size: const Size(1280, 800),
+        pickersInVideo: pickersInVideo,
+      );
+      final entry = find.byKey(const ValueKey('replay-recording-1234567'));
+      await tester.ensureVisible(entry);
+      await tester.tap(entry);
+      await settle(tester);
+      final rate = find.byKey(const ValueKey('archive-rate')).hitTestable();
+      final catalog = find.byKey(const ValueKey('archive-catalog')).hitTestable();
+      expect(rate, findsOneWidget);
+      expect(catalog, findsOneWidget);
+      final handle = find.byKey(const ValueKey('live-play-chat-handle')).hitTestable();
+      expect(handle, findsOneWidget);
+      await tester.tap(handle);
+      await settle(tester);
+      expect(tester.getSize(find.byKey(const ValueKey('live-play-chat-box'))).width, 0);
+      expect(rate, findsOneWidget);
+      expect(catalog, findsOneWidget);
+      expect(find.byKey(const ValueKey('live-play-quality')).hitTestable(), findsOneWidget);
+      expect(engine.opens, hasLength(1));
+      expect(tester.takeException(), isNull);
+      await captureQaFrame(tester, 'pr220-replay-folded-$pickersInVideo');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await settle(tester);
+    });
+  }
 
   testWidgets('a list failure stops automatic requests and retry preserves the keyword', (tester) async {
     final source = FakeHuyaArchive()..failList = true;
@@ -273,21 +388,24 @@ void main() {
       testWidgets('$platform archive layout $layout is bounded at 150 percent type', (tester) async {
         final (engine, _) = await page(tester, platform: platform, size: layout, scale: 1.5);
         expect(find.byKey(const ValueKey('replay-catalog-page')), findsOneWidget);
-        expect(
-          find.byKey(
-            ValueKey(
-              'replay-recording-${platform == SiteIds.huya
-                  ? firstArchive.id
-                  : platform == SiteIds.douyu
-                  ? secondVideo.id
-                  : platform == SiteIds.soop
-                  ? soopRecording.id
-                  : archive.bvid}',
-            ),
-          ),
-          findsOneWidget,
-        );
+        final id = switch (platform) {
+          SiteIds.huya => firstArchive.id,
+          SiteIds.douyu => secondVideo.id,
+          SiteIds.soop => soopRecording.id,
+          SiteIds.chzzk => chzzkRecording,
+          _ => archive.bvid,
+        };
+        final recording = find.byKey(ValueKey('replay-recording-$id'));
+        expect(recording, findsOneWidget);
         expect(engine.opens, isEmpty, reason: 'browsing an archive does not open a second decoder');
+        if (platform == SiteIds.chzzk) {
+          await tester.ensureVisible(recording);
+          await tester.tap(recording);
+          await settle(tester);
+          expect(engine.opens.single.onDemand, isTrue);
+          expect(engine.opens.single.uri.path, '/replay.mp4');
+          expect(find.byKey(const ValueKey('archive-rate')), findsWidgets);
+        }
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
         await settle(tester);

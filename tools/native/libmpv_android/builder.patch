@@ -12,20 +12,22 @@ index f84a3f2..cda476c 100755
      $BUILDSCRIPT build
      popd
 diff --git a/buildscripts/include/depinfo.sh b/buildscripts/include/depinfo.sh
-index 7f9385a..ab8309c 100755
+index 7f9385a..44ef3bc 100755
 --- a/buildscripts/include/depinfo.sh
 +++ b/buildscripts/include/depinfo.sh
-@@ -13,8 +13,8 @@ v_freetype=2-15-0
+@@ -13,9 +13,9 @@ v_freetype=2-15-0
  v_mbedtls=3.6.7
  v_dav1d=1.5.4
  v_libxml2=2.15.4
 -v_ffmpeg=24e860f6d3c4f2ebae65ed7649e2a8860d512879
 -v_mpv=c3ac7f39514c7f45bc38a18e66887240539ee33c
-+v_ffmpeg=946fcce07b6dcd0331c8cc609192aeff5e1924f8
-+v_mpv=41f6a645068483470267271e1d09966ca3b9f413
- v_libplacebo=1dd022687b9ac1dd996855b51433bf770ae76aab
+-v_libplacebo=1dd022687b9ac1dd996855b51433bf770ae76aab
++v_ffmpeg=74e4393595cf2b5857f0da925c4e0dd74ea306e5
++v_mpv=b0841e8c4d156b8403dc1876c4cbd9011eb583f3
++v_libplacebo=275f7dea27924cdd34ab2e6c20e448b6bc4fab65
  v_lcms2=lcms2.19.1
  v_libogg=1.3.5
+ v_libvorbis=1.3.7
 diff --git a/buildscripts/include/download-deps.sh b/buildscripts/include/download-deps.sh
 index 3d5b41e..ab88038 100755
 --- a/buildscripts/include/download-deps.sh

@@ -7,7 +7,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +16,7 @@ import 'package:live_media/live_media.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/live_play/buttons/room_menu_button.dart';
 import 'package:pure_live/features/live_play/live_play_page.dart';
@@ -228,6 +228,86 @@ int _whole(double height, double card, int columns) {
 }
 
 void main() {
+  testWidgets('the opt-in picture long press opens the room switch panel', (tester) async {
+    final room = await _pump(tester, settings: {Settings.livePlayLongPressSwitchRoom: true});
+    await tester.longPressAt(tester.getCenter(find.byType(RoomPlayer)));
+    await _settle(tester);
+    expect(_key('live-play-switch-panel'), findsOneWidget);
+    expect(room.engine.opens, hasLength(1));
+    await _close(tester, room);
+  });
+
+  testWidgets('room appointment accepts a daily time and keeps the current room untouched', (tester) async {
+    final room = await _pump(tester, platform: TargetPlatform.windows, width: 1280, height: 800);
+    await _openFromMenu(tester);
+    await _tap(tester, 'switch-group-saved');
+    await _tap(tester, 'switch-saved-schedule');
+    await _tap(tester, 'room-schedule-daily');
+    await tester.enterText(_key('room-schedule-value'), '0910');
+    await _tap(tester, 'room-schedule-save');
+    final appointments = (await tester.runAsync(room.services.store.roomSchedules.all))!;
+    expect(appointments.single.room.roomId, '6');
+    expect(appointments.single.dailyMinute, 550);
+    expect(room.engine.opens, hasLength(1));
+    await _close(tester, room);
+  });
+
+  testWidgets('saved rotation is explicit and advances the existing room player', (tester) async {
+    final room = await _pump(tester, platform: TargetPlatform.windows, width: 1280, height: 800);
+    final queue = room.services.store.savedRoomQueue;
+    await tester.runAsync(() async {
+      await queue.add(_room('6'));
+      await queue.add(_room('7'));
+    });
+    await _openFromMenu(tester);
+    await _tap(tester, 'switch-group-saved');
+    await _tap(tester, 'switch-saved-rotation');
+    await tester.enterText(_key('room-rotation-seconds'), '5');
+    await _tap(tester, 'room-rotation-confirm');
+    expect(room.engine.opens, hasLength(1));
+    await tester.pump(const Duration(seconds: 6));
+    await _settle(tester);
+    expect(room.engine.opens, hasLength(2));
+    expect(room.engine.opens.last.uri.path, contains('/7/'));
+    expect(room.sessions, hasLength(1));
+    await _close(tester, room);
+  });
+
+  testWidgets('saved room list adds, reorders and removes rooms without switching the player', (tester) async {
+    final room = await _pump(
+      tester,
+      platform: TargetPlatform.windows,
+      width: 1280,
+      height: 800,
+      settings: {Settings.roomSwitcherLayout: 'list'},
+    );
+    final queue = room.services.store.savedRoomQueue;
+    await tester.runAsync(() async {
+      await queue.add(_room('7'));
+      await queue.add(_room('8'));
+    });
+    Future<List<String>> order() async => (await tester.runAsync(queue.all))!.map((r) => r.roomId).toList();
+    await _openFromMenu(tester);
+    await _tap(tester, 'switch-group-saved');
+    await _tap(tester, 'switch-saved-toggle-current');
+    expect(await order(), ['7', '8', '6']);
+    final other = _key('switch-room-bilibili-8');
+    await tester.ensureVisible(other);
+    await tester.longPress(other);
+    await _settle(tester);
+    await tester.tap(find.text('上移'));
+    await _settle(tester);
+    expect(await order(), ['8', '7', '6']);
+    await tester.longPress(other);
+    await _settle(tester);
+    await tester.tap(find.text('从房间列表移除'));
+    await _settle(tester);
+    expect(await order(), ['7', '6']);
+    expect(room.engine.opens, hasLength(1));
+    expect(tester.takeException(), isNull);
+    await _close(tester, room);
+  });
+
   testWidgets('issue 202: outside tap consumes the gesture and only closes the fullscreen side panel', (tester) async {
     final room = await _pump(tester, width: 1024, height: 768, follows: [_room('5'), _room('7')]);
     await _tap(tester, 'live-play-fullscreen');

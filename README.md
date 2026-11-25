@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>下载 5.6.5</b></a>
-  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.6.5.md">更新说明</a>
+  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>下载 5.7.0</b></a>
+  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.7.0.md">更新说明</a>
   &nbsp;·&nbsp; <a href="#功能详解">功能</a>
   &nbsp;·&nbsp; <a href="#支持的平台">支持的平台</a>
   &nbsp;·&nbsp; <a href="#从源码构建">从源码构建</a>
@@ -103,6 +103,8 @@
 5.6.4增加竖屏上滚弹幕选项、回放自动续页/关键词/日期、SOOP公开回放与多CDN、CC原生游客弹幕，修复小窗任务退出及小红书首连等待；真实礼物目录和原TV等边界继续跟进。
 
 5.6.5 批量刷新已知 B 站关注，Windows 更新保留同目标桌面快捷方式。宽屏底栏可关闭，多屏联动记住所选显示器，全屏醒目留言入口随控制栏显示。
+
+5.7.0 升级 Flutter/Dart、构建工具链和播放/录制内核，适配新版界面组件与窗口管理，并修复 Android 静态 JNI 初始化和 Windows 冷启动内容刷新。整合房间列表与轮播、可选的画面长按切房、TV 双画面、前台预约、CHZZK 公开回放和直播缓存回看。新增选项保持默认关闭；缓存回看仅限当前连续内存范围，预约需应用运行并处于前台。原设备和账号未确认的问题继续跟踪。
 
 > 从 5.0.0 起项目搬到这个独立仓库 [wzgrx/PureLive](https://github.com/wzgrx/PureLive)。原来的 [wzgrx/pure_live](https://github.com/wzgrx/pure_live)（[liuchuancong/pure_live](https://github.com/liuchuancong/pure_live) 的分支）保留不删，装着 3.x、4.x 的设备会照常收到更新提示并下载到这里的新版本。
 
@@ -325,7 +327,7 @@
 
 性能上的做法：
 
-- **只用 mpv 播放**（自己维护的 media_kit 分支，libmpv 0.41.0、FFmpeg 9.0.2）；切换清晰度和线路不重建播放器。
+- **只用 mpv 播放**（自己维护的 media_kit 分支，libmpv 0.42.0；Android、Linux 和 Apple 自建播放包使用 FFmpeg 9.1，Windows 官方播放包使用其随附的 FFmpeg Git 快照；录制统一为 FFmpeg 9.1）；切换清晰度和线路不重建播放器。
 - **刷新率**：保留 3.x 的省电、均衡、性能三档；播放时按视频帧率选择屏幕刷新率，只在能无缝切换时切换。
 - **弹幕**：排版缓存成图，帧率取屏幕刷新率的整数分之一，同屏数量有上限；只描边、不加模糊阴影。
 - **界面**：状态变化只重建用到它的部分，列表懒加载，图片按显示尺寸解码、缓存有上限，图片下载放在单独的线程；视频上方不用模糊效果。
@@ -402,7 +404,7 @@
 | **Android 手机和平板** | Android 8.0 及以上 | `…-android-arm64-v8a-release.apk`（绝大多数设备，不确定就选它）；老的 32 位设备选 `armeabi-v7a`，模拟器选 `x86_64` |
 | **Android 电视、电视盒子** | Android 8.0 及以上 | 和手机是同一个 APK：在电视上自动进入遥控器操作的电视界面（也可以在 设置 → 外观 → 界面模式 里切换） |
 | **Windows** | Windows 10、11（64 位） | `…-windows-x64-setup.exe`（安装版）或 `…-windows-x64-portable.zip`（便携版，解压即用，数据保存在程序旁边的 UserData） |
-| **Linux** | x86_64，GTK 3 桌面 | `…-linux-x64.tar.gz`：解压后运行 `pure_live`，压缩包里的 README.txt 写了怎么加到应用菜单 |
+| **Linux** | x86_64，GTK 3、OpenGL；glibc ≥ 2.38、GLIBCXX ≥ 3.4.32 | `…-linux-x64.tar.gz`：解压后运行 `pure_live`，压缩包里的 README.txt 写了怎么加到应用菜单 |
 | **macOS** | macOS 12 及以上，Intel 和 Apple 芯片 | `…-macos-universal.dmg`：打开后把“纯粹直播”拖进“应用程序”。没有苹果签名，第一次打开如果提示无法验证开发者，到 系统设置 → 隐私与安全性 点“仍要打开” |
 | **iPhone、iPad** | iOS、iPadOS 15 及以上 | `…-ios-unsigned.ipa` 用 AltStore 或 SideStore 安装（自己的 Apple ID 签名，免费账号每 7 天续签）；装了 TrollStore 的设备用 `…-ios-trollstore.ipa`（iOS 14 及更早的设备 TrollStore 也能装上，但打不开：开发框架 Flutter 最低要 iOS 15） |
 
@@ -417,7 +419,13 @@
 
 ## 从源码构建
 
-需要 Linux 或 Windows 上的 Flutter 环境。工具链的版本统一写在 [`toolchain.env`](toolchain.env)（Flutter 3.47.8、Dart 3.13.7、Gradle 9.8.2、AGP 9.4.1、Kotlin 2.4.21、JDK 27、Android SDK 37.2、build-tools 37.0.0、platform-tools 37.0.1、cmdline-tools 23.0、NDK 30.0.16248370、CMake 4.1.2），升级时只改这一处（Android 构建直接读取其中的 compileSdk、build-tools、NDK、CMake；Gradle、AGP 另见 Z01）。
+### 构建工具链（2026-11-25）
+
+本轮升级固定Flutter 3.50.1 / Dart 3.14、Gradle 9.9.2 / AGP 9.5.2和JDK 27.0.1.1+4；Linux使用Clang 23.1.6，Windows使用Visual Studio 18.12.1，Apple固定Xcode 27.2。准确版本以`toolchain.env`为准。SDK语义补丁须在独立副本显式准备，不能直接使用未准备的共享SDK。
+
+工作区直接依赖已更新到当前官方版本；六项间接依赖受 Flutter SDK 或上游范围约束，保留最新可解算版本，未强行覆盖跨主版本约束。具体锁定结果见 `pubspec.lock`。
+
+需要 Linux 或 Windows 上的 Flutter 环境。工具链的版本统一写在 [`toolchain.env`](toolchain.env)（Flutter 3.50.1、Dart 3.14.0、Gradle 9.9.2、AGP 9.5.2、Kotlin 2.4.21、JDK 27、Android SDK 37.2、build-tools 37.0.0、platform-tools 37.0.3、cmdline-tools 23.0、NDK 30.0.16248370、CMake 4.1.2），升级时只改这一处（Android 构建直接读取其中的 compileSdk、build-tools、NDK、CMake；Gradle、AGP 另见 Z01）。
 
 ```bash
 git clone https://github.com/wzgrx/PureLive.git
@@ -425,10 +433,11 @@ cd PureLive
 
 # 1. 环境：按 toolchain.env 装好工具链，写一个环境脚本，每次构建前 source 一下
 #    （下面是示例路径，换成你自己的）
-export FLUTTER_ROOT="$HOME/tools/flutter-sdk/3.47.8"
+export FLUTTER_ROOT="$HOME/tools/flutter-sdk/3.50.1-purelive"
 export JAVA_HOME="$HOME/tools/jdk-27"
 export ANDROID_HOME="$HOME/Android/Sdk"
 export PATH="$FLUTTER_ROOT/bin:$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+python3 tools/flutter_sdk/prepare.py --apply --bootstrap-tests --sdk "$FLUTTER_ROOT"
 
 # 2. 录制用的 FFmpeg 原生包：下载一次后缓存在 ~/.cache/pure_live/ffmpeg_kit，之后离线也能构建
 bash tools/ffmpeg_kit/fetch.sh android
@@ -442,7 +451,7 @@ flutter build apk --release --split-per-abi
 ```
 
 - 产物在 `apps/pure_live/build/app/outputs/flutter-apk/`，每个架构一个 APK。播放用的 libmpv 原生包由构建自动下载。
-- **Windows**：在 Windows 上装好 Flutter、Visual Studio（C++ 桌面开发）和 NuGet，运行 `pwsh tools/release/package_windows.ps1`，得到便携 ZIP 和 Inno Setup 6 安装包。
+- **Windows**：在 Windows 上装好 Flutter、Visual Studio（C++ 桌面开发）和 NuGet 8.0.0，运行 `pwsh tools/release/package_windows.ps1`，得到便携 ZIP 和 Inno Setup 7.1.1 安装包。
 - **Linux**：装好 `clang cmake ninja-build pkg-config libgtk-3-dev`，运行 `bash tools/release/package_linux.sh`，得到 `linux-x64.tar.gz`。
 - 签名密钥不在仓库里：没有 `apps/pure_live/android/key.properties` 时，release 包用调试密钥签名。
 - debug 和 profile 包的包名带 `.v4dev`、应用名是“纯粹直播 v4dev”，和正式版互不影响，适合开发调试。
@@ -476,7 +485,7 @@ docs/                   开发计划、模块记录、界面设计和功能清�
 
 按 [D-092 / 维护方针](MAINTENANCE.md) 恢复功能需求与开发；下表列出已交付范围，后续需求按可行性和验证结果推进。
 
-| 客户端 | 5.6.5（现在） | 以后 |
+| 客户端 | 5.7.0（现在） | 以后 |
 |---|---|---|
 | **Android 手机和平板** | 正式版：液态玻璃底栏、阻尼和弹簧动效，八个平台的官方登录，15 种界面语言 | 持续修平台变化 |
 | **Android 电视** | 正式版：直播、视频（哔哩哔哩点播）、音乐三个模式，壁纸，电视样式的设置目录，扫码用手机输入 | 在更多电视真机上验证和调整 |

@@ -6,7 +6,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -17,10 +16,12 @@ import 'package:live_danmaku/live_danmaku.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/live_play/buttons/room_menu_button.dart';
 import 'package:pure_live/features/live_play/buttons/stream_menu.dart';
+import 'package:pure_live/features/live_play/layout/room_info_bar.dart';
 import 'package:pure_live/features/live_play/live_play_page.dart';
 import 'package:pure_live/features/live_play/logic/room_layout.dart';
 import 'package:pure_live/features/live_play/logic/room_orientation.dart';
@@ -493,6 +494,47 @@ void main() {
     });
   });
 
+  testWidgets('A07.46: the setting puts quality and line on a phone picture and takes them back', (tester) async {
+    final room = await _pump(tester, settings: {Settings.livePlayPickersInVideo: true});
+    final info = find.byType(RoomInfoBar);
+    final bar = _key('live-play-bottom-bar');
+    expect(find.descendant(of: info, matching: _key('live-play-audience-row')), findsOneWidget);
+    expect(find.descendant(of: info, matching: _key('live-play-quality')), findsNothing);
+    expect(find.descendant(of: info, matching: _key('live-play-line')), findsNothing);
+    expect(find.descendant(of: bar, matching: _key('live-play-quality')), findsOneWidget);
+    expect(find.descendant(of: bar, matching: _key('live-play-line')), findsOneWidget);
+    expect(_key('live-play-quality'), findsOneWidget, reason: 'one host only');
+    expect(_key('live-play-line'), findsOneWidget);
+    // Off again: they return above the chat without reopening the room.
+    await tester.runAsync(() => room.services.store.settings.set(Settings.livePlayPickersInVideo, false));
+    await _settle(tester);
+    expect(find.descendant(of: info, matching: _key('live-play-quality')), findsOneWidget);
+    expect(find.descendant(of: bar, matching: _key('live-play-quality')), findsNothing);
+    await _close(tester, room);
+  });
+
+  testWidgets('A07.46 narrow player can scroll to and open the stream selector', (tester) async {
+    final room = await _pump(tester, width: 320, height: 700, settings: {Settings.livePlayPickersInVideo: true});
+    final line = _key('live-play-line');
+    expect(line, findsOneWidget);
+    await tester.ensureVisible(line);
+    await tester.pump();
+    expect(line.hitTestable(), findsOneWidget);
+    await tester.tap(line);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(
+      find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> && key.value.startsWith('live-play-line-item');
+      }).hitTestable(),
+      findsWidgets,
+    );
+    expect(tester.takeException(), isNull);
+    await captureQaFrame(tester, 'pr220-phone-narrow-line');
+    await _close(tester, room);
+  });
+
   group('U.2d wide room', () {
     testWidgets('issue180: iPad landscape keeps title with chat and source selectors below the player', (tester) async {
       final room = await _pump(tester, width: 1180, height: 820, platform: TargetPlatform.iOS);
@@ -602,6 +644,47 @@ void main() {
         findsOneWidget,
         reason: 'the page reads the setting, so a rebuild is enough',
       );
+      await _close(tester, room);
+    });
+    testWidgets('A07.46: with the setting on the wide footer keeps only the figures', (tester) async {
+      final room = await _pump(
+        tester,
+        width: 1280,
+        height: 800,
+        platform: TargetPlatform.windows,
+        settings: {Settings.livePlayPickersInVideo: true},
+      );
+      final footer = _key('live-play-wide-footer');
+      final chat = _key('live-play-chat-box');
+      final bar = _key('live-play-bottom-bar');
+      expect(find.descendant(of: footer, matching: _key('live-play-audience-row')), findsOneWidget);
+      expect(find.descendant(of: footer, matching: _key('live-play-quality')), findsNothing);
+      expect(find.descendant(of: chat, matching: _key('live-play-quality')), findsNothing);
+      expect(find.descendant(of: bar, matching: _key('live-play-quality')), findsOneWidget);
+      expect(find.descendant(of: bar, matching: _key('live-play-line')), findsOneWidget);
+      expect(_key('live-play-quality'), findsOneWidget, reason: 'one host only');
+      await captureQaFrame(tester, 'pr220-wide-on');
+      // Off again: the footer hosts them, still without reopening the room.
+      await tester.runAsync(() => room.services.store.settings.set(Settings.livePlayPickersInVideo, false));
+      await _settle(tester);
+      expect(find.descendant(of: footer, matching: _key('live-play-quality')), findsOneWidget);
+      expect(find.descendant(of: bar, matching: _key('live-play-quality')), findsNothing);
+      await captureQaFrame(tester, 'pr220-wide-off');
+      await _close(tester, room);
+    });
+    testWidgets('A07.46: with the footer off the setting still keeps them on the picture', (tester) async {
+      final room = await _pump(
+        tester,
+        width: 1280,
+        height: 800,
+        platform: TargetPlatform.windows,
+        settings: {Settings.livePlayPickersInVideo: true, Settings.livePlayWideFooter: false},
+      );
+      expect(_key('live-play-wide-footer'), findsNothing);
+      expect(find.descendant(of: _key('live-play-chat-box'), matching: _key('live-play-quality')), findsNothing);
+      expect(find.descendant(of: _key('live-play-chat-box'), matching: _key('live-play-line')), findsNothing);
+      expect(find.descendant(of: _key('live-play-bottom-bar'), matching: _key('live-play-quality')), findsOneWidget);
+      expect(find.descendant(of: _key('live-play-bottom-bar'), matching: _key('live-play-line')), findsOneWidget);
       await _close(tester, room);
     });
     testWidgets('840 and wider: the chat column (34 %, 300-400) with the strip; a 16:9 frame; Windows bar', (

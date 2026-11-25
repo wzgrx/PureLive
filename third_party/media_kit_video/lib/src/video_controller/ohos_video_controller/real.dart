@@ -3,16 +3,15 @@
 /// Copyright © 2021 & onwards, Hitesh Kumar Saini <saini123hitesh@gmail.com>.
 /// All rights reserved.
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
-import 'dart:io';
 import 'dart:async';
 import 'dart:collection';
-import 'package:flutter/services.dart';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
-import 'package:synchronized/synchronized.dart';
-
+import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
-
 import 'package:media_kit_video/src/video_controller/platform_video_controller.dart';
+import 'package:synchronized/synchronized.dart';
 
 /// {@template ohos_video_controller}
 ///
@@ -48,10 +47,7 @@ class OhosVideoController extends PlatformVideoController {
   StreamSubscription<VideoParams>? videoParamsSubscription;
 
   /// {@macro ohos_video_controller}
-  OhosVideoController._(
-    super.player,
-    super.configuration,
-  ) {
+  OhosVideoController._(super.player, super.configuration) {
     videoParamsSubscription = player.stream.videoParams.listen(
       (event) => lock.synchronized(() async {
         final int width;
@@ -66,7 +62,8 @@ class OhosVideoController extends PlatformVideoController {
         }
 
         final isZero = width == 0 || height == 0;
-        final isSame = width == rect.value?.width.toInt() &&
+        final isSame =
+            width == rect.value?.width.toInt() &&
             height == rect.value?.height.toInt();
         if (isZero || isSame) {
           return;
@@ -74,14 +71,11 @@ class OhosVideoController extends PlatformVideoController {
 
         final handle = await player.handle;
 
-        await _channel.invokeMethod(
-          'VideoOutputManager.SetSurfaceSize',
-          {
-            'handle': handle.toString(),
-            'width': width.toString(),
-            'height': height.toString(),
-          },
-        );
+        await _channel.invokeMethod('VideoOutputManager.SetSurfaceSize', {
+          'handle': handle.toString(),
+          'width': width.toString(),
+          'height': height.toString(),
+        });
         await setProperties({
           'ohos-surface-size': [width, height].join('x'),
         });
@@ -133,10 +127,7 @@ class OhosVideoController extends PlatformVideoController {
     }
 
     // Creation:
-    final controller = OhosVideoController._(
-      player,
-      configuration,
-    );
+    final controller = OhosVideoController._(player, configuration);
 
     // Register [_dispose] for execution upon [Player.dispose].
     player.platform?.release.add(controller._dispose);
@@ -146,9 +137,7 @@ class OhosVideoController extends PlatformVideoController {
 
     final Map<dynamic, dynamic>? data = await _channel.invokeMethod(
       'VideoOutputManager.Create',
-      {
-        'handle': handle.toString(),
-      },
+      {'handle': handle.toString()},
     );
 
     if (data == null) {
@@ -172,18 +161,16 @@ class OhosVideoController extends PlatformVideoController {
       // MPV's HarmonyOS video output requires a valid surface ID before the
       // GPU video output is initialized.
       await controller.setProperty('vo', 'null');
-      await controller.setProperties(
-        {
-          'ohos-surface-size': '${rect.width.toInt()}x${rect.height.toInt()}',
-          'wid': wid.toString(),
-          'hwdec': configuration.hwdec!,
-          'vid': 'auto',
-          'force-window': 'yes',
-          'sub-use-margins': 'no',
-          'sub-scale-with-window': 'no',
-          'osd-font': 'HarmonyOS Sans SC',
-        },
-      );
+      await controller.setProperties({
+        'ohos-surface-size': '${rect.width.toInt()}x${rect.height.toInt()}',
+        'wid': wid.toString(),
+        'hwdec': configuration.hwdec!,
+        'vid': 'auto',
+        'force-window': 'yes',
+        'sub-use-margins': 'no',
+        'sub-scale-with-window': 'no',
+        'osd-font': 'HarmonyOS Sans SC',
+      });
       await controller.setProperty('vo', configuration.vo!);
     });
 
@@ -198,11 +185,7 @@ class OhosVideoController extends PlatformVideoController {
   /// * “Premature optimization is the root of all evil”
   /// * “With great power comes great responsibility”
   @override
-  Future<void> setSize({
-    int? width,
-    int? height,
-    bool force = false,
-  }) {
+  Future<void> setSize({int? width, int? height, bool force = false}) {
     throw UnsupportedError(
       '[OhosVideoController.setSize] is not available on Ohos',
     );
@@ -213,12 +196,9 @@ class OhosVideoController extends PlatformVideoController {
     await videoParamsSubscription?.cancel();
     final handle = await player.handle;
     _controllers.remove(handle);
-    await _channel.invokeMethod(
-      'VideoOutputManager.Dispose',
-      {
-        'handle': handle.toString(),
-      },
-    );
+    await _channel.invokeMethod('VideoOutputManager.Dispose', {
+      'handle': handle.toString(),
+    });
     wid.dispose();
     super.dispose();
   }

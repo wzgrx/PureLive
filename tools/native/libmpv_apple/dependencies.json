@@ -1,0 +1,30 @@
+{
+  "source": "https://github.com/mpvkit/libass-build/releases/tag/0.17.5",
+  "assets": [
+    {
+      "name": "libass-all.zip",
+      "url": "https://github.com/mpvkit/libass-build/releases/download/0.17.5/libass-all.zip",
+      "sha256": "d5e4b6046d0a4198fb97083816348b2229071749de8c429747a9558c325a1d3a"
+    },
+    {
+      "name": "libfreetype-all.zip",
+      "url": "https://github.com/mpvkit/libass-build/releases/download/0.17.5/libfreetype-all.zip",
+      "sha256": "d5fb41dd3d66c6e433b389a398571b51b8d65f3f9e81f10ee61d5434a647749e"
+    },
+    {
+      "name": "libfribidi-all.zip",
+      "url": "https://github.com/mpvkit/libass-build/releases/download/0.17.5/libfribidi-all.zip",
+      "sha256": "7ae8cf8c8b16a8b4ebc004f3368044d9baf8454398d18d9e8bc37964b04a2fe6"
+    },
+    {
+      "name": "libharfbuzz-all.zip",
+      "url": "https://github.com/mpvkit/libass-build/releases/download/0.17.5/libharfbuzz-all.zip",
+      "sha256": "ff67179fb84a9a0f34b2ba276c4028823fecd90315cf18496be400cdfc768a3e"
+    },
+    {
+      "name": "libunibreak-all.zip",
+      "url": "https://github.com/mpvkit/libass-build/releases/download/0.17.5/libunibreak-all.zip",
+      "sha256": "a7a9c0afa36e2301eec583e5575c30c1609357045d718565d06faf93abc56617"
+    }
+  ]
+}

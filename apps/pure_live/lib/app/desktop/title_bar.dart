@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
+import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_observer.dart';
 import 'package:pure_live/routes/route_path.dart';
 
@@ -14,8 +14,8 @@ import 'package:pure_live/routes/route_path.dart';
 /// c11); null on any other page or when the room has no name yet.
 String? roomNameOf(RouteSettings? page) {
   if (page?.name != RoutePath.kLivePlay) return null;
-  final room = page?.arguments;
-  if (room is! LiveRoom) return null;
+  final room = LiveRoomArgs.roomOf(page?.arguments);
+  if (room == null) return null;
   final nick = room.nick.trim();
   return nick.isEmpty ? null : nick;
 }

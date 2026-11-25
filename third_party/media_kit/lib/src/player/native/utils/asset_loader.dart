@@ -4,10 +4,10 @@
 /// All rights reserved.
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
 import 'dart:io';
-import 'package:path/path.dart' as path;
-import 'package:safe_local_storage/safe_local_storage.dart';
 
 import 'package:media_kit/src/player/native/utils/android_asset_loader.dart';
+import 'package:path/path.dart' as path;
+import 'package:safe_local_storage/safe_local_storage.dart';
 
 /// {@template asset_loader}
 ///
@@ -63,12 +63,7 @@ class AssetLoader {
       );
     } else if (Platform.isAndroid) {
       asset = path.normalize(
-        AndroidAssetLoader.loadSync(
-          path.join(
-            'flutter_assets',
-            key,
-          ),
-        ),
+        AndroidAssetLoader.loadSync(path.join('flutter_assets', key)),
       );
     } else if (Platform.operatingSystem == 'ohos') {
       asset = path.normalize(

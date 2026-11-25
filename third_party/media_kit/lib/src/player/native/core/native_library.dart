@@ -4,8 +4,8 @@
 // All rights reserved.
 // Use of this source code is governed by MIT license that can be found in the LICENSE file.
 
-import 'dart:io';
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:media_kit/ffi/ffi.dart';
 
@@ -20,6 +20,7 @@ abstract final class NativeLibrary {
   }
 
   static void ensureInitialized({String? libmpv}) {
+    _prepareLibmpv();
     if (libmpv != null) {
       DynamicLibrary.open(libmpv);
       _resolved = libmpv;
@@ -46,6 +47,13 @@ abstract final class NativeLibrary {
   symbol: 'mpv_client_api_version',
 )
 external int _clientApiVersion();
+
+@Native<Void Function()>(
+  assetId:
+      'package:media_kit/src/player/native/core/native_event_loop_bindings.dart',
+  symbol: 'media_kit_prepare_libmpv',
+)
+external void _prepareLibmpv();
 
 @Native<Int32 Function(Pointer<Void>, Pointer<Char>, Int32)>(
   assetId:

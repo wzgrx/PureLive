@@ -1,17 +1,18 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/live_play/logic/room_controller.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/rooms/platform_texts.dart';
 import 'package:pure_live/shared/rooms/playback_lines.dart';
 
 /// The quality and line buttons, "原画 ⌄" "线路1 ⌄" (3.x `ResolutionSelector`
-/// and `LineSelector`), in the room strip and in the fullscreen bar alike
-/// (U.2f: every client has the same two buttons and the same small menu).
-/// [onVideo] draws them white on the picture; there the menus open above the
-/// buttons when they fit ([preferAbove]).
+/// and `LineSelector`), above the chat or in the player's control bar (the
+/// fullscreen always; every inline layout while Settings.livePlayPickersInVideo
+/// is on, A07.46). U.2f: every client has the same two buttons and the same
+/// small menu. [onVideo] draws them white on the picture; there the menus
+/// open above the buttons when they fit ([preferAbove]).
 class StreamPickers extends StatelessWidget {
   /// Creates the pickers.
   const new({

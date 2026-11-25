@@ -2,22 +2,22 @@
   "schema": 1,
   "bundles": {
     "android_arm64": {
-      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-android-0.41.0-ff9.0.2-b2/libmpv-android-0.41.0-ffmpeg-9.0.2-arm64-v8a.jar",
-      "sha256": "49b3cf57eeaec839aa2480d9608fcf0795431b7c92f04bb68cd575c249751b4c",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-android-0.42.0-ffmpeg-9.1-arm64-v8a.jar",
+      "sha256": "16c3a8acb91a6d0059a523973540cf6a35828a9ee91e934d3cc4b0205cfe138b",
       "format": "zip",
       "root": "lib/arm64-v8a",
       "library": "libmpv.so"
     },
     "android_arm": {
-      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-android-0.41.0-ff9.0.2-b2/libmpv-android-0.41.0-ffmpeg-9.0.2-armeabi-v7a.jar",
-      "sha256": "c23f5d6f52011b1e6418587f5029358e97c58cc04f0109197a826d8e77585389",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-android-0.42.0-ffmpeg-9.1-armeabi-v7a.jar",
+      "sha256": "3448ba02d1258da420000f698768025548f7f2560803c0d6e5c1604268d2933c",
       "format": "zip",
       "root": "lib/armeabi-v7a",
       "library": "libmpv.so"
     },
     "android_x64": {
-      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-android-0.41.0-ff9.0.2-b2/libmpv-android-0.41.0-ffmpeg-9.0.2-x86_64.jar",
-      "sha256": "802cc5ee5a3f4b1896f38329c19d09d5b9d73cc4bd7f10c49976c28baff22de1",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-android-0.42.0-ffmpeg-9.1-x86_64.jar",
+      "sha256": "e5f04712260c5a34f27c360e347aed0298c61f1658760a3e8dad7fc6e8247ba5",
       "format": "zip",
       "root": "lib/x86_64",
       "library": "libmpv.so"
@@ -30,20 +30,20 @@
       "library": "libmpv.so"
     },
     "windows_arm64": {
-      "url": "https://github.com/Predidit/libmpv-win32-video-cmake/releases/download/202609151348/mpv-dev-aarch64-20260915-git-0b7ed67.zip",
-      "sha256": "2adb3eb11a7985699203ee94b6182088e0e0bc8be492cd4adf184411dbf6a31d",
+      "url": "https://github.com/mpv-player/mpv/releases/download/v0.42.0/libmpv-v0.42.0-aarch64-w64-mingw32-lgpl.zip",
+      "sha256": "e5092a8ec0878127fcac2c33d15c566c569bd9dcf13cee4829ae91a2770abbcb",
       "format": "zip",
       "library": "libmpv-2.dll"
     },
     "windows_x64": {
-      "url": "https://github.com/Predidit/libmpv-win32-video-cmake/releases/download/202609151348/mpv-dev-x86_64-20260915-git-0b7ed67.7z",
-      "sha256": "8adceab30b6bcc5503fa9d3823b68f4acd15ee1c41d6dc2492826f373531c10a",
-      "format": "7z",
+      "url": "https://github.com/mpv-player/mpv/releases/download/v0.42.0/libmpv-v0.42.0-x86_64-w64-mingw32-lgpl.zip",
+      "sha256": "8e5f77430efc53ef175804ba6618527e3af0448a0dcabf04d3cc72659d1a6fce",
+      "format": "zip",
       "library": "libmpv-2.dll"
     },
     "linux_x64": {
-      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-linux-0.41.0-ff9.0.2-b1/libmpv_x86_64.zip",
-      "sha256": "e21b80a36945a088f509294030bc99b2b1ce1c036df1da10839077e3d21ee63c",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv_x86_64.zip",
+      "sha256": "0ec1d8028215391c62134ddef4d6939f05e3e4b062cc2d7f6a432aeb0faf9ea6",
       "format": "zip",
       "library": "libmpv.so.2"
     },
@@ -54,29 +54,29 @@
       "library": "libmpv.so.2"
     },
     "ios_arm64": {
-      "url": "https://github.com/Predidit/libmpv-darwin-build/releases/download/0.6.8/libmpv-xcframeworks_0.6.8_ios-universal-video-default.tar.gz",
-      "sha256": "d428641cc6c100de8234eae04e229966e46949eb73fcabd526a008a02e9bf968",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-ios-0.42.0-ffmpeg-9.1.tar.gz",
+      "sha256": "e1d508e0f28f69e3f14b96657e6f4723a3a656c2051bda3f9abbbfb07434c033",
       "format": "tar.gz",
       "library": "Mpv",
       "xcframework": true
     },
     "ios_x64": {
-      "url": "https://github.com/Predidit/libmpv-darwin-build/releases/download/0.6.8/libmpv-xcframeworks_0.6.8_ios-universal-video-default.tar.gz",
-      "sha256": "d428641cc6c100de8234eae04e229966e46949eb73fcabd526a008a02e9bf968",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-ios-0.42.0-ffmpeg-9.1.tar.gz",
+      "sha256": "e1d508e0f28f69e3f14b96657e6f4723a3a656c2051bda3f9abbbfb07434c033",
       "format": "tar.gz",
       "library": "Mpv",
       "xcframework": true
     },
     "macos_arm64": {
-      "url": "https://github.com/Predidit/libmpv-darwin-build/releases/download/0.6.8/libmpv-xcframeworks_0.6.8_macos-universal-video-default.tar.gz",
-      "sha256": "c396976a267eaaa64bc603f3cc1a2ee02d27c7d5d57935d2458f364afdf0f3cb",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-macos-0.42.0-ffmpeg-9.1.tar.gz",
+      "sha256": "a318624ae70ade7527997c913ade98b6b031c5978c21ad1bec2312c23f111b7b",
       "format": "tar.gz",
       "library": "Mpv",
       "xcframework": true
     },
     "macos_x64": {
-      "url": "https://github.com/Predidit/libmpv-darwin-build/releases/download/0.6.8/libmpv-xcframeworks_0.6.8_macos-universal-video-default.tar.gz",
-      "sha256": "c396976a267eaaa64bc603f3cc1a2ee02d27c7d5d57935d2458f364afdf0f3cb",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-macos-0.42.0-ffmpeg-9.1.tar.gz",
+      "sha256": "a318624ae70ade7527997c913ade98b6b031c5978c21ad1bec2312c23f111b7b",
       "format": "tar.gz",
       "library": "Mpv",
       "xcframework": true

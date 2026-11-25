@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Accessible level-band fallback when Huya BadgeInfo has a name/level but
 /// carries no native RGB. This is an app palette, not a custom badge skin.

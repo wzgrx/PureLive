@@ -38,8 +38,8 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The vehicles a big gift may have.
 enum LocalGiftVehicle {

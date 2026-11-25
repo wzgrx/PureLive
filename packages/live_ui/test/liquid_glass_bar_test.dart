@@ -2,9 +2,9 @@
 // so this is the frosted fallback; the choices and the drag are the same.
 import 'dart:ui' show Tristate;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   Future<List<int>> pump(

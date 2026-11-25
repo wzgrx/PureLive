@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/metrics.dart';
 import 'package:live_ui/src/widgets/anchored_menu.dart';
+import 'package:material_ui/material_ui.dart';
 
 // Moved from the live room (docs/A-界面设计/A07-直播间界面/A07.6-直播间弹窗) so the multi-view page
 // (docs/A-界面设计/A13-网络电视和多画面界面/A13.2-多画面) shows the same quality and line menus.

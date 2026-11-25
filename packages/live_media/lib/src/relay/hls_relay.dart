@@ -17,7 +17,7 @@ typedef SegmentRestore = Uint8List Function(Uint8List segment);
 @immutable
 final class HlsRelayRecipe {
   /// Creates a recipe; every part is optional.
-  const new({this.cookies, this.restore, this.queryPolicy, this.master});
+  const new({this.cookies, this.restore, this.queryPolicy, this.master, this.vodPlaylist});
 
   /// The `Cookie` header for a request to the URL, read at every request so
   /// a renewed grant applies at once (niconico's per-path cookies); null
@@ -35,6 +35,9 @@ final class HlsRelayRecipe {
   /// Rewrites the line's own master before it is served (niconico's exact
   /// variant, `HlsMasterSelection.rewrite`).
   final String Function(Uri source, String text)? master;
+
+  /// A validated finite playlist supplied by an on-demand adapter.
+  final String? vodPlaylist;
 }
 
 /// One upstream answer of an HLS line.
@@ -367,7 +370,10 @@ final class HlsRoute {
     if (entry.kind == _Kind.segment && await _serveHeld(response, entry)) return;
     HlsUpstreamResponse answer;
     try {
-      answer = await upstream.get(url, _headersFor(url));
+      final playlist = identical(entry, _index) ? recipe.vodPlaylist : null;
+      answer = playlist == null
+          ? await upstream.get(url, _headersFor(url))
+          : HlsUpstreamResponse(status: HttpStatus.ok, url: url, body: Stream.value(utf8.encode(playlist)));
     } on Object {
       await _status(response, HttpStatus.badGateway);
       return;

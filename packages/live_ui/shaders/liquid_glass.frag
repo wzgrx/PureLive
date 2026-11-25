@@ -78,56 +78,57 @@ void main() {
   float dd = roundRect(p, dropCentre, dropHalf, dropRadius);
   float drop = (1.0 - smoothstep(-0.75, 0.75, dd)) * uShape.z;
   float cover = max(inside, drop);
-  if (cover <= 0.0) {
+  // Keep the sampler path in one exit block: Flutter's Windows shader
+  // translator cannot reliably lower early returns next to texture samples.
+  if (cover > 0.0) {
+    float band = uOptics.x;
+    float depth = clamp(-d / band, 0.0, 1.0);
+    vec2 normal = roundRectNormal(p, paneCentre, paneHalf, paneRadius);
+    // Steep at the rim, flat inside: a thick lens's round edge.
+    float rimward = 1.0 - depth;
+    float bend = 1.0 - sqrt(max(1.0 - rimward * rimward, 0.0));
+    vec3 colour = refracted(p, -normal * bend * uOptics.y, uOptics.w);
+
+    vec2 dropNormal = roundRectNormal(p, dropCentre, dropHalf, dropRadius);
+    float dropDepth = clamp(-dd / (band * 0.8), 0.0, 1.0);
+    if (drop > 0.0) {
+      float dropRimward = 1.0 - dropDepth;
+      float dropBend = 1.0 - sqrt(max(1.0 - dropRimward * dropRimward, 0.0));
+      vec2 magnified = dropCentre + (p - dropCentre) / uShape.w;
+      // A stronger colour split at the drop's rim: the rainbow edge of a
+      // held lens.
+      vec3 seen = refracted(magnified, -dropNormal * dropBend * uOptics.y * 1.4, uOptics.w * 2.5);
+      colour = mix(colour, seen, drop);
+    }
+
+    // Tint, less on the drop, and a touch more colour.
+    colour = mix(colour, uTint.rgb, uTint.a * (1.0 - 0.6 * drop));
+    float grey = dot(colour, vec3(0.299, 0.587, 0.114));
+    colour = mix(vec3(grey), colour, uLight.w);
+
+    // The defined edge: a thin line just inside the outline.
+    float line = (1.0 - smoothstep(0.0, uEdge.x, -d)) * inside;
+    colour = mix(colour, colour * (1.0 - uEdge.y) + uEdge.z, line);
+
+    // Rims: thin and bright where the edge faces the light, faint opposite.
+    vec2 light = normalize(uLight.xy);
+    float rimWidth = uOptics.z;
+    float rim = (1.0 - smoothstep(0.0, rimWidth, -d)) * inside;
+    float facing = max(dot(normal, light), 0.0);
+    float away = max(dot(normal, -light), 0.0);
+    colour += rim * (0.6 * facing + 0.22 * away) * uLight.z;
+    // A soft sheen along the lit edge, inside.
+    colour += (1.0 - depth) * 0.07 * facing * uLight.z * inside;
+    if (drop > 0.0) {
+      float dropRim = 1.0 - smoothstep(0.0, rimWidth, -dd);
+      float dropFacing = max(dot(dropNormal, light), 0.0);
+      float dropAway = max(dot(dropNormal, -light), 0.0);
+      colour += drop * dropRim * (0.75 * dropFacing + 0.3 * dropAway) * uLight.z;
+    }
+
+    colour = clamp(colour, 0.0, 1.0);
+    fragColor = vec4(colour * cover, cover);
+  } else {
     fragColor = vec4(0.0);
-    return;
   }
-
-  float band = uOptics.x;
-  float depth = clamp(-d / band, 0.0, 1.0);
-  vec2 normal = roundRectNormal(p, paneCentre, paneHalf, paneRadius);
-  // Steep at the rim, flat inside: a thick lens's round edge.
-  float rimward = 1.0 - depth;
-  float bend = 1.0 - sqrt(max(1.0 - rimward * rimward, 0.0));
-  vec3 colour = refracted(p, -normal * bend * uOptics.y, uOptics.w);
-
-  vec2 dropNormal = roundRectNormal(p, dropCentre, dropHalf, dropRadius);
-  float dropDepth = clamp(-dd / (band * 0.8), 0.0, 1.0);
-  if (drop > 0.0) {
-    float dropRimward = 1.0 - dropDepth;
-    float dropBend = 1.0 - sqrt(max(1.0 - dropRimward * dropRimward, 0.0));
-    vec2 magnified = dropCentre + (p - dropCentre) / uShape.w;
-    // A stronger colour split at the drop's rim: the rainbow edge of a
-    // held lens.
-    vec3 seen = refracted(magnified, -dropNormal * dropBend * uOptics.y * 1.4, uOptics.w * 2.5);
-    colour = mix(colour, seen, drop);
-  }
-
-  // Tint, less on the drop, and a touch more colour.
-  colour = mix(colour, uTint.rgb, uTint.a * (1.0 - 0.6 * drop));
-  float grey = dot(colour, vec3(0.299, 0.587, 0.114));
-  colour = mix(vec3(grey), colour, uLight.w);
-
-  // The defined edge: a thin line just inside the outline.
-  float line = (1.0 - smoothstep(0.0, uEdge.x, -d)) * inside;
-  colour = mix(colour, colour * (1.0 - uEdge.y) + uEdge.z, line);
-
-  // Rims: thin and bright where the edge faces the light, faint opposite.
-  vec2 light = normalize(uLight.xy);
-  float rimWidth = uOptics.z;
-  float rim = (1.0 - smoothstep(0.0, rimWidth, -d)) * inside;
-  float facing = max(dot(normal, light), 0.0);
-  float away = max(dot(normal, -light), 0.0);
-  colour += rim * (0.6 * facing + 0.22 * away) * uLight.z;
-  // A soft sheen along the lit edge, inside.
-  colour += (1.0 - depth) * 0.07 * facing * uLight.z * inside;
-  if (drop > 0.0) {
-    float dropRim = 1.0 - smoothstep(0.0, rimWidth, -dd);
-    float dropFacing = max(dot(dropNormal, light), 0.0);
-    float dropAway = max(dot(dropNormal, -light), 0.0);
-    colour += drop * dropRim * (0.75 * dropFacing + 0.3 * dropAway) * uLight.z;
-  }
-
-  colour = clamp(colour, 0.0, 1.0);
-  fragColor = vec4(colour * cover, cover);
 }

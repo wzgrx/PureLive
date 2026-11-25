@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/widgets/network_image.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A piece of a chat message: text or an emote picture.
 @immutable

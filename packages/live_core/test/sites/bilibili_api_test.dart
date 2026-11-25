@@ -40,6 +40,85 @@ String _editPlay(String body, void Function(Map<String, dynamic> data) change) {
 }
 
 void main() {
+  test('extra codecs keep the AVC default, requested tier and stable identities', () {
+    Map<String, Object?> codec(String kind, int qn) => {
+      'codec_name': kind,
+      'current_qn': qn,
+      'base_url': '/live/$kind.flv?',
+      'url_info': [
+        {'host': 'https://video.example.test', 'extra': 'expires=1794124800'},
+      ],
+    };
+    final data = <String, dynamic>{
+      'playurl_info': {
+        'playurl': {
+          'stream': [
+            {
+              'protocol_name': 'http_stream',
+              'format': [
+                {
+                  'format_name': 'flv',
+                  'codec': [codec('live-av1', 250), codec('live-hevc', 250), codec('avc', 250), codec('av1', 150)],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+    LivePlayUrlResolution read({bool extra = false}) => BilibiliApi.resolution(
+      data,
+      requestedQn: 250,
+      roomId: '1',
+      issuedAt: DateTime.utc(2026, 11, 8),
+      includeAlternateCodecs: extra,
+    );
+    expect(read().lines.map((line) => line.codec), ['avc']);
+    final alternate = read(extra: true);
+    expect(alternate.appliedQualityData, 250);
+    expect(alternate.lines.map((line) => line.codec), ['avc', 'av1', 'hevc']);
+    expect(alternate.lines.map((line) => line.lineId).toSet(), hasLength(3));
+    expect(alternate.lines.first.lineId, read().lines.single.lineId);
+  });
+
+  test('Bilibili detail prefers valid current keyframes and preserves offline and invalid-frame covers', () {
+    final body = _sample('S06-short-id').body;
+    LiveRoom parse(Object? frame, int status) => BilibiliApi.roomDetail(
+      _editRoomInfo(body, (room) {
+        room['live_status'] = status;
+        room['cover'] = 'https://images.example.test/room.jpg';
+        room['keyframe'] = frame;
+      }),
+      requestedId: '8',
+    ).room;
+    const valid = 'https://images.example.test/frame.jpg?expires=42';
+    expect(parse(valid, 1).cover, valid);
+    expect(parse('data:image/png;base64,ABC', 1).cover, 'https://images.example.test/room.jpg');
+    expect(parse(valid, 0).cover, 'https://images.example.test/room.jpg');
+  });
+
+  test('Bilibili follow identity survives public list, search and short-room detail parsing', () {
+    final listing = _sample('S03-page1');
+    final list = (jsonDecode(listing.body) as Map<String, dynamic>)['data'] as List;
+    final listed = BilibiliApi.roomList(listing.body).rooms;
+    expect(listed.map((room) => room.userId), list.map((entry) => '${(entry as Map)['uid']}'));
+
+    final search = _sample('S05-live-results');
+    final data = (jsonDecode(search.body) as Map<String, Object?>)['data']! as Map<String, Object?>;
+    final result = data['result']! as Map<String, Object?>;
+    final rows = [...result['live_user']! as List<Object?>, ...result['live_room']! as List<Object?>];
+    final byRoom = {for (final row in rows.cast<Map<String, Object?>>()) '${row['roomid']}': '${row['uid']}'};
+    final found = BilibiliApi.searchRooms(search.body, page: 1);
+    expect(found.map((room) => room.userId), found.map((room) => byRoom[room.roomId]));
+
+    final detail = _sample('S06-short-id');
+    final detailData = (jsonDecode(detail.body) as Map<String, Object?>)['data']! as Map<String, Object?>;
+    final raw = detailData['room_info']! as Map<String, Object?>;
+    final room = BilibiliApi.roomDetail(detail.body, requestedId: '${raw['short_id']}').room;
+    expect(room.roomId, '${raw['short_id']}');
+    expect(room.userId, '${raw['uid']}');
+  });
+
   test('S01 categories: ids, names and areas match 3.x', () {
     final fixture = _sample('S01-guest');
     final categories = BilibiliApi.categories(fixture.body, status: fixture.status);
@@ -74,7 +153,13 @@ void main() {
         for (final (index, room) in result.rooms.indexed) {
           // totalViewers: the "N人看过" count 3.x dropped (the capability table
           // already says Bilibili has cumulative viewers).
-          _expectParity(room.toJson(), legacy[index], changed: {'totalViewers'}, reason: '$name[$index]');
+          // S04 also carries explicit live keyframes (#222).
+          _expectParity(
+            room.toJson(),
+            legacy[index],
+            changed: {'totalViewers', if (name == 'S04-page1') 'cover'},
+            reason: '$name[$index]',
+          );
           expect(room.onlineViewers, isEmpty, reason: '`online` is popularity, never a head count');
         }
         expect(result.hasMore, legacy.isNotEmpty, reason: 'neither endpoint reports an end');
@@ -128,16 +213,15 @@ void main() {
         final raw = (((jsonDecode(fixture.body) as Map)['data'] as Map)['result'] as Map).cast<String, dynamic>();
         final liveRooms = (raw['live_room'] as List).cast<Map<String, dynamic>>();
         for (final (index, room) in rooms.take(legacy.length).indexed) {
-          // cover: the room cover (`user_cover`, what 3.x asked for with
-          // cover_type=user_cover) instead of the keyframe in `cover`; 3.x also
-          // wrote `https:https://…` for absolute covers.
+          // Live cards prefer the keyframe in `cover`; 3.x requested the room
+          // cover and wrote `https:https://…` for some absolute covers.
           // totalViewers: see recommend.
           _expectParity(room.toJson(), legacy[index], changed: {'cover', 'totalViewers'}, reason: '$name[$index]');
-          expect(room.cover, startsWith('https://i0.hdslb.com/bfs/live/'), reason: 'room cover, not a keyframe');
-          expect(
-            room.cover,
-            contains(liveRooms[index]['user_cover'].toString().replaceFirst(RegExp('^(https?:)?//'), '')),
-          );
+          final item = liveRooms[index];
+          final preferred = room.isLiveNow && (item['cover'] as String?)?.isNotEmpty == true
+              ? item['cover']
+              : item['user_cover'];
+          expect(room.cover, contains(preferred.toString().replaceFirst(RegExp('^(https?:)?//'), '')));
         }
         expect(legacy.where((room) => '${room['cover']}'.startsWith('https:https:')), isNotEmpty);
         final users = rooms.skip(legacy.length).toList();
@@ -213,7 +297,12 @@ void main() {
         _expectParity(
           json,
           room,
-          changed: {'introduction', 'totalViewers', if (name == 'S06-replay') 'liveStatus'},
+          changed: {
+            'introduction',
+            'totalViewers',
+            if (detail.room.isLiveNow) 'cover',
+            if (name == 'S06-replay') 'liveStatus',
+          },
           reason: name,
         );
         // M2.1's keys, which 3.x never wrote: the start time of a live room

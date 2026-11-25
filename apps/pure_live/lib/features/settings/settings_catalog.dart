@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/settings/appearance_pages.dart';
 import 'package:pure_live/features/settings/audience_pages.dart';
 import 'package:pure_live/features/settings/background_guide_tiles.dart';
@@ -989,6 +989,30 @@ List<SettingsEntry> _build() {
       AppIcons.homeBottomBar,
       desc: 'enable_live_play_wide_footer_subtitle',
       keywords: ['底栏', '信息栏', '人数', '画质', '线路', '宽屏', '布局', 'footer', 'bottom bar'],
+    )
+    ..toggle(
+      'live_play_pickers_in_video',
+      'enable_live_play_pickers_in_video',
+      Settings.livePlayPickersInVideo,
+      AppIcons.settingsQuality,
+      desc: 'enable_live_play_pickers_in_video_subtitle',
+      keywords: ['画质', '线路', '原画', '画面', '控制条', '弹幕窗口', 'quality', 'line', 'picker'],
+    )
+    ..toggle(
+      'live_play_long_press_switch',
+      'enable_live_play_long_press_switch',
+      Settings.livePlayLongPressSwitchRoom,
+      AppIcons.switchRoom,
+      desc: 'enable_live_play_long_press_switch_subtitle',
+      keywords: ['长按', '切换直播间', '手势', 'long press', 'switch room'],
+    )
+    ..toggle(
+      'live_play_rewind',
+      'enable_live_play_rewind',
+      Settings.livePlayRewind,
+      AppIcons.settingsQuality,
+      desc: 'enable_live_play_rewind_subtitle',
+      keywords: ['直播回退', '直播缓存', '回到直播', 'rewind', 'cache'],
     )
     ..link(
       'audience',

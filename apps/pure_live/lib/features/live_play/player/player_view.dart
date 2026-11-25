@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/live_play/buttons/fullscreen_super_chat_button.dart';
@@ -26,6 +26,7 @@ import 'package:pure_live/features/live_play/logic/room_status.dart';
 import 'package:pure_live/features/live_play/mini/mini_player.dart';
 import 'package:pure_live/features/live_play/mini/room_mini_window.dart';
 import 'package:pure_live/features/live_play/player/bar_parts.dart';
+import 'package:pure_live/features/live_play/player/live_rewind_bar.dart';
 import 'package:pure_live/features/live_play/player/player_controls.dart';
 import 'package:pure_live/features/live_play/player/player_gestures.dart';
 import 'package:pure_live/features/live_play/player/player_status.dart';
@@ -95,6 +96,7 @@ class RoomPlayer extends ConsumerStatefulWidget {
     this.edge,
     this.onTitle,
     this.pickersInBar = false,
+    this.replayActionsInBar = false,
     this.alignment = Alignment.center,
     super.key,
   });
@@ -103,8 +105,14 @@ class RoomPlayer extends ConsumerStatefulWidget {
   /// opens or closes the room details ([PlayerBarActions.onTitle]).
   final VoidCallback? onTitle;
 
-  /// The quality and line buttons in the inline bottom bar (A07.17 c2).
+  /// The quality and line buttons in the inline bottom bar (A07.17 c2; every
+  /// inline room layout when Settings.livePlayPickersInVideo is on, A07.46).
   final bool pickersInBar;
+
+  /// The chat column's replay strip is out of reach (a phone held sideways,
+  /// a folded wide chat): the replay transport carries its rate, catalog and
+  /// return-live actions (A07.44, A07.46).
+  final bool replayActionsInBar;
 
   /// Where the picture sits in the player: at the top under the portrait
   /// room's panel (A07.17 c3: centred, a portrait picture left a black
@@ -808,6 +816,9 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
       mode: watchSetting(ref, Settings.refreshRateMode),
     );
     final longPress = showDanmaku && watchSetting(ref, Settings.enableDanmakuLongPressInteraction);
+    final longPressSwitch =
+        watchSetting(ref, Settings.livePlayLongPressSwitchRoom) && !pip && !_locked && !_room.isArchive;
+    final rewind = watchSetting(ref, Settings.livePlayRewind);
     final diagnostics = watchSetting(ref, Settings.showPortraitDiagnostics);
     final pausedBehavior = watchSetting(ref, Settings.danmakuPausedBehavior);
     final maxVisible = watchSetting(ref, Settings.danmakuMaxVisibleCount);
@@ -931,11 +942,15 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
                     onSecondaryTapCancel: widget.platform.desktop ? _cancelSecondary : null,
                     onTertiaryTapUp: widget.platform.platform == TargetPlatform.windows ? _onMiddleTap : null,
                     onTertiaryTapCancel: widget.platform.platform == TargetPlatform.windows ? _cancelMiddle : null,
-                    // F.2b: only with its switch on, so it never holds a drag back.
-                    onLongPressStart: longPress
+                    // An explicit danmaku hit owns the long press. Only a
+                    // blank part of an unlocked live picture can switch rooms.
+                    onLongPressStart: longPress || longPressSwitch
                         ? (details) {
-                            if (_danmakuAt(details.globalPosition, longPress: true) case final hit?) {
+                            final hit = longPress ? _danmakuAt(details.globalPosition, longPress: true) : null;
+                            if (hit != null) {
                               unawaited(_openMessage(hit));
+                            } else if (longPressSwitch) {
+                              RoomPanelScope.maybeOf(context)?.open(RoomPanelKind.switchRoom);
                             }
                           }
                         : null,
@@ -1086,9 +1101,20 @@ class _RoomPlayerState extends ConsumerState<RoomPlayer> {
                             bottom: padding.bottom + (portraitRows ? portraitRowHeight * 2 + 12 : controlBarHeight),
                             child: RoomReplayTransport(
                               controller: _room,
-                              immersive: arrangement != ControlsArrangement.inline || widget.pickersInBar,
+                              immersive: arrangement != ControlsArrangement.inline || widget.replayActionsInBar,
                               onInteract: _touch,
                               onHolding: _onMenu,
+                            ),
+                          ),
+                        if (!_locked && controls && !_room.isArchive && rewind)
+                          Positioned(
+                            left: padding.left,
+                            right: padding.right,
+                            bottom: padding.bottom + (portraitRows ? portraitRowHeight * 2 + 12 : controlBarHeight),
+                            child: RoomLiveRewindBar(
+                              key: ValueKey('live-rewind-${_room.room.identityKey}'),
+                              session: _room.session,
+                              onInteract: _touch,
                             ),
                           ),
                         if (!_locked && widget.edge != null)

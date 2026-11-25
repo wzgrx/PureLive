@@ -1,4 +1,6 @@
 #include "flutter_window.h"
+
+#include <cstdint>
 #include "uninstall_shutdown.h"
 
 #include <algorithm>
@@ -68,6 +70,11 @@ bool FlutterWindow::OnCreate() {
           flutter_controller_->engine()->messenger(), "pure_live/window_startup",
           &flutter::StandardMethodCodec::GetInstance());
   startup_channel_->SetMethodCallHandler([this](const auto& call, auto result) {
+    if (call.method_name() == "getWindowHandle") {
+      result->Success(flutter::EncodableValue(
+          static_cast<int64_t>(reinterpret_cast<intptr_t>(GetHandle()))));
+      return;
+    }
     if (call.method_name() == "uninstallReady") {
       uninstall_ready_ = true;
       result->Success();
@@ -208,9 +215,10 @@ void FlutterWindow::RecoverStartupSurface() {
   SetWindowPos(child, nullptr, 0, 0, width - 1, height, flags);
   SetWindowPos(child, nullptr, 0, 0, width, height, flags);
   flutter_controller_->ForceRedraw();
-  // One resync after the first frame is enough. The five-tick fallback is
-  // only for a startup that has not produced a frame; never jitter a live UI.
-  if (startup_frame_seen_) {
+  // The first native frame can still be the loading skeleton. Keep one
+  // scheduled resync after it so a pending initial surface resize cannot
+  // strand the first content frame. Recovery remains bounded to startup.
+  if (startup_frame_seen_ && startup_recovery_attempts_ >= 2) {
     startup_recovery_attempts_ = kStartupRecoveryAttempts;
     KillTimer(parent, kStartupRecoveryTimer);
   }

@@ -704,7 +704,7 @@ final Provider<MusicPlayer> musicPlayerProvider = Provider((ref) {
 /// video; pure_live_TV's mode switch rule). Does nothing when music never
 /// started in this run.
 Future<void> yieldMusicToOtherPlayback(WidgetRef ref) async {
-  if (!ref.exists(musicPlayerProvider)) return;
+  if (!ref.read(musicPlayerProvider.exists)) return;
   await ref.read(musicPlayerProvider).yieldToOtherPlayback();
 }
 

@@ -3,11 +3,10 @@
 /// Copyright © 2021 & onwards, Hitesh Kumar Saini <saini123hitesh@gmail.com>.
 /// All rights reserved.
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
-import 'dart:ffi';
 import 'dart:collection';
+import 'dart:ffi';
 
 import 'package:media_kit/ffi/ffi.dart';
-
 import 'package:media_kit/src/player/native/utils/isolates.dart';
 
 /// {@template android_content_uri_provider}
@@ -65,10 +64,10 @@ abstract class AndroidContentUriProvider {
   /// The native implementation for [openFileDescriptor] & [openFileDescriptorSync].
   static int _openFileDescriptor(String uri) {
     final lib = DynamicLibrary.open('libmediakitandroidhelper.so');
-    final fn =
-        lib.lookupFunction<OpenFileDescriptorCXX, OpenFileDescriptorDart>(
-      'MediaKitAndroidHelperOpenFileDescriptor',
-    );
+    final fn = lib
+        .lookupFunction<OpenFileDescriptorCXX, OpenFileDescriptorDart>(
+          'MediaKitAndroidHelperOpenFileDescriptor',
+        );
     final name = uri.toNativeUtf8();
     final fileDescriptor = fn.call(name.cast());
     return fileDescriptor;
@@ -77,10 +76,10 @@ abstract class AndroidContentUriProvider {
   /// The native implementation for [closeFileDescriptor] & [closeFileDescriptorSync].
   static void _closeFileDescriptor(int fileDescriptor) {
     final lib = DynamicLibrary.open('libmediakitandroidhelper.so');
-    final fn =
-        lib.lookupFunction<CloseFileDescriptorCXX, CloseFileDescriptorDart>(
-      'MediaKitAndroidHelperCloseFileDescriptor',
-    );
+    final fn = lib
+        .lookupFunction<CloseFileDescriptorCXX, CloseFileDescriptorDart>(
+          'MediaKitAndroidHelperCloseFileDescriptor',
+        );
     fn.call(fileDescriptor);
   }
 

@@ -19,6 +19,7 @@ const _www = 'www.douyu.com';
 /// number) or an alias.
 final RegExp _roomKey = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
 final RegExp _digits = RegExp(r'^\d{1,18}$');
+final RegExp _followRid = RegExp(r'^[1-9][0-9]{0,17}$');
 
 /// The canonical rid a room's signing, stream and danmaku requests use (a
 /// room asked for by its 靓号 or alias keeps that address as its identity).
@@ -64,6 +65,7 @@ final class DouyuSite extends LiveSite
     with LiveSiteLinks
     implements
         LiveSiteRoomRefresher,
+        LiveSiteFollowBatchRefresher,
         LiveSiteRecordRoomResolver,
         LivePlayUrlResolver,
         LivePlayRecoveryResolver,
@@ -76,10 +78,18 @@ final class DouyuSite extends LiveSite
   /// (`douyuForceRenew`, off by default; see [DouyuApi.lease]) each time a
   /// URL is resolved or its lease looked up. [now] and [random] are
   /// injectable for tests.
-  new(this.http, {this._cookies, this._login, bool Function()? forceRenewal, DateTime Function()? now, Random? random})
-    : _forceRenewal = forceRenewal ?? _off,
-      _now = now ?? DateTime.now,
-      _processDid = DouyuApi.generateDeviceId(random ?? Random.secure());
+  new(
+    this.http, {
+    this._cookies,
+    this._login,
+    bool Function()? forceRenewal,
+    bool Function()? additionalCodecs,
+    DateTime Function()? now,
+    Random? random,
+  }) : _forceRenewal = forceRenewal ?? _off,
+       _additionalCodecs = additionalCodecs ?? _off,
+       _now = now ?? DateTime.now,
+       _processDid = DouyuApi.generateDeviceId(random ?? Random.secure());
 
   /// Transport.
   final LiveHttp http;
@@ -87,6 +97,7 @@ final class DouyuSite extends LiveSite
   final CookieVault? _cookies;
   final DouyuLoginStore? _login;
   final bool Function() _forceRenewal;
+  final bool Function() _additionalCodecs;
   final DateTime Function() _now;
   final String _processDid;
 
@@ -403,6 +414,25 @@ final class DouyuSite extends LiveSite
   @override
   Future<LiveRoom> getRoomDetailForRefresh({required String roomId}) => _detail(roomId);
 
+  @override
+  Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async {
+    final requested = {
+      for (final room in rooms)
+        if (room.platform == _site &&
+            _followRid.hasMatch(room.roomId) &&
+            (_rids[room.roomId] ?? room.roomId) == room.roomId)
+          room.roomId: room,
+    };
+    if (requested.length < 2 || requested.length > 20) return const {};
+    final response = await http.postJson(
+      _site,
+      Uri.https('apiv2.douyucdn.cn', '/Livenc/UserRelation/getFollowRoomListByRid'),
+      form: {'rids': requested.keys.join(',')},
+      timeout: const Duration(seconds: 3),
+    );
+    return DouyuApi.followBatch(response, requested);
+  }
+
   /// Strict: a failed `betard` is thrown, never turned into an offline room
   /// (3.x once stopped recordings that way).
   @override
@@ -456,10 +486,11 @@ final class DouyuSite extends LiveSite
     if (data is! DouyuPlayData) return LivePlayUrlResolution(urls: const []);
     final rid = _rid(detail);
     final answers = <({LivePlayLine line, int? rate})>[];
+    final additional = _additionalCodecs();
     SiteError? last;
     for (final cdn in data.cdns) {
       try {
-        answers.add(await _answer(rid, data.rate, cdn));
+        answers.addAll(await _answers(rid, data.rate, cdn, additionalCodecs: additional));
       } on SiteError catch (error) {
         last = error;
       }
@@ -505,27 +536,57 @@ final class DouyuSite extends LiveSite
     if (data is! DouyuPlayData || lineIndex < 0 || lineIndex >= data.cdns.length) {
       return LivePlayUrlResolution(urls: const []);
     }
-    final answer = await _answer(_rid(detail), data.rate, data.cdns[lineIndex]);
-    return DouyuApi.resolution([answer], requestedRate: data.rate);
+    // Recording's cursor addresses one original CDN, independent of UI variants.
+    final answers = await _answers(_rid(detail), data.rate, data.cdns[lineIndex]);
+    return DouyuApi.resolution(answers, requestedRate: data.rate);
   }
 
-  Future<({LivePlayLine line, int? rate})> _answer(String rid, int rate, String cdn) async {
-    final play = await _play(rid, rate: rate, cdn: cdn);
-    final answer = DouyuApi.answer(
-      play.data,
-      roomId: rid,
-      cdn: cdn,
-      cookie: play.cookie,
-      issuedAt: play.issuedAt,
-      forceRenewal: _forceRenewal(),
-    );
-    final lease = answer.line.lease;
-    if (lease != null) {
-      _leases.remove(answer.line.url);
-      _leases[answer.line.url] = lease;
-      if (_leases.length > 64) _leases.remove(_leases.keys.first);
+  Future<List<({LivePlayLine line, int? rate})>> _answers(
+    String rid,
+    int rate,
+    String cdn, {
+    bool additionalCodecs = false,
+  }) async {
+    final answers = <({LivePlayLine line, int? rate})>[];
+    if (additionalCodecs) {
+      try {
+        final play = await _play(rid, rate: rate, cdn: cdn, additionalCodecs: true);
+        answers.addAll(
+          DouyuApi.codecAnswers(
+            play.data,
+            roomId: rid,
+            cdn: cdn,
+            cookie: play.cookie,
+            issuedAt: play.issuedAt,
+            forceRenewal: _forceRenewal(),
+          ),
+        );
+      } on SiteError {
+        // Fall back to the existing AVC request when the extended form fails.
+      }
     }
-    return answer;
+    if (answers.isEmpty) {
+      final play = await _play(rid, rate: rate, cdn: cdn);
+      answers.add(
+        DouyuApi.answer(
+          play.data,
+          roomId: rid,
+          cdn: cdn,
+          cookie: play.cookie,
+          issuedAt: play.issuedAt,
+          forceRenewal: _forceRenewal(),
+        ),
+      );
+    }
+    for (final answer in answers) {
+      final lease = answer.line.lease;
+      if (lease != null) {
+        _leases.remove(answer.line.url);
+        _leases[answer.line.url] = lease;
+        if (_leases.length > 64) _leases.remove(_leases.keys.first);
+      }
+    }
+    return answers;
   }
 
   /// One signed `getH5PlayV1` for (rate, cdn), at most twice: after a failed
@@ -537,6 +598,7 @@ final class DouyuSite extends LiveSite
     required int rate,
     required String cdn,
     bool anonymous = false,
+    bool additionalCodecs = false,
   }) async {
     if (!_digits.hasMatch(rid)) throw NotFound(_site, 'room id "$rid" is not a number');
     final guest = anonymous || _guestFor(rid);
@@ -563,6 +625,7 @@ final class DouyuSite extends LiveSite
               did: identity.did,
               rate: rate,
               cdn: cdn,
+              additionalCodecs: additionalCodecs,
             ),
           ),
         );

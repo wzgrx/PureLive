@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Puts the buttons of a dialog below it on the 14-point role
 /// (docs/specs/UI.md section 7: no text in a popup under 14; the theme's buttons use the

@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/live_play/danmaku/danmaku_settings_panel.dart';
 import 'package:pure_live/features/live_play/logic/room_controller.dart';
 import 'package:pure_live/features/live_play/record/record_panel.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/danmaku/block_manager.dart';
 import 'package:pure_live/tv/tv_theme.dart';
+import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 import 'package:pure_live/tv/widgets/tv_tabs.dart';
 
 /// The parts of [TvRoomSettingsPanel] (A17.4 c7–c10).
@@ -32,13 +33,29 @@ enum TvRoomSettingsTab {
 /// TV's directional navigation); Back closes it.
 class TvRoomSettingsPanel extends StatefulWidget {
   /// Creates the panel for [controller]'s room.
-  const new({required this.controller, required this.onClose, super.key});
+  const new({
+    required this.controller,
+    required this.onClose,
+    this.onRoomQueue,
+    this.onSleepTimer,
+    this.onLiveRewind,
+    super.key,
+  });
 
   /// The room.
   final LiveRoomController controller;
 
   /// Closes the panel.
   final VoidCallback onClose;
+
+  /// Opens the saved queue using the TV's normal remote focus dialog.
+  final VoidCallback? onRoomQueue;
+
+  /// Opens the TV countdown for the current room.
+  final VoidCallback? onSleepTimer;
+
+  /// Opens the verified live cache controls, when enabled.
+  final VoidCallback? onLiveRewind;
 
   /// The panel's width in canvas pixels (c2).
   static const double width = 400;
@@ -119,6 +136,20 @@ class _TvRoomSettingsPanelState extends State<TvRoomSettingsPanel> {
                 ),
               ),
               SizedBox(height: scale.px(8)),
+              if (widget.onRoomQueue != null)
+                TvOptionRow(
+                  key: const ValueKey('tv-room-saved-queue'),
+                  label: i18n('room_switch_saved'),
+                  onTap: widget.onRoomQueue,
+                ),
+              if (widget.onSleepTimer != null)
+                TvOptionRow(
+                  key: const ValueKey('tv-room-sleep-timer'),
+                  label: i18n('sleep_timer'),
+                  onTap: widget.onSleepTimer,
+                ),
+              if (widget.onLiveRewind != null)
+                TvOptionRow(label: i18n('live_rewind_title'), onTap: widget.onLiveRewind),
               Expanded(
                 child: Material(
                   type: MaterialType.transparency,

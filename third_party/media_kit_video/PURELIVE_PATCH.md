@@ -116,3 +116,12 @@ before initialization, owns cleanup when its factory fails, and retains the
 original setup exception. The real-handle setup-failure regression verifies
 release before propagation. Session creation/stop retirement is bounded and
 late completions cannot adopt a new room (G02.13).
+
+## 2026-11-25 upstream render-API migration
+
+Rebased onto Predidit/media-kit 484639aca5ffc754a65876c22f01dbb070225732.
+Windows uses the upstream D3D11 render API; preserve PureLive's fence-confirmed
+ProducerCommit result as the presented-frame signal. Failed native renders must
+not increment frameRevision. Existing Surface, disposal, audio mode and viewport
+patches remain. The native bundle must export the matching render API.
+Linux prefers upstream's GLES3 context and keeps its GLES2 fallback.

@@ -1,10 +1,10 @@
 // A03.5 / R01.3: pages come and go with a spring slide; nothing fades
 
-// (fade-forwards drew both pages into offscreen layers every frame).
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+// (fade-forwards drew both pages into offscreen layers every frame).
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   test('the spring curve starts at 0, ends at exactly 1, never passes it and is fast at first', () {

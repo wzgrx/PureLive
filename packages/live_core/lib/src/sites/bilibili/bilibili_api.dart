@@ -224,6 +224,23 @@ abstract final class BilibiliApi {
           LiveRoom.compareAudienceRanking(left, right, preferRealOnline: false, platformEnabled: (_) => false),
     );
 
+  static final _followUidPattern = RegExp(r'^[1-9][0-9]{0,17}$');
+
+  /// Public streamer identity, distinct from the room and viewer ids.
+  static String? followUid(Object? value) {
+    final uid = jsonString(value);
+    return uid != null && _followUidPattern.hasMatch(uid) ? uid : null;
+  }
+
+  /// Prefers a usable keyframe for a confirmed live broadcast. Retains the
+  /// existing cover when the endpoint omits the keyframe or sends junk.
+  static String preferLiveKeyframe(Object? keyframe, String fallback, {String suffix = ''}) {
+    final image = normalizeImageUrl(keyframe);
+    final uri = Uri.tryParse(image);
+    if (uri == null || uri.host.isEmpty || uri.userInfo.isNotEmpty) return fallback;
+    return uri.hasQuery || uri.hasFragment ? image : '$image$suffix';
+  }
+
   static LiveRoom? _listRoom(Map<String, dynamic> item) {
     final id = _roomId(item['roomid'] ?? item['room_id']);
     if (id == null) return null;
@@ -231,10 +248,15 @@ abstract final class BilibiliApi {
     return LiveRoom(
       roomId: id,
       platform: _site,
+      userId: followUid(item['uid']),
       title: decodeHtmlEntities(jsonString(item['title']) ?? ''),
       nick: decodeHtmlEntities(jsonString(item['uname']) ?? ''),
       avatar: _image(item['face']),
-      cover: _image(item['cover'], '@400w.jpg').ifEmpty(() => _image(item['user_cover'], '@400w.jpg')),
+      cover: preferLiveKeyframe(
+        item['keyframe'],
+        _image(item['cover'], '@400w.jpg').ifEmpty(() => _image(item['user_cover'], '@400w.jpg')),
+        suffix: '@400w.jpg',
+      ),
       area: jsonString(item['area_v2_name']) ?? jsonString(item['area_name']) ?? jsonString(item['areaName']) ?? '',
       watching: online,
       popularity: online,
@@ -276,16 +298,23 @@ abstract final class BilibiliApi {
     if (id == null) return null;
     final state = _status(item['live_status']);
     final live = state == LiveStatus.live;
+    final cover = _image(item['user_cover'], '@400w.jpg').ifEmpty(() => _image(item['cover'], '@400w.jpg'));
     final online = jsonString(item['online']) ?? '';
     return LiveRoom(
       roomId: id,
       platform: _site,
+      userId: followUid(item['uid']),
       title: _highlighted(item['title']),
       nick: _highlighted(item['uname']),
       avatar: _image(item['uface'], '@400w.jpg'),
-      // `cover` is a keyframe screenshot; the room cover (what 3.x asked for
-      // with cover_type=user_cover) is `user_cover`.
-      cover: _image(item['user_cover'], '@400w.jpg').ifEmpty(() => _image(item['cover'], '@400w.jpg')),
+      // Search calls the keyframe `cover`; `user_cover` is the room cover.
+      cover: live
+          ? preferLiveKeyframe(
+              item['keyframe'],
+              preferLiveKeyframe(item['cover'], cover, suffix: '@400w.jpg'),
+              suffix: '@400w.jpg',
+            )
+          : cover,
       area: _highlighted(item['cate_name']),
       watching: online,
       popularity: online,
@@ -304,6 +333,7 @@ abstract final class BilibiliApi {
     return LiveRoom(
       roomId: id,
       platform: _site,
+      userId: followUid(item['uid']),
       nick: _highlighted(item['uname']),
       avatar: _image(item['uface'], '@400w.jpg'),
       area: _highlighted(item['cate_name']),
@@ -363,10 +393,11 @@ abstract final class BilibiliApi {
       room: LiveRoom(
         roomId: id,
         platform: _site,
+        userId: followUid(room['uid']),
         title: decodeHtmlEntities(jsonString(room['title']) ?? ''),
         nick: decodeHtmlEntities(jsonString(base?['uname']) ?? ''),
         avatar: _image(base?['face'], '@100w.jpg'),
-        cover: _image(room['cover']),
+        cover: live ? preferLiveKeyframe(room['keyframe'], _image(room['cover'])) : _image(room['cover']),
         area: jsonString(room['area_name']) ?? '',
         watching: online,
         popularity: online,
@@ -645,6 +676,7 @@ abstract final class BilibiliApi {
     required DateTime issuedAt,
     String? cookie,
     bool preferRaw = false,
+    bool includeAlternateCodecs = false,
   }) {
     final playurl = _playurl(data);
     final requested = jsonInt(requestedQn);
@@ -658,7 +690,7 @@ abstract final class BilibiliApi {
       final base = entry.codec['base_url'];
       final current = jsonInt(entry.codec['current_qn']);
       if (format == null || base is! String || base.isEmpty || current == null || current <= 0) continue;
-      final codec = jsonString(entry.codec['codec_name'])?.toLowerCase();
+      final codec = _streamCodec(jsonString(entry.codec['codec_name']));
       for (final info in _list(entry.codec['url_info'])) {
         final map = _object(info);
         if (map == null) continue;
@@ -680,11 +712,23 @@ abstract final class BilibiliApi {
     if (candidates.isEmpty) return LivePlayUrlResolution(urls: const [], appliedQualityData: requestedQn);
     candidates.sort((a, b) => _compareCandidates(a, b, requested));
     final first = candidates.first;
+    // Keep the legacy delivered quality. Extra codecs may not downgrade it.
+    final primaryCodec = includeAlternateCodecs && candidates.any((c) => c.qn == first.qn && c.codec == 'avc')
+        ? 'avc'
+        : first.codec;
+    final ordered = includeAlternateCodecs
+        ? [
+            ...candidates.where((c) => c.codec == primaryCodec),
+            ...candidates.where((c) => c.codec != primaryCodec && const {'avc', 'hevc', 'av1'}.contains(c.codec)),
+          ]
+        : candidates;
     final headers = mediaHeaders(roomId, cookie: cookie);
     final seen = <String>{};
     final lines = <LivePlayLine>[
-      for (final candidate in candidates)
-        if (candidate.qn == first.qn && candidate.codec == first.codec && seen.add(candidate.url.toString()))
+      for (final candidate in ordered)
+        if (candidate.qn == first.qn &&
+            (includeAlternateCodecs || candidate.codec == primaryCodec) &&
+            seen.add(candidate.url.toString()))
           LivePlayLine(
             candidate.url.toString(),
             headers: headers,
@@ -698,7 +742,7 @@ abstract final class BilibiliApi {
     // lines. Respect its delivered tier and leave untranscoded rooms alone.
     final raw =
         preferRaw && requested == 10000 && first.qn == 10000 && qualities(data).any((quality) => quality.data == 250)
-        ? _rawLines(lines)
+        ? _rawLines(lines.where((line) => line.codec == primaryCodec).toList())
         : const <LivePlayLine>[];
     return LivePlayUrlResolution.lines([...raw, ...lines], appliedQualityData: first.qn);
   }
@@ -949,6 +993,13 @@ abstract final class BilibiliApi {
       }
     }
   }
+
+  static String? _streamCodec(String? value) => switch (value?.trim().toLowerCase()) {
+    'avc' || 'h264' || 'live-h264' => 'avc',
+    'hevc' || 'h265' || 'live-hevc' => 'hevc',
+    'av1' || 'av01' || 'live-av1' => 'av1',
+    final other => other,
+  };
 
   static int _compareCandidates(_Candidate a, _Candidate b, int? requestedQn) {
     final byRequest = (a.qn == requestedQn ? 0 : 1).compareTo(b.qn == requestedQn ? 0 : 1);

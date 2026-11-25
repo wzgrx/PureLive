@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The named text styles of 3.x (`AppTextStyles.t13`, `t15SemiBold`, ...),
 /// read from the theme in scope.

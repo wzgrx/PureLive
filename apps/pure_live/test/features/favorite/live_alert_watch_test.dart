@@ -45,6 +45,31 @@ Future<void> _until(Future<bool> Function() done) async {
 
 const LiveAlertTexts _texts = (title: '{name} 开播了', empty: '点按进入直播间', channel: '开播提醒', channelDescription: '说明');
 
+final class _BiliBatchSite extends LiveSite implements LiveSiteFollowBatchRefresher {
+  @override
+  String get id => SiteIds.bilibili;
+
+  @override
+  String get name => id;
+
+  final List<String> detailRequests = [];
+  final List<List<String?>> batchRequests = [];
+
+  @override
+  Future<LiveRoom> getRoomDetail({required String roomId}) async {
+    detailRequests.add(roomId);
+    return LiveRoom(platform: id, roomId: roomId, userId: '10$roomId', liveStatus: LiveStatus.offline);
+  }
+
+  @override
+  Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async {
+    final uids = rooms.map((room) => room.userId).toList();
+    if (uids.any((uid) => BilibiliApi.followUid(uid) == null)) return const {};
+    batchRequests.add(uids);
+    return {for (final room in rooms) room.identityKey: room.copyWith(liveStatus: LiveStatus.offline)};
+  }
+}
+
 void main() {
   late Directory folder;
   late LiveAlertWatchFile file;
@@ -53,6 +78,49 @@ void main() {
     file = LiveAlertWatchFile(Future.value(File('${folder.path}/${LiveAlertWatchFile.name}')));
   });
   tearDown(() => folder.deleteSync(recursive: true));
+
+  test('existing foreground follows persist Bilibili identities and subsequently batch', () async {
+    final store = await LiveStore.memory(cipher: FakeCipher());
+    addTearDown(store.close);
+    final site = _BiliBatchSite();
+    final refresher = FollowRefresher(sites: SiteRegistry({site.id: () => site}));
+    for (final rid in ['1', '2']) {
+      await store.follows.add(LiveRoom(platform: site.id, roomId: rid));
+    }
+    final first = await refresher.refresh(await store.follows.all(), concurrency: 2);
+    await store.follows.update(first.rooms);
+    final saved = await store.follows.all();
+    expect(saved.map((room) => room.userId), unorderedEquals(['101', '102']));
+    await refresher.refresh(saved, concurrency: 2);
+    expect(site.detailRequests, hasLength(2));
+    expect(site.batchRequests.single, unorderedEquals(['101', '102']));
+  });
+
+  test('old background watch learns Bilibili UIDs and the next check can batch without refollowing', () async {
+    final site = _BiliBatchSite();
+    final refresher = FollowRefresher(sites: SiteRegistry({site.id: () => site}));
+    await file.write(
+      LiveAlertWatch(
+        rooms: [
+          LiveRoom(platform: SiteIds.bilibili, roomId: '1'),
+          LiveRoom(platform: SiteIds.bilibili, roomId: '2'),
+        ],
+        names: {},
+        states: {},
+        texts: _texts,
+      ),
+    );
+    Future<List<LiveRoom>> check() =>
+        runLiveAlertCheck(file: file, refresher: refresher, post: (_, _) async => fail('Neither room started'));
+    await check();
+    expect(site.detailRequests, unorderedEquals(['1', '2']));
+    expect((await file.read())!.rooms.map((room) => room.userId), ['101', '102']);
+    await check();
+    expect(site.detailRequests, hasLength(2));
+    expect(site.batchRequests, [
+      ['101', '102'],
+    ]);
+  });
 
   test('the file keeps the rooms, names, states and words; another version or junk reads as none', () async {
     final at = DateTime.fromMillisecondsSinceEpoch(1760000000000);

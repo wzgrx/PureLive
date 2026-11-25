@@ -405,6 +405,42 @@ void main() {
     });
   });
 
+  test('only the first buffering of finite VOD receives the longer startup budget', () async {
+    final relay = await LoopbackRelay.start();
+    addTearDown(relay.close);
+    fakeAsync((async) {
+      engine = FakeEngine();
+      session = PlaybackSession(
+        engine: () async => engine,
+        opener: MediaOpener(relay: () async => relay),
+      );
+      final plan = PlaybackPlan(
+        sources: const [
+          LineSource(
+            LivePlayLine('https://vod.example/seg.ts', format: StreamFormat.hls),
+            vodPlaylist: '#EXTM3U\n#EXTINF:4,\nhttps://vod.example/seg.ts\n#EXT-X-ENDLIST\n',
+          ),
+          LineSource(_b),
+        ],
+        onDemand: true,
+        start: const Duration(seconds: 300),
+      );
+      unawaited(session.open(PlaybackRequest(site: 'chzzk', plan: plan)));
+      async.flushMicrotasks();
+      engine.emit(const EngineBuffering(buffering: true));
+      async.elapse(const Duration(seconds: 21));
+      expect(engine.opens, hasLength(1));
+      engine
+        ..emit(const EnginePosition(Duration(seconds: 300)))
+        ..playing()
+        ..emit(const EngineBuffering(buffering: true));
+      async.elapse(const Duration(seconds: 13));
+      expect(engine.opens.last.uri.host, 'b.example');
+      unawaited(session.dispose());
+      async.flushMicrotasks();
+    });
+  });
+
   test('buffering that never ends is recovered once its first deadline passes', () {
     fakeAsync((async) {
       start(PlaybackRequest(site: 'douyu', plan: _plan([_a, _b])), async);

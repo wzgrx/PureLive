@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:loading_indicator/loading_indicator.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef _Builder = Widget Function(Color color, double size, ColorScheme colors);
 

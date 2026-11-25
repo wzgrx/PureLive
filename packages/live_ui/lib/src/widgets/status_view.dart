@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
@@ -15,6 +14,7 @@ import 'package:live_ui/src/widgets/app_toast.dart';
 import 'package:live_ui/src/widgets/loading_styles.dart';
 import 'package:live_ui/src/widgets/scrolling.dart';
 import 'package:live_ui/src/widgets/window_layout.dart';
+import 'package:material_ui/material_ui.dart';
 
 // The one status component (docs/A-界面设计/A02-组件/A02.1-通用组件 c2–c7): six states
 // (skeleton, loading, empty, error, restricted, offline) in four places

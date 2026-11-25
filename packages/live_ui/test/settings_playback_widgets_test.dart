@@ -1,9 +1,9 @@
 // The live_ui pieces added for the playback and data settings (U.6c, U.6e):
 // a value under the explanation, a red title, the danmaku preview, the
 // JSON tree.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 Widget _app(Widget child) => MaterialApp(home: Scaffold(body: child));
 

@@ -1,11 +1,11 @@
 // A01.2: the corner radii and durations are named once (AppRadii,
 // AppDurations) with the values the theme had; text takes its size from the
 // five font roles, so the font settings reach every title and row.
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:live_ui/src/widgets/anchored_menu.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Every font setting at its largest (Settings.fontSize*: 15, 17, 18, 20, 26).
 const _largest = LiveFontSizes(bodySmall: 15, bodyMedium: 17, bodyLarge: 18, titleMedium: 20, titleLarge: 26);

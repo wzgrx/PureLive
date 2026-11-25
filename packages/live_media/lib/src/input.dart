@@ -126,7 +126,19 @@ final class MediaOpener {
   }) async {
     if (cancel?.isCancelled ?? false) throw TransportFailure(site, TransportReason.cancelled);
     switch (source) {
-      case LineSource(:final line):
+      case LineSource(:final line, :final vodPlaylist):
+        if (vodPlaylist != null) {
+          if (!onDemand) throw ArgumentError('A finite HLS index needs on-demand playback');
+          final relay = await _relayNow();
+          if (cancel?.isCancelled ?? false) throw TransportFailure(site, TransportReason.cancelled);
+          final input = relay.openHls(
+            line,
+            site: site,
+            recipe: HlsRelayRecipe(vodPlaylist: vodPlaylist),
+            maxEntries: 12000,
+          );
+          return _RelayedInput(source, MediaRoute.hlsRelay, input, null, onDemand: true, start: start);
+        }
         final route = MediaRoute.of(
           line,
           engine: engine,

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// What [RecordGlyph] shows: the state of a room's recording
 /// (docs/A-界面设计/A10-录制界面/A10.3-录制按钮和状态图标). Only [recording] is red; every state that does

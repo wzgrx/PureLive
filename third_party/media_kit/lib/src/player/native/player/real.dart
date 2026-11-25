@@ -3,27 +3,23 @@
 // Copyright © 2021 & onwards, Hitesh Kumar Saini <saini123hitesh@gmail.com>.
 // All rights reserved.
 // Use of this source code is governed by MIT license that can be found in the LICENSE file.
-import 'dart:io';
-import 'dart:ffi';
 import 'dart:async';
 import 'dart:collection';
+import 'dart:ffi';
+import 'dart:io';
 import 'dart:typed_data';
-import 'package:path/path.dart';
-import 'package:meta/meta.dart';
+
 import 'package:image/image.dart';
-import 'package:synchronized/synchronized.dart';
-import 'package:safe_local_storage/safe_local_storage.dart';
-
 import 'package:media_kit/ffi/ffi.dart';
-
+import 'package:media_kit/generated/libmpv/bindings.dart' as generated;
 import 'package:media_kit/src/models/audio_device.dart';
 import 'package:media_kit/src/models/audio_params.dart';
 import 'package:media_kit/src/models/media/media.dart';
 import 'package:media_kit/src/models/playable.dart';
 import 'package:media_kit/src/models/player_log.dart';
 import 'package:media_kit/src/models/player_state.dart';
-import 'package:media_kit/src/models/playlist_mode.dart';
 import 'package:media_kit/src/models/playlist.dart';
+import 'package:media_kit/src/models/playlist_mode.dart';
 import 'package:media_kit/src/models/track.dart';
 import 'package:media_kit/src/models/video_params.dart';
 import 'package:media_kit/src/player/native/core/fallback_bitrate_handler.dart';
@@ -35,8 +31,10 @@ import 'package:media_kit/src/player/native/utils/android_helper.dart';
 import 'package:media_kit/src/player/native/utils/isolates.dart';
 import 'package:media_kit/src/player/native/utils/temp_file.dart';
 import 'package:media_kit/src/player/platform_player.dart';
-
-import 'package:media_kit/generated/libmpv/bindings.dart' as generated;
+import 'package:meta/meta.dart';
+import 'package:path/path.dart';
+import 'package:safe_local_storage/safe_local_storage.dart';
+import 'package:synchronized/synchronized.dart';
 
 /// Initializes the native backend for package:media_kit.
 void nativeEnsureInitialized({String? libmpv}) {
@@ -102,6 +100,7 @@ class NativePlayer extends PlatformPlayer {
           for (final request in [
             ..._setPropertyRequests.values,
             ..._getPropertyRequests.values,
+            ..._seekRangeRequests.values,
             ..._commandRequests.values,
             ..._screenshotRequests.values.map((request) => request.completer),
           ]) {
@@ -109,6 +108,7 @@ class NativePlayer extends PlatformPlayer {
           }
           _setPropertyRequests.clear();
           _getPropertyRequests.clear();
+          _seekRangeRequests.clear();
           _commandRequests.clear();
           _screenshotRequests.clear();
         }
@@ -1220,6 +1220,31 @@ class NativePlayer extends PlatformPlayer {
     }
   }
 
+  /// Reads only the seekable demuxer cache intervals, without blocking the UI.
+  Future<List<({double start, double end})>> getCacheSeekRangesAsync({
+    Duration timeout = const Duration(seconds: 1),
+  }) async {
+    await waitForPlayerInitialization.timeout(timeout);
+    _checkNativeHandle();
+    final requestNumber = _asyncRequestNumber++;
+    final completer = _seekRangeRequests[requestNumber] =
+        Completer<List<({double start, double end})>>();
+    final name = 'demuxer-cache-state'.toNativeUtf8();
+    try {
+      final immediate = mpv.mpv_get_property_async(
+        ctx,
+        requestNumber,
+        name.cast(),
+        generated.mpv_format.MPV_FORMAT_NODE,
+      );
+      if (immediate < 0) return const [];
+      return await completer.future.timeout(timeout);
+    } finally {
+      calloc.free(name);
+      _seekRangeRequests.remove(requestNumber);
+    }
+  }
+
   /// Observes property for the internal libmpv instance of this [Player].
   /// Please use this method only if you know what you are doing, existing methods in [Player] implementation are suited for the most use cases.
   ///
@@ -1398,6 +1423,26 @@ class NativePlayer extends PlatformPlayer {
     }
     if (event.ref.event_id ==
         generated.mpv_event_id.MPV_EVENT_GET_PROPERTY_REPLY) {
+      final ranges = _seekRangeRequests.remove(event.ref.reply_userdata);
+      if (ranges != null) {
+        try {
+          final data = event.ref.data;
+          if (event.ref.error < 0 || data == nullptr) {
+            ranges.complete(const []);
+          } else {
+            final property = data.cast<generated.mpv_event_property>().ref;
+            ranges.complete(
+              property.format == generated.mpv_format.MPV_FORMAT_NODE
+                  ? copyNativeSeekRanges(
+                      property.data.cast<generated.mpv_node>(),
+                    )
+                  : const [],
+            );
+          }
+        } on Object catch (error, stackTrace) {
+          ranges.completeError(error, stackTrace);
+        }
+      }
       final completer = _getPropertyRequests.remove(event.ref.reply_userdata);
       // A timeout may have retired this request. Copy event-owned data before
       // returning to mpv_wait_event; it is invalidated by the next native event.
@@ -2382,6 +2427,8 @@ class NativePlayer extends PlatformPlayer {
   int _asyncRequestNumber = 0;
   final Map<int, Completer<int>> _setPropertyRequests = {};
   final Map<int, Completer<String>> _getPropertyRequests = {};
+  final Map<int, Completer<List<({double start, double end})>>>
+  _seekRangeRequests = {};
   final Map<int, Completer<int>> _commandRequests = {};
   final Map<int, _ScreenshotRequest> _screenshotRequests = {};
 

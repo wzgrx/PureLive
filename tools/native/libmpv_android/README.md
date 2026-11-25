@@ -1,34 +1,28 @@
-# Android libmpv 0.41.0 / FFmpeg 9.0.2 b2
+# Android libmpv 0.42.0 / FFmpeg 9.1
 
-Issue #176 的兼容性修复。旧 b1 在 Android API27 模拟器中加载失败：两个 Vulkan 1.1 核心符号被直接导入。b2 在创建 Vulkan 实例之后动态查询核心/KHR入口，缺失时退出可选 Vulkan 路径，保留 OpenGL/MediaCodec 与原 JNI 补丁。没有修改 API 最低要求或全局 TLS 策略。
+稳定标签的确切提交、全部依赖和三个JAR的SHA-256固定于`provenance.json`。保留API26最低要求、原Java/JNI helper和动态查询Vulkan可选入口的兼容修复。三个ABI全部强导入已与NDK API26 stub逐项核对，ELF至少16KB对齐。
 
-## 构建来源
+mpv0.42在FFmpeg9中默认验证TLS证书，mbedTLS未自动加载Android根证书会使HTTPS直播失败。`../ffmpeg_system_ca.patch`在没有显式CA文件时加载Conscrypt APEX系统信任库，旧Android加载`/system/etc/security/cacerts`；显式CA文件仍替换默认来源，验证保持开启。
 
-`provenance.json` 固定上游构建器、各依赖、补丁与二进制/JAR校验和。JAR保留 b1 的 media-kit helper，只替换同 ABI 的 libmpv.so。三个 ABI 的 ELF LOAD 对齐均至少16KB，Vulkan强导入均存在于NDK API26 stub。尚无原反馈者360N7Pro或ARM真机执行证据。
-
-复建在新的独立目录进行，不能对已有工程执行重置/清理：
+复建须使用新的独立目录，保留已有源代码和缓存：
 
 ```bash
-git clone https://github.com/Predidit/libmpv-android-video-build.git android-mpv-b2
-cd android-mpv-b2
+git clone https://github.com/Predidit/libmpv-android-video-build.git android-mpv-042
+cd android-mpv-042
 git checkout 0443048272a511d7a990a2a3d5ca6bbaf55a869a
 git apply /path/to/PureLive/tools/native/libmpv_android/builder.patch
 cd buildscripts
 mkdir -p sdk
 ln -s "$ANDROID_HOME" sdk/android-sdk-linux
-# Host Python needs Jinja2; the recorded build used Python 3.12 with Jinja2.
 cp /path/to/PureLive/tools/native/libmpv_android/ffmpeg.sh scripts/ffmpeg.sh
 cp /path/to/PureLive/tools/native/libmpv_android/api26_vulkan_entrypoints.patch patches/mpv/
+cp /path/to/PureLive/tools/native/ffmpeg_system_ca.patch patches/ffmpeg/system_ca.patch
 bash -e include/download-deps.sh
 bash -e patch.sh
+git -C deps/mpv fetch --depth 1 origin tag v0.42.0
+git -C deps/ffmpeg fetch --depth 1 origin tag n9.1
 export cores=16
 for arch in x86_64 arm64 armv7l; do bash -e build.sh --arch "$arch"; done
 ```
 
-保留构建器原 mbedTLS `/dev/urandom` 配置，三个 ABI 顺序构建以免共享源码清理冲突。可选 Kazumi HLS 和不适用0.41的 TLS 补丁已从构建选择移除。以实际 `prefix/<abi>/lib/libmpv.so` 存在及校验为准，不能只看脚本退出码。不要运行上游 `bundle_default.sh` 的递归清理。
-
-## 运行验证边界
-
-在本任务新建、只读基础镜像的 API27 x64 模拟器中，5.6.1 release、修复前5.6.2 release/profile均出现原生加载失败；仅替换libmpv的独立签名诊断APK成功初始化并连续解码本地产生的 H.264/AAC 视频（11秒至17秒画面）。诊断APK不是正式附件。最终同源 profile/release 执行结果另记在 Y01.42 验证记录；ARM静态检查不等于ARM真机播放验证。
-
-参考：[Android Vulkan 实现](https://source.android.com/docs/core/graphics/implement-vulkan)、[Khronos Android平台说明](https://docs.vulkan.org/guide/latest/platforms.html)。
+JAR保留旧版已校验helper，仅替换同ABI的`libmpv.so`。不要执行上游`bundle_default.sh`的递归清理。API27自有模拟器已验证本地H.264/AAC、公网HTTPS、未知证书拒绝及显式测试CA接受；ARM静态检查不等于原机播放验收。旧0.41构建和API27故障证据保留在Git历史及旧native发布页。

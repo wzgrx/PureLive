@@ -169,19 +169,18 @@ class VideoControllerConfiguration {
     bool? enableHardwareAcceleration,
     bool? enableAndroidSurfaceProducer,
     bool? androidAttachSurfaceAfterVideoParameters,
-  }) =>
-      VideoControllerConfiguration(
-        vo: vo ?? this.vo,
-        hwdec: hwdec ?? this.hwdec,
-        scale: scale ?? this.scale,
-        width: width ?? this.width,
-        height: height ?? this.height,
-        enableHardwareAcceleration:
-            enableHardwareAcceleration ?? this.enableHardwareAcceleration,
-        enableAndroidSurfaceProducer:
-            enableAndroidSurfaceProducer ?? this.enableAndroidSurfaceProducer,
-        androidAttachSurfaceAfterVideoParameters:
-            androidAttachSurfaceAfterVideoParameters ??
-                this.androidAttachSurfaceAfterVideoParameters,
-      );
+  }) => VideoControllerConfiguration(
+    vo: vo ?? this.vo,
+    hwdec: hwdec ?? this.hwdec,
+    scale: scale ?? this.scale,
+    width: width ?? this.width,
+    height: height ?? this.height,
+    enableHardwareAcceleration:
+        enableHardwareAcceleration ?? this.enableHardwareAcceleration,
+    enableAndroidSurfaceProducer:
+        enableAndroidSurfaceProducer ?? this.enableAndroidSurfaceProducer,
+    androidAttachSurfaceAfterVideoParameters:
+        androidAttachSurfaceAfterVideoParameters ??
+        this.androidAttachSurfaceAfterVideoParameters,
+  );
 }

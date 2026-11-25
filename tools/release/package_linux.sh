@@ -36,7 +36,7 @@ cat > "$stage/README.txt" <<'README'
 加到应用菜单：把 purelive.desktop 里的 Exec 改成 pure_live 的完整路径，
 再复制到 ~/.local/share/applications/ ，图标 purelive.png 复制到
 ~/.local/share/icons/ 。
-需要：GTK 3、OpenGL（一般桌面都已自带）。Linux 版没有应用内网页登录，
+需要：GTK 3、OpenGL、glibc 2.38 及以上、提供 GLIBCXX_3.4.32 的 libstdc++。Linux 版没有应用内网页登录，
 账号可以在手机或 Windows 上登录后用“设备同步”带过来。
 README
 tar -C "$(dirname "$stage")" -czf "$out/$name.tar.gz" "$name"

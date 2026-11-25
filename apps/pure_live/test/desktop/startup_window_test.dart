@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pure_live/app/desktop/app_window_api.dart';
 import 'package:pure_live/app/desktop/startup_window.dart';
-import 'package:window_manager/window_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -30,11 +30,11 @@ void main() {
     });
     final maximized = Completer<void>();
     var ready = false;
-    final restoring = restoreStartupWindow(const WindowOptions(), () async {
+    final restoring = restoreStartupWindow(const AppWindowOptions(), () async {
       calls.add('restore-begin');
       await maximized.future;
       calls.add('restore-finished');
-    }).then((_) => ready = true);
+    }, prepare: (_) async => calls.add('prepare')).then((_) => ready = true);
     await Future<void>.delayed(const Duration(seconds: 1));
     expect(calls, contains('restore-begin'));
     expect(calls, isNot(contains('layoutReady')));

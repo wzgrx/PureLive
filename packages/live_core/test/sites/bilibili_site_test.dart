@@ -131,6 +131,8 @@ void main() {
                 'title': 'New',
                 'uname': 'Example',
                 'live_time': 1793782000,
+                'keyframe': 'https://images.example.test/frame.jpg',
+                'cover_from_user': 'https://images.example.test/room.jpg',
                 'lock_till': '0000-00-00 00:00:00',
                 'hidden_till': '0000-00-00 00:00:00',
               },
@@ -166,6 +168,7 @@ void main() {
     expect(http.requests.single.method, 'POST');
     expect(result.keys, [first.identityKey]);
     expect(result[first.identityKey]?.title, 'New');
+    expect(result[first.identityKey]?.cover, 'https://images.example.test/frame.jpg');
     expect(result[first.identityKey]?.isLiveNow, isTrue);
   });
 

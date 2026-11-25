@@ -28,14 +28,14 @@ class VideoStateInheritedWidget extends InheritedWidget {
     required Widget child,
     this.disposeNotifiers = true,
   }) : super(
-          child: VideoStateInheritedWidgetContextNotifier(
-            state: state,
-            contextNotifier: contextNotifier,
-            videoViewParametersNotifier: videoViewParametersNotifier,
-            disposeNotifiers: disposeNotifiers,
-            child: child,
-          ),
-        );
+         child: VideoStateInheritedWidgetContextNotifier(
+           state: state,
+           contextNotifier: contextNotifier,
+           videoViewParametersNotifier: videoViewParametersNotifier,
+           disposeNotifiers: disposeNotifiers,
+           child: child,
+         ),
+       );
 
   static VideoStateInheritedWidget? maybeOf(BuildContext context) {
     return context
@@ -44,10 +44,7 @@ class VideoStateInheritedWidget extends InheritedWidget {
 
   static VideoStateInheritedWidget of(BuildContext context) {
     final VideoStateInheritedWidget? result = maybeOf(context);
-    assert(
-      result != null,
-      'No [VideoStateInheritedWidget] found in [context]',
-    );
+    assert(result != null, 'No [VideoStateInheritedWidget] found in [context]');
     return result!;
   }
 

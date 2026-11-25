@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/multiview/logic/multiview_controller.dart';
 import 'package:pure_live/features/multiview/logic/multiview_geometry.dart';
 import 'package:pure_live/features/multiview/widgets/cell_view.dart';

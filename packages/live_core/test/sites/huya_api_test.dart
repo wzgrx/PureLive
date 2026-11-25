@@ -1176,11 +1176,11 @@ void main() {
 
     test('board entries: ids kept, empty and expired entries dropped, price from iCostPay', () {
       final now = DateTime.utc(2026, 9, 27, 12);
-      TarsStruct entry(int id, int countdown, {String text = 'message', int total = 60}) => TarsStruct({
+      TarsStruct entry(int id, int? countdown, {String text = 'message', int total = 60}) => TarsStruct({
         0: const TarsStruct({1: ' nick ', 2: '//a.msstatic.com/f.jpg'}),
         1: text,
         4: total,
-        5: countdown,
+        5: ?countdown,
         9: id,
         12: 1200,
       });
@@ -1194,7 +1194,14 @@ void main() {
                     0,
                     TarsStruct({
                       1: TarsStruct({
-                        1: <Object?>[entry(2, 50), entry(1, 10), entry(3, 30, text: ' '), entry(4, 0, total: 0)],
+                        1: <Object?>[
+                          entry(2, 50),
+                          entry(1, 10),
+                          entry(3, 30, text: ' '),
+                          entry(4, 0, total: 3600),
+                          entry(5, null),
+                          entry(6, -1),
+                        ],
                       }),
                     }),
                   ))
@@ -1202,7 +1209,8 @@ void main() {
         },
       ).encode();
       final chats = HuyaApi.superChats(bytes, now: now);
-      expect(chats.map((chat) => chat.messageId), ['huya:2', 'huya:1']);
+      expect(chats.map((chat) => chat.messageId), ['huya:2', 'huya:1', 'huya:5']);
+      expect(chats.last.endTime, now.add(const Duration(seconds: 60)));
       final first = chats.first;
       expect((first.userName, first.face, first.price), ('nick', 'https://a.msstatic.com/f.jpg', 12));
       // D07.2: the unit of the platform table (superChatUnits).

@@ -28,6 +28,8 @@ dependencies:
   universal_platform: ^1.0.0+1
   plugin_platform_interface: ^2.0.2
 
+  material_ui: any
+  cupertino_ui: any
 dev_dependencies:
   flutter_lints: ^5.0.0
 

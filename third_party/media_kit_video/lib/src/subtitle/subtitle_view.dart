@@ -5,7 +5,7 @@
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
 import 'dart:async';
 import 'dart:math';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:media_kit_video/src/video_controller/video_controller.dart';
 
@@ -93,7 +93,8 @@ class SubtitleViewState extends State<SubtitleView> {
             kTextScaleFactorReferenceWidth * kTextScaleFactorReferenceHeight;
         final textScaleFactor = sqrt((nr / dr).clamp(0.0, 1.0));
 
-        final textScaler = widget.configuration.textScaler ??
+        final textScaler =
+            widget.configuration.textScaler ??
             TextScaler.linear(textScaleFactor);
         return Material(
           color: Colors.transparent,
@@ -153,11 +154,6 @@ class SubtitleViewConfiguration {
     ),
     this.textAlign = TextAlign.center,
     this.textScaler,
-    this.padding = const EdgeInsets.fromLTRB(
-      16.0,
-      0.0,
-      16.0,
-      24.0,
-    ),
+    this.padding = const EdgeInsets.fromLTRB(16.0, 0.0, 16.0, 24.0),
   });
 }

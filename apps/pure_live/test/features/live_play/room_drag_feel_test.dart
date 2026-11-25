@@ -4,10 +4,10 @@
 // resist past their ends, and dragging the panel leaves the picture alone.
 // On the K90 (400 × 869 dp at 3×) at 120 Hz, as in side_panel_test.dart.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/live_play/layout/portrait_panel.dart';
 import 'package:pure_live/features/live_play/logic/room_layout.dart';
 import 'package:pure_live/features/live_play/player/room_swipe.dart';

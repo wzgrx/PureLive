@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The follow button of the live room's app bar (docs/A-界面设计/A07-直播间界面/A07.1-竖屏普通布局,
 /// change 12), for every other place that follows something (the card

@@ -1,8 +1,8 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/about/about_page.dart';
 import 'package:pure_live/features/account/account_page.dart';
 import 'package:pure_live/features/area_rooms/area_rooms_page.dart';
@@ -137,7 +137,10 @@ GoRouter buildAppRouter({
               // reads it), not the list it came with (U.2b2).
               ? liveRoomPage(
                   key: state.pageKey,
-                  arguments: LiveRoomArgs.roomOf(state.extra) ?? state.extra,
+                  arguments: switch (state.extra) {
+                    LiveRoomArgs(appointment: true) => state.extra,
+                    _ => LiveRoomArgs.roomOf(state.extra) ?? state.extra,
+                  },
                   child: child,
                 )
               : MaterialPage<Object?>(key: state.pageKey, name: path, arguments: state.extra, child: child);

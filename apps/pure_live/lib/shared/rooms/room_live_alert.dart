@@ -1,11 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/permission_prompts.dart';
@@ -36,7 +36,12 @@ bool liveAlertCoversAll(SettingsStore settings) =>
 /// with their own switch (and the chosen tags) are covered. Off: the room
 /// leaves the list; with none left and no tag chosen, every follow is
 /// covered again (V01.1 L3), so the toast says so.
-Future<void> toggleRoomLiveAlert(BuildContext context, {required LiveStore store, required LiveRoom room}) async {
+Future<void> toggleRoomLiveAlert(
+  BuildContext context, {
+  required LiveStore store,
+  required LiveRoom room,
+  Future<bool> Function()? confirmNarrow,
+}) async {
   final settings = store.settings;
   final keys = settings.get(Settings.liveAlertRoomKeys);
   final name = room.displayNick(platformName(room.platform));
@@ -52,14 +57,16 @@ Future<void> toggleRoomLiveAlert(BuildContext context, {required LiveStore store
     return;
   }
   if (liveAlertCoversAll(settings)) {
-    final narrow = await showAppConfirmDialog(
-      context: context,
-      key: const ValueKey('room-live-alert-narrow'),
-      title: i18n('room_live_alert_narrow_title'),
-      message: i18n('room_live_alert_narrow_message'),
-      confirmLabel: i18n('room_live_alert_narrow_confirm'),
-      confirmKey: const ValueKey('room-live-alert-narrow-confirm'),
-    );
+    final narrow =
+        await (confirmNarrow?.call() ??
+            showAppConfirmDialog(
+              context: context,
+              key: const ValueKey('room-live-alert-narrow'),
+              title: i18n('room_live_alert_narrow_title'),
+              message: i18n('room_live_alert_narrow_message'),
+              confirmLabel: i18n('room_live_alert_narrow_confirm'),
+              confirmKey: const ValueKey('room-live-alert-narrow-confirm'),
+            ));
     if (!narrow) return;
   } else if (!settings.get(Settings.liveAlertEnabled)) {
     if (!context.mounted) return;

@@ -27,6 +27,7 @@ defaults:
 
 jobs:
   publish:
+    if: ${{ !startsWith(inputs.tag, 'native-') }}
     name: Attach Apple packages
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -45,4 +46,76 @@ jobs:
           version="${TAG#v}"
           ls PureLive-"$version"-* >/dev/null
           gh release upload "$TAG" PureLive-"$version"-* --repo "$GITHUB_REPOSITORY" --clobber
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name'
+
+  native:
+    name: Attach verified Apple native dependencies
+    if: ${{ startsWith(inputs.tag, 'native-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validate producer, download and attach native components
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > run.json
+          [[ "$(jq -r .status run.json)" == completed ]]
+          [[ "$(jq -r .name run.json)" == 'FFmpegKit Apple' || "$(jq -r .name run.json)" == 'Libmpv Apple' ]]
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" > release.json
+          [[ "$(jq -r .prerelease release.json)" == true ]]
+          case "$TAG" in
+            native-ffmpeg-*)
+              [[ "$TAG" =~ ^native-ffmpeg-9[.]1-b[0-9]+$ ]]
+              artifact=ffmpeg-kit-apple
+              gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs" > jobs.json
+              jq -e '[.jobs[].steps[] | select((.name == "Build" or .name == "Check and hash") and .conclusion == "success")] | length == 2' jobs.json >/dev/null
+              ;;
+            native-libmpv-*)
+              [[ "$TAG" =~ ^native-libmpv-0[.]42[.]0-ff9[.]1-b[0-9]+$ ]]
+              artifact=libmpv-apple
+              [[ "$(jq -r .conclusion run.json)" == success ]]
+              ;;
+            *) echo 'Unsupported native component tag' >&2; exit 1 ;;
+          esac
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$artifact" --dir native-out
+          cd native-out
+          sha256sum -c SHA256SUMS
+          if [[ "$artifact" == libmpv-apple ]]; then
+            [[ "$(jq -r .source_ref provenance.json)" == "$(jq -r .head_sha ../run.json)" ]]
+            jq -e '.mpv == "b0841e8c4d156b8403dc1876c4cbd9011eb583f3" and .ffmpeg == "74e4393595cf2b5857f0da925c4e0dd74ea306e5" and (.targets | length) == 5' provenance.json >/dev/null
+          fi
+          count=0
+          while read -r expected file; do
+            [[ "$expected" =~ ^[a-f0-9]{64}$ ]]
+            case "$file" in
+              bundle-base-ios-universal-lgpl.xcframework.zip|bundle-base-macos-universal-lgpl.xcframework.zip)
+                [[ "$artifact" == ffmpeg-kit-apple ]]
+                ;;
+              libmpv-ios-0.42.0-ffmpeg-9.1.tar.gz|libmpv-macos-0.42.0-ffmpeg-9.1.tar.gz)
+                [[ "$artifact" == libmpv-apple ]]
+                ;;
+              provenance.json) continue ;;
+              *) echo 'Unexpected native artifact member' >&2; exit 1 ;;
+            esac
+            digest=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" | jq -r --arg file "$file" '.assets[] | select(.name == $file) | .digest')
+            if [[ -n "$digest" ]]; then
+              [[ "$digest" == "sha256:$expected" ]]
+            else
+              gh release upload "$TAG" "$file" --repo "$GITHUB_REPOSITORY"
+            fi
+            digest=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" | jq -r --arg file "$file" '.assets[] | select(.name == $file) | .digest')
+            [[ "$digest" == "sha256:$expected" ]]
+            count=$((count + 1))
+          done < SHA256SUMS
+          [[ "$count" == 2 ]]
+          sed 's/  provenance.json$/  provenance-apple.json/' SHA256SUMS > SHA256SUMS-apple.txt
+          gh release upload "$TAG" SHA256SUMS-apple.txt --repo "$GITHUB_REPOSITORY" --clobber
+          if [[ -f provenance.json ]]; then
+            [[ "$(jq -r .source_ref provenance.json)" == "$(jq -r .head_sha ../run.json)" ]]
+            cp provenance.json provenance-apple.json
+            gh release upload "$TAG" provenance-apple.json --repo "$GITHUB_REPOSITORY" --clobber
+          fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name'

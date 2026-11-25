@@ -2,13 +2,14 @@ import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
+import 'package:pure_live/shared/rooms/room_schedule_dialog.dart';
 import 'package:pure_live/shared/rooms/room_tags_dialog.dart';
 import 'package:pure_live/shared/rooms/room_texts.dart';
 import 'package:pure_live/shared/rooms/share_code.dart';
@@ -41,7 +42,7 @@ final class RoomMenuAction {
   final bool danger;
 }
 
-enum _Choice { follow, unfollow, tags, share }
+enum _Choice { follow, unfollow, tags, share, schedule }
 
 /// The dialog of a room card, the same on every card page and client
 /// (3.x `RoomCard.onLongPress`, also on right click; docs/A-界面设计/A09-浏览界面/A09.1-房间卡片,
@@ -79,6 +80,8 @@ Future<void> showRoomMenu(
       await editRoomTags(context, store: store, room: room);
     case _Choice.share:
       await shareRoom(room, origin: shareOrigin(context));
+    case _Choice.schedule:
+      await showRoomAppointmentMenu(context, store.roomSchedules, room);
     case final RoomMenuAction action:
       action.onSelected();
   }
@@ -125,6 +128,15 @@ class _RoomMenu extends StatelessWidget {
             onPressed: () => pick(_Choice.tags),
           ),
         ],
+        if (!SiteIds.isRetired(room.platform))
+          [
+            CardDialogAction(
+              key: const ValueKey('room-menu-appointment'),
+              icon: AppIcons.sleepTimer,
+              label: i18n('room_schedule_title'),
+              onPressed: () => pick(_Choice.schedule),
+            ),
+          ],
         for (final action in actions)
           [
             CardDialogAction(

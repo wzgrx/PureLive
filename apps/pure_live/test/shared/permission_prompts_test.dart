@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_store/live_store.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/settings/playback_tiles.dart';
 import 'package:pure_live/platform/system_permissions.dart';
 import 'package:pure_live/shared/permission_prompts.dart';

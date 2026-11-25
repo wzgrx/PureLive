@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/theme/metrics.dart';
 import 'package:live_ui/src/widgets/focus_ring.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The chip's height (docs/A-界面设计/A02-组件/A02.1-通用组件 c13); 48 to tap.
 const double appChipHeight = 36;

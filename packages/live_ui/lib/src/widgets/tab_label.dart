@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/widgets/focus_ring.dart';
 import 'package:live_ui/src/widgets/scrollable_tab_bar.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A tab's content (docs/A-界面设计/A02-组件/A02.1-通用组件 c12): the label, optionally a
 /// number after it (tabular, in the tab's colour; the follows' states and

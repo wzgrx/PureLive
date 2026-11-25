@@ -4,12 +4,12 @@ publish_to: none
 version: 0.1.0
 
 environment:
-  sdk: ^3.13.0
+  sdk: ^3.14.0
 
 resolution: workspace
 
 dependencies:
-  crypto: ^3.0.8
+  crypto: 3.0.8
   live_core: any
   live_net: any
   meta: ^1.19.0

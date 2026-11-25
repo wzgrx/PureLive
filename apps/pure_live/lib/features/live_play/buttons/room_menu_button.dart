@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/live_play/dialogs/playback_info_panel.dart';
@@ -314,7 +314,13 @@ List<List<RoomMenuItem>> roomMenuItems(
   return [
     for (final group in roomMenuGroups(
       iptv: controller.site.id == SiteIds.iptv,
-      replay: {SiteIds.huya, SiteIds.douyu, SiteIds.bilibili, SiteIds.soop}.contains(controller.room.platform),
+      replay: {
+        SiteIds.huya,
+        SiteIds.douyu,
+        SiteIds.bilibili,
+        SiteIds.soop,
+        SiteIds.chzzk,
+      }.contains(controller.room.platform),
       newWindow: DesktopWindow.offersNewWindow(settings),
       local: settings.get(Settings.localInteractionEnabled),
       cast: castSupported(defaultTargetPlatform),

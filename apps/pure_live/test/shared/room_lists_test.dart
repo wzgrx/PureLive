@@ -1,12 +1,12 @@
 // F.5a item 3: the time on air on the cards of every list page, and the
 // search pages sharing the platform's snapshot (UPGRADES 7-9, 10-3, 25-12,
 // 33-7; 19-1, 24-5, 26-1).
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_net/testing.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/search/search_model.dart';
 import 'package:pure_live/shared/rooms/room_grid.dart';
@@ -106,7 +106,7 @@ void main() {
     Finder heartIn(String key) =>
         find.descendant(of: find.byKey(ValueKey(key)), matching: find.byKey(const ValueKey('room-card-followed')));
     expect(heartIn('browse-1'), findsOneWidget);
-    expect(find.byTooltip('已关注'), findsOneWidget);
+    expect(find.byWidgetPredicate((widget) => widget is Tooltip && widget.message == '已关注'), findsOneWidget);
     expect(heartIn('browse-2'), findsNothing);
     expect(heartIn('follows-1'), findsNothing);
 

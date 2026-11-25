@@ -4,29 +4,27 @@
 /// All rights reserved.
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
+import 'dart:html' as html;
 import 'dart:js' as js;
 import 'dart:typed_data';
-import 'dart:collection';
-import 'dart:html' as html;
-import 'package:meta/meta.dart';
+
 import 'package:collection/collection.dart';
-import 'package:synchronized/synchronized.dart';
-
-import 'package:media_kit/src/player/platform_player.dart';
-
-import 'package:media_kit/src/player/web/utils/hls.dart';
-import 'package:media_kit/src/player/web/utils/duration.dart';
-
-import 'package:media_kit/src/models/track.dart';
-import 'package:media_kit/src/models/playable.dart';
-import 'package:media_kit/src/models/playlist.dart';
-import 'package:media_kit/src/models/media/media.dart';
 import 'package:media_kit/src/models/audio_device.dart';
-import 'package:media_kit/src/models/player_state.dart';
 import 'package:media_kit/src/models/audio_params.dart';
-import 'package:media_kit/src/models/video_params.dart';
+import 'package:media_kit/src/models/media/media.dart';
+import 'package:media_kit/src/models/playable.dart';
+import 'package:media_kit/src/models/player_state.dart';
+import 'package:media_kit/src/models/playlist.dart';
 import 'package:media_kit/src/models/playlist_mode.dart';
+import 'package:media_kit/src/models/track.dart';
+import 'package:media_kit/src/models/video_params.dart';
+import 'package:media_kit/src/player/platform_player.dart';
+import 'package:media_kit/src/player/web/utils/duration.dart';
+import 'package:media_kit/src/player/web/utils/hls.dart';
+import 'package:meta/meta.dart';
+import 'package:synchronized/synchronized.dart';
 
 /// Initializes the web backend for package:media_kit.
 void webEnsureInitialized({String? libmpv}) {}
@@ -42,8 +40,8 @@ void webEnsureInitialized({String? libmpv}) {}
 class WebPlayer extends PlatformPlayer {
   /// {@macro web_player}
   WebPlayer({required super.configuration})
-      : id = js.context[kInstanceCount] ?? 0,
-        element = html.VideoElement() {
+    : id = js.context[kInstanceCount] ?? 0,
+      element = html.VideoElement() {
     lock.synchronized(() async {
       element
         // Do not add autoplay=false attribute: https://stackoverflow.com/a/19664804/12825435
@@ -86,10 +84,7 @@ class WebPlayer extends PlatformPlayer {
         lock.synchronized(() async {
           // PlayerState.state.playing & PlayerState.stream.playing
           // PlayerState.state.buffering & PlayerState.stream.buffering
-          state = state.copyWith(
-            playing: true,
-            completed: false,
-          );
+          state = state.copyWith(playing: true, completed: false);
           if (!playingController.isClosed) {
             playingController.add(true);
           }
@@ -248,10 +243,7 @@ class WebPlayer extends PlatformPlayer {
           // PlayerState.state.height & PlayerState.stream.height
           final width = element.videoWidth;
           final height = element.videoHeight;
-          state = state.copyWith(
-            width: width,
-            height: height,
-          );
+          state = state.copyWith(width: width, height: height);
           if (!widthController.isClosed) {
             widthController.add(width);
           }
@@ -269,9 +261,7 @@ class WebPlayer extends PlatformPlayer {
         }
       }
 
-      await HLS.ensureInitialized(
-        hls: test ? HLS.kHLSCDN : null,
-      );
+      await HLS.ensureInitialized(hls: test ? HLS.kHLSCDN : null);
       completer.complete();
       try {
         configuration.ready?.call();
@@ -294,25 +284,19 @@ class WebPlayer extends PlatformPlayer {
       await pause(synchronized: false);
 
       state = state.copyWith(
-        track: state.track.copyWith(
-          video: VideoTrack.no(),
-        ),
+        track: state.track.copyWith(video: VideoTrack.no()),
       );
       if (!trackController.isClosed) {
         trackController.add(state.track);
       }
       state = state.copyWith(
-        track: state.track.copyWith(
-          audio: AudioTrack.no(),
-        ),
+        track: state.track.copyWith(audio: AudioTrack.no()),
       );
       if (!trackController.isClosed) {
         trackController.add(state.track);
       }
       state = state.copyWith(
-        track: state.track.copyWith(
-          subtitle: SubtitleTrack.no(),
-        ),
+        track: state.track.copyWith(subtitle: SubtitleTrack.no()),
       );
       if (!trackController.isClosed) {
         trackController.add(state.track);
@@ -364,10 +348,7 @@ class WebPlayer extends PlatformPlayer {
       }
 
       // Restore original state & reset public [PlayerState] & [PlayerStream] values e.g. width=null, height=null, subtitle=['', ''] etc.
-      await stop(
-        open: true,
-        synchronized: false,
-      );
+      await stop(open: true, synchronized: false);
 
       element.pause();
       // Enter paused state.
@@ -382,38 +363,24 @@ class WebPlayer extends PlatformPlayer {
 
       _shuffle.clear();
 
-      state = state.copyWith(
-        playlist: Playlist(
-          playlist,
-          index: index,
-        ),
-      );
+      state = state.copyWith(playlist: Playlist(playlist, index: index));
       if (!playlistController.isClosed) {
-        playlistController.add(
-          Playlist(
-            playlist,
-            index: index,
-          ),
-        );
+        playlistController.add(Playlist(playlist, index: index));
       }
 
       _loadSource(_playlist[_index]);
 
       if (play) {
-        element.play().catchError(
-          (error) {
-            // PlayerStream.error
-            final e = error as html.DomException;
-            if (!errorController.isClosed) {
-              errorController.add(e.message ?? '');
-            }
-          },
-        );
+        element.play().catchError((error) {
+          // PlayerStream.error
+          final e = error as html.DomException;
+          if (!errorController.isClosed) {
+            errorController.add(e.message ?? '');
+          }
+        });
       } else {
         // A minimal quirk to match the native backend behavior.
-        state = state.copyWith(
-          buffering: true,
-        );
+        state = state.copyWith(buffering: true);
         if (!bufferingController.isClosed) {
           bufferingController.add(true);
         }
@@ -431,10 +398,7 @@ class WebPlayer extends PlatformPlayer {
   /// Stops the [Player].
   /// Unloads the current [Media] or [Playlist] from the [Player]. This method is similar to [dispose] but does not release the resources & [Player] is still usable.
   @override
-  Future<void> stop({
-    bool open = false,
-    bool synchronized = true,
-  }) async {
+  Future<void> stop({bool open = false, bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -551,15 +515,13 @@ class WebPlayer extends PlatformPlayer {
       }
       await waitForPlayerInitialization;
       await waitForVideoControllerInitializationIfAttached;
-      element.play().catchError(
-        (error) {
-          // PlayerStream.error
-          final e = error as html.DomException;
-          if (!errorController.isClosed) {
-            errorController.add(e.message ?? '');
-          }
-        },
-      );
+      element.play().catchError((error) {
+        // PlayerStream.error
+        final e = error as html.DomException;
+        if (!errorController.isClosed) {
+          errorController.add(e.message ?? '');
+        }
+      });
     }
 
     if (synchronized) {
@@ -610,10 +572,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> add(
-    Media media, {
-    bool synchronized = true,
-  }) async {
+  Future<void> add(Media media, {bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -624,9 +583,7 @@ class WebPlayer extends PlatformPlayer {
       _playlist = [..._playlist, media];
 
       state = state.copyWith(
-        playlist: state.playlist.copyWith(
-          medias: _playlist,
-        ),
+        playlist: state.playlist.copyWith(medias: _playlist),
       );
       if (!playlistController.isClosed) {
         playlistController.add(state.playlist);
@@ -641,10 +598,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> remove(
-    int index, {
-    bool synchronized = true,
-  }) async {
+  Future<void> remove(int index, {bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -656,10 +610,7 @@ class WebPlayer extends PlatformPlayer {
       // In this situation, the playlist doesn't seem to be updated, so we manually update it.
       if (_index == index &&
           _playlist.length - 1 == index &&
-          [
-            PlaylistMode.none,
-            PlaylistMode.single,
-          ].contains(_playlistMode)) {
+          [PlaylistMode.none, PlaylistMode.single].contains(_playlistMode)) {
         _index = _playlist.length - 2 < 0 ? 0 : _playlist.length - 2;
 
         state = state.copyWith(
@@ -706,7 +657,6 @@ class WebPlayer extends PlatformPlayer {
           playlistController.add(state.playlist);
         }
       }
-
       // Default
       else {
         _playlist = [..._playlist];
@@ -719,10 +669,7 @@ class WebPlayer extends PlatformPlayer {
         }
 
         state = state.copyWith(
-          playlist: state.playlist.copyWith(
-            medias: _playlist,
-            index: _index,
-          ),
+          playlist: state.playlist.copyWith(medias: _playlist, index: _index),
         );
         if (!playlistController.isClosed) {
           playlistController.add(state.playlist);
@@ -738,9 +685,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> next({
-    bool synchronized = true,
-  }) async {
+  Future<void> next({bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -750,9 +695,7 @@ class WebPlayer extends PlatformPlayer {
 
       Future<void> start() async {
         state = state.copyWith(
-          playlist: state.playlist.copyWith(
-            index: _index,
-          ),
+          playlist: state.playlist.copyWith(index: _index),
         );
         if (!playlistController.isClosed) {
           playlistController.add(state.playlist);
@@ -810,9 +753,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> previous({
-    bool synchronized = true,
-  }) async {
+  Future<void> previous({bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -822,9 +763,7 @@ class WebPlayer extends PlatformPlayer {
 
       Future<void> start() async {
         state = state.copyWith(
-          playlist: state.playlist.copyWith(
-            index: _index,
-          ),
+          playlist: state.playlist.copyWith(index: _index),
         );
         if (!playlistController.isClosed) {
           playlistController.add(state.playlist);
@@ -882,10 +821,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> jump(
-    int index, {
-    bool synchronized = true,
-  }) async {
+  Future<void> jump(int index, {bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -908,11 +844,7 @@ class WebPlayer extends PlatformPlayer {
         playingController.add(true);
       }
 
-      state = state.copyWith(
-        playlist: state.playlist.copyWith(
-          index: _index,
-        ),
-      );
+      state = state.copyWith(playlist: state.playlist.copyWith(index: _index));
       if (!playlistController.isClosed) {
         playlistController.add(state.playlist);
       }
@@ -926,11 +858,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> move(
-    int from,
-    int to, {
-    bool synchronized = true,
-  }) async {
+  Future<void> move(int from, int to, {bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -957,12 +885,7 @@ class WebPlayer extends PlatformPlayer {
       _playlist = values;
       // ---------------------------------------------
 
-      state = state.copyWith(
-        playlist: Playlist(
-          _playlist,
-          index: _index,
-        ),
-      );
+      state = state.copyWith(playlist: Playlist(_playlist, index: _index));
       if (!playlistController.isClosed) {
         playlistController.add(state.playlist);
       }
@@ -976,10 +899,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> seek(
-    Duration duration, {
-    bool synchronized = true,
-  }) async {
+  Future<void> seek(Duration duration, {bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -1031,10 +951,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> setVolume(
-    double volume, {
-    bool synchronized = true,
-  }) async {
+  Future<void> setVolume(double volume, {bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -1058,10 +975,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> setRate(
-    double rate, {
-    bool synchronized = true,
-  }) async {
+  Future<void> setRate(double rate, {bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -1071,11 +985,7 @@ class WebPlayer extends PlatformPlayer {
       await waitForVideoControllerInitializationIfAttached;
 
       if (rate <= 0.0) {
-        throw ArgumentError.value(
-          rate,
-          'rate',
-          'Must be greater than 0.0',
-        );
+        throw ArgumentError.value(rate, 'rate', 'Must be greater than 0.0');
       }
       element.playbackRate = rate;
     }
@@ -1088,10 +998,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> setPitch(
-    double pitch, {
-    bool synchronized = true,
-  }) async {
+  Future<void> setPitch(double pitch, {bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -1119,10 +1026,7 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<void> setShuffle(
-    bool shuffle, {
-    bool synchronized = true,
-  }) async {
+  Future<void> setShuffle(bool shuffle, {bool synchronized = true}) async {
     Future<void> function() async {
       if (disposed) {
         throw AssertionError('[Player] has been disposed');
@@ -1142,10 +1046,7 @@ class WebPlayer extends PlatformPlayer {
         _index = _playlist.indexOf(current);
 
         state = state.copyWith(
-          playlist: Playlist(
-            [..._playlist],
-            index: _index,
-          ),
+          playlist: Playlist([..._playlist], index: _index),
         );
         if (!playlistController.isClosed) {
           playlistController.add(state.playlist);
@@ -1157,10 +1058,7 @@ class WebPlayer extends PlatformPlayer {
         _shuffle.clear();
 
         state = state.copyWith(
-          playlist: Playlist(
-            [..._playlist],
-            index: _index,
-          ),
+          playlist: Playlist([..._playlist], index: _index),
         );
         if (!playlistController.isClosed) {
           playlistController.add(state.playlist);
@@ -1207,9 +1105,7 @@ class WebPlayer extends PlatformPlayer {
       }
       await waitForPlayerInitialization;
       await waitForVideoControllerInitializationIfAttached;
-      throw UnsupportedError(
-        '[Player.setVideoTrack] is not supported on web',
-      );
+      throw UnsupportedError('[Player.setVideoTrack] is not supported on web');
     }
 
     if (synchronized) {
@@ -1269,9 +1165,7 @@ class WebPlayer extends PlatformPlayer {
       await waitForVideoControllerInitializationIfAttached;
 
       // Reset existing Player.state.subtitle & Player.stream.subtitle.
-      state = state.copyWith(
-        subtitle: const PlayerState().subtitle,
-      );
+      state = state.copyWith(subtitle: const PlayerState().subtitle);
       if (!subtitleController.isClosed) {
         subtitleController.add(state.subtitle);
       }
@@ -1365,15 +1259,13 @@ class WebPlayer extends PlatformPlayer {
   ///
   /// [includeLibassSubtitles] is ignored.
   @override
-  Future<Uint8List?> screenshot(
-      {String? format = 'image/jpeg',
-      bool synchronized = true,
-      bool includeLibassSubtitles = false}) async {
+  Future<Uint8List?> screenshot({
+    String? format = 'image/jpeg',
+    bool synchronized = true,
+    bool includeLibassSubtitles = false,
+  }) async {
     Future<Uint8List?> function() async {
-      if (![
-        'image/jpeg',
-        'image/png',
-      ].contains(format)) {
+      if (!['image/jpeg', 'image/png'].contains(format)) {
         throw ArgumentError.value(
           format,
           'format',
@@ -1416,10 +1308,11 @@ class WebPlayer extends PlatformPlayer {
   }
 
   @override
-  Future<Uint8List?> safeScreenshot(
-      {String? format = 'image/jpeg',
-      bool synchronized = true,
-      bool includeLibassSubtitles = false}) {
+  Future<Uint8List?> safeScreenshot({
+    String? format = 'image/jpeg',
+    bool synchronized = true,
+    bool includeLibassSubtitles = false,
+  }) {
     return screenshot(
       format: format,
       synchronized: synchronized,
@@ -1477,18 +1370,12 @@ class WebPlayer extends PlatformPlayer {
     // PlayerState.state.buffering & PlayerState.stream.buffering
 
     // A minimal quirk to match the NativePlayer behavior.
-    state = state.copyWith(
-      buffering: true,
-    );
+    state = state.copyWith(buffering: true);
     if (!bufferingController.isClosed) {
       bufferingController.add(true);
     }
 
-    state = state.copyWith(
-      playing: false,
-      completed: true,
-      buffering: false,
-    );
+    state = state.copyWith(playing: false, completed: true, buffering: false);
     if (!playingController.isClosed) {
       playingController.add(false);
     }
@@ -1536,11 +1423,7 @@ class WebPlayer extends PlatformPlayer {
         }
     }
     // Update:
-    state = state.copyWith(
-      playlist: state.playlist.copyWith(
-        index: _index,
-      ),
-    );
+    state = state.copyWith(playlist: state.playlist.copyWith(index: _index));
     if (!playlistController.isClosed) {
       playlistController.add(state.playlist);
     }

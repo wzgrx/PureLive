@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_net/live_net.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:live_vod/live_vod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/app/ui_mode.dart';
 import 'package:pure_live/app/vod.dart';
@@ -32,7 +32,7 @@ const replayDatePresetLabels = {
 };
 
 /// Platforms with an implemented, official creator archive contract.
-const replayPlatforms = <String>[SiteIds.huya, SiteIds.douyu, SiteIds.bilibili, SiteIds.soop];
+const replayPlatforms = <String>[SiteIds.huya, SiteIds.douyu, SiteIds.bilibili, SiteIds.soop, SiteIds.chzzk];
 
 /// One date-led creator archive on phones, desktop and keyboard/remote clients.
 class ReplayCatalogPage extends ConsumerStatefulWidget {
@@ -154,6 +154,22 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
           await _readPositions(g);
           return;
         }
+        if (_platform == SiteIds.chzzk) {
+          final id = ChzzkArchiveApi.videoFromText(text);
+          if (id != null) {
+            final parts = await ref.read(chzzkArchiveProvider).detail(id, cancel: cancel);
+            if (!mounted || g != _generation) return;
+            final v = parts.first.recording;
+            _author = v.channelId;
+            _entries = [
+              ArchiveRecording(v, title: v.title, cover: v.cover, date: v.publishedAt?.toLocal(), duration: v.duration),
+            ];
+            await _readPositions(g);
+            return;
+          }
+          author = ChzzkArchiveApi.channelFromText(text);
+          if (author == null) throw const FormatException('Invalid CHZZK replay URL');
+        }
         if (_platform == SiteIds.soop) {
           final videoId = SoopArchiveApi.videoFromText(text);
           if (videoId != null) {
@@ -198,6 +214,8 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
         if (!RegExp(r'^[A-Za-z0-9_-]{1,64}$').hasMatch(text)) throw const FormatException('Invalid room');
         author = _platform == SiteIds.soop
             ? SoopArchiveApi.authorFromText(text)
+            : _platform == SiteIds.chzzk
+            ? ChzzkArchiveApi.channelFromText(text)
             : await ref.read(replayIdentityProvider).resolve(_platform, text, cancel: cancel);
         if (author == null) throw const FormatException('Invalid SOOP author');
       }
@@ -249,6 +267,13 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
         next = [
           for (final v in result.videos)
             ArchiveRecording(v, title: v.title, cover: v.cover, date: DateTime.tryParse(v.date), duration: v.duration),
+        ];
+        more = result.hasMore;
+      } else if (_platform == SiteIds.chzzk) {
+        final result = await ref.read(chzzkArchiveProvider).list(_author, page: page, cancel: cancel);
+        next = [
+          for (final v in result.videos)
+            ArchiveRecording(v, title: v.title, cover: v.cover, date: v.publishedAt?.toLocal(), duration: v.duration),
         ];
         more = result.hasMore;
       } else if (_platform == SiteIds.soop) {
@@ -308,6 +333,8 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
             ? huyaArchiveProgressProvider
             : _platform == SiteIds.soop
             ? soopArchiveProgressProvider
+            : _platform == SiteIds.chzzk
+            ? chzzkArchiveProgressProvider
             : bilibiliReplayProgressProvider,
       );
       for (final entry in _entries) {
@@ -316,6 +343,7 @@ class _ReplayCatalogPageState extends ConsumerState<ReplayCatalogPage> {
           positions[entry.id] = (await progress.recent('${entry.id}:'))?.position ?? Duration.zero;
         }
         if (_platform == SiteIds.huya) positions[entry.id] = await progress.position(entry.id);
+        if (_platform == SiteIds.chzzk) positions[entry.id] = await progress.position('${entry.id}:1');
         if (_platform == SiteIds.soop) {
           positions[entry.id] = (await progress.recent('${entry.id}:'))?.position ?? Duration.zero;
         }

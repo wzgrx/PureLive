@@ -3,7 +3,7 @@
 # published (build.sh runs it on its output; run it on the Apple workflow's
 # zips too):
 #
-#   tools/ffmpeg_kit/rebuild/check.sh <dir> [FFmpeg tag, default n9.0.2]
+#   tools/ffmpeg_kit/rebuild/check.sh <dir> [FFmpeg tag, default n9.1]
 #
 # - Every binary carries the FFmpeg tag (the armeabi-v7a library of
 #   ffmpeg-kit-builders' own 0.11.2 release was built from another commit).
@@ -14,7 +14,7 @@
 set -euo pipefail
 
 dir="$(cd "${1:?usage: $0 <dir> [FFmpeg tag]}" && pwd)"
-tag="${2:-n9.0.2}"
+tag="${2:-n9.1}"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 failed=0

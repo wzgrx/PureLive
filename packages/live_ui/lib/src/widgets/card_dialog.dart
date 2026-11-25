@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/text_styles.dart';
 import 'package:live_ui/src/widgets/app_dialog.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A button of a [CardDialog] (outlined, with its words).
 @immutable

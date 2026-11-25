@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/live_play/buttons/room_menu_button.dart';
 import 'package:pure_live/features/live_play/buttons/stream_menu.dart';
 import 'package:pure_live/features/live_play/layout/room_header.dart';
@@ -25,7 +25,8 @@ IconData audienceIcon(AudienceMetricType type) => switch (type) {
 /// (a tap anywhere on it opens or closes the room details); the platform's
 /// audience figures and the time on air on the second, in one line of a
 /// fixed height (A07.17 c1), with the quality and line buttons on its right
-/// ([StreamPickers]). Grey placeholders while the room loads (E2).
+/// while [showPickers] ([StreamPickers]). Grey placeholders while the room
+/// loads (E2).
 class RoomInfoBar extends ConsumerWidget {
   /// Creates the strip.
   const new({
@@ -35,6 +36,7 @@ class RoomInfoBar extends ConsumerWidget {
     this.onReopen,
     this.showTitle = true,
     this.showFigures = true,
+    this.showPickers = true,
     super.key,
   });
 
@@ -53,8 +55,12 @@ class RoomInfoBar extends ConsumerWidget {
   /// Wide rooms keep the title beside chat and figures below the player.
   final bool showTitle;
 
-  /// Whether this instance owns the figures and quality/line pickers.
+  /// Whether this instance owns the figures.
   final bool showFigures;
+
+  /// Whether this instance owns the quality and line pickers (A07.46 puts
+  /// them in the player's control bar instead).
+  final bool showPickers;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => Padding(
@@ -69,7 +75,13 @@ class RoomInfoBar extends ConsumerWidget {
               Expanded(
                 child: _TitleLine(controller: controller, detailsOpen: detailsOpen, onTap: onToggleDetails),
               ),
-              if ({SiteIds.huya, SiteIds.douyu, SiteIds.bilibili, SiteIds.soop}.contains(controller.room.platform))
+              if ({
+                SiteIds.huya,
+                SiteIds.douyu,
+                SiteIds.bilibili,
+                SiteIds.soop,
+                SiteIds.chzzk,
+              }.contains(controller.room.platform))
                 TextButton.icon(
                   key: const ValueKey('room-replay-entry'),
                   onPressed: () => unawaited(RoomMenuButton.run(context, ref, controller, RoomMenuEntry.replayArchive)),
@@ -100,7 +112,8 @@ class RoomInfoBar extends ConsumerWidget {
                         child: AudienceStrip(controller: controller),
                       ),
                     ),
-                    if (stage != RoomStage.unplayable) StreamPickers(controller: controller, onReopen: onReopen),
+                    if (showPickers && stage != RoomStage.unplayable)
+                      StreamPickers(controller: controller, onReopen: onReopen),
                   ],
                 ),
               ),

@@ -1,16 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/music_player.dart';
 import 'package:pure_live/app/network.dart';
 import 'package:pure_live/app/services.dart';
+import 'package:pure_live/features/live_play/dialogs/room_dialogs.dart' show sleepTimerMaxMinutes, sleepTimerPresets;
 import 'package:pure_live/features/live_play/layout/room_panel.dart';
 import 'package:pure_live/features/live_play/logic/background_playback.dart';
 import 'package:pure_live/features/live_play/logic/room_controller.dart';
@@ -29,6 +30,7 @@ import 'package:pure_live/shared/rooms/playback_hud.dart';
 import 'package:pure_live/shared/rooms/playback_lines.dart';
 import 'package:pure_live/shared/rooms/room_gain.dart';
 import 'package:pure_live/shared/rooms/room_menu.dart';
+import 'package:pure_live/shared/rooms/timed_room_rotation.dart';
 import 'package:pure_live/tv/room/tv_room_overlays.dart';
 import 'package:pure_live/tv/room/tv_room_settings_panel.dart';
 import 'package:pure_live/tv/room/tv_super_chat_panel.dart';
@@ -37,12 +39,13 @@ import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/wallpaper/tv_wallpaper_layer.dart';
 import 'package:pure_live/tv/widgets/tv_dialogs.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
+import 'package:pure_live/tv/widgets/tv_room_appointment.dart';
 import 'package:pure_live/tv/widgets/tv_room_dialog.dart';
 import 'package:pure_live/tv/widgets/tv_status.dart';
 
 /// The player settings (M9) as the engine's configuration (the phone room's
 /// rule, M13.3).
-MpvEngineConfig tvEngineConfig(SettingsStore settings) => MpvEngineConfig(
+MpvEngineConfig tvEngineConfig(SettingsStore settings, {bool allowLiveRewind = true}) => MpvEngineConfig(
   platform: mpvPlatformOf(defaultTargetPlatform) ?? MpvPlatform.linux,
   hardwareDecoding: settings.get(Settings.enableCodec),
   customOutput: settings.get(Settings.customPlayerOutput),
@@ -52,6 +55,7 @@ MpvEngineConfig tvEngineConfig(SettingsStore settings) => MpvEngineConfig(
   androidCompatibility: settings.get(Settings.playerCompatMode),
   rtxVideoSuperResolution: settings.get(Settings.enableRtxVsr),
   volumeGainDb: settings.get(Settings.volumeBoostDb),
+  liveRewindEnabled: allowLiveRewind && settings.get(Settings.livePlayRewind),
 );
 
 /// The basic TV room (pure_live_TV `LivePlayPage` and `PlayerKeyScope`;
@@ -81,6 +85,8 @@ class TvLivePlayPage extends ConsumerStatefulWidget {
   ConsumerState<TvLivePlayPage> createState() => TvLivePlayPageState();
 }
 
+enum _QueueAction { toggleCurrent, start, stop, open, up, down, remove, schedule }
+
 /// The TV room's state (tests read [index] and [controller]).
 class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
   final FocusNode _keys = FocusNode(debugLabel: 'tv room keys');
@@ -90,6 +96,10 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
   int _index = 0;
   LiveRoomController? _controller;
   AutoRoomSwitch? _autoRoomSwitch;
+  late final TimedRoomRotation _rotation = TimedRoomRotation(switchTo: _rotateTo);
+  late final AppLifecycleListener _rotationLifecycle;
+  List<LiveRoom> _rotationRooms = const [];
+  bool _rotationForeground = true;
   StreamSubscription<PlaybackState>? _autoRoomStates;
   PlaybackSession? _session;
   late final Future<void> _wallpaperReady;
@@ -131,6 +141,14 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
   @override
   void initState() {
     super.initState();
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _rotationForeground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    _rotationLifecycle = AppLifecycleListener(
+      onStateChange: (state) {
+        _rotationForeground = state == AppLifecycleState.resumed;
+        _syncAutoRoomSwitch();
+      },
+    );
     // One video at a time on a box: the video background waits (A17.8).
     _wallpaperReady = TvWallpaperVideo.hold();
     // Music gives the speakers to the room.
@@ -172,6 +190,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       onRefresh: () async => await _controller?.load(preservePause: true),
       siteOf: ref.read(sitesProvider).maybeOf,
       maySwitch: () =>
+          !_rotation.active &&
           mounted &&
           _controller?.sleepDeadline == null &&
           !(_controller?.sleepTimerFinished ?? false) &&
@@ -233,6 +252,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
   void _syncAutoRoomSwitch() {
     final controller = _controller;
     if (controller == null) return;
+    if (_rotation.active) _rotation.observe(controller.room, eligible: _canRotate);
     _autoRoomSwitch?.update(
       room: controller.room,
       playback: controller.session.state,
@@ -240,6 +260,229 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       unavailable: controller.stage == RoomStage.unplayable,
       replay: controller.playingCarousel,
     );
+  }
+
+  bool get _canRotate {
+    final controller = _controller;
+    return mounted &&
+        _rotationForeground &&
+        !_controls &&
+        !_panel &&
+        !_settings &&
+        !_superChatPanel &&
+        (ModalRoute.isCurrentOf(context) ?? true) &&
+        controller != null &&
+        !controller.isArchive &&
+        !controller.switching &&
+        !controller.switchingLine &&
+        controller.sleepDeadline == null &&
+        !controller.sleepTimerFinished &&
+        (controller.stage == RoomStage.playing && controller.session.state.status == PlaybackStatus.playing ||
+            controller.stage == RoomStage.offline && controller.room.isExplicitlyOfflineNow ||
+            controller.stage == RoomStage.unplayable);
+  }
+
+  List<LiveRoom> _availableQueue(List<LiveRoom> rooms) {
+    final sites = ref.read(sitesProvider);
+    return rooms.where((room) => sites.maybeOf(room.platform) != null).toList();
+  }
+
+  bool _rotateTo(LiveRoom next) {
+    if (!_canRotate || ref.read(sitesProvider).maybeOf(next.platform) == null) return false;
+    final index = _rotationRooms.indexWhere(next.hasSameIdentity);
+    if (index < 0) return false;
+    _playlist = _rotationRooms;
+    switchTo(index, automatic: true);
+    return true;
+  }
+
+  Future<void> _startQueueRotation(List<LiveRoom> rooms) async {
+    final order = await showTvChoice<RoomRotationOrder>(
+      context,
+      title: i18n('room_rotation_start'),
+      options: [
+        TvChoice(value: RoomRotationOrder.ordered, label: i18n('room_rotation_ordered')),
+        TvChoice(value: RoomRotationOrder.shuffled, label: i18n('room_rotation_random')),
+      ],
+    );
+    if (order == null || !mounted) return;
+    final text = await showTvInput(
+      context,
+      title: i18n('room_rotation_interval'),
+      text: '60',
+      numeric: true,
+      maxLength: 5,
+    );
+    if (text == null || !mounted) return;
+    final seconds = int.tryParse(text.trim());
+    if (seconds == null || seconds < 5 || seconds > 86400) {
+      AppNavigator.toast(i18n('room_rotation_interval_invalid'));
+      return;
+    }
+    final current = _room;
+    final available = _availableQueue(rooms);
+    if (current == null || available.length < 2 || !available.any(current.hasSameIdentity)) {
+      AppNavigator.toast(i18n('room_rotation_unavailable'));
+      return;
+    }
+    _rotationRooms = List.unmodifiable(available);
+    _rotation.start(
+      _rotationRooms,
+      interval: Duration(seconds: seconds),
+      order: order,
+    );
+    _hide();
+  }
+
+  Future<void> _roomAppointment(LiveRoom room) =>
+      showTvRoomAppointment(context, ref.read(storeProvider).roomSchedules, room);
+
+  Future<void> _queueRoomAction(LiveRoom room, List<LiveRoom> rooms) async {
+    final index = rooms.indexWhere(room.hasSameIdentity);
+    if (index < 0) return;
+    final action = await showTvChoice<_QueueAction>(
+      context,
+      title: room.nick.isEmpty ? room.roomId : room.nick,
+      options: [
+        TvChoice(value: _QueueAction.open, label: i18n('switch_live_room')),
+        TvChoice(value: _QueueAction.schedule, label: i18n('room_schedule_title')),
+        if (index > 0) TvChoice(value: _QueueAction.up, label: i18n('room_switch_saved_move_up')),
+        if (index + 1 < rooms.length) TvChoice(value: _QueueAction.down, label: i18n('room_switch_saved_move_down')),
+        TvChoice(value: _QueueAction.remove, label: i18n('room_switch_saved_remove')),
+      ],
+    );
+    if (!mounted || action == null) return;
+    final store = ref.read(storeProvider).savedRoomQueue;
+    if (action == _QueueAction.schedule) {
+      await _roomAppointment(room);
+      return;
+    }
+    if (action == _QueueAction.open) {
+      final available = _availableQueue(rooms);
+      final target = available.indexWhere(room.hasSameIdentity);
+      if (target < 0) {
+        AppNavigator.toast(i18n('platform_retired'));
+        return;
+      }
+      _hide();
+      _playlist = available;
+      switchTo(target);
+      return;
+    }
+    final changed = await switch (action) {
+      _QueueAction.up => store.move(room, index - 1),
+      _QueueAction.down => store.move(room, index + 1),
+      _QueueAction.remove => store.remove(room),
+      _ => Future.value(false),
+    };
+    if (!changed && mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+  }
+
+  Future<void> _showSleepTimer() async {
+    final controller = _controller;
+    if (controller == null) return;
+    final minutes = await showTvChoice<int>(
+      context,
+      title: i18n('sleep_timer'),
+      subtitle: i18n('room_playback_timer_desc'),
+      current: controller.sleepDeadline == null ? 0 : controller.sleepMinutes,
+      options: [
+        TvChoice(value: 0, label: i18n('disabled')),
+        for (final minutes in sleepTimerPresets) TvChoice(value: minutes, label: '$minutes ${i18n('minutes')}'),
+        TvChoice(value: -1, label: i18n('custom_sleep_minutes')),
+      ],
+    );
+    if (!mounted || minutes == null || !identical(controller, _controller)) return;
+    int? selected = minutes;
+    if (minutes == -1) {
+      final input = await showTvInput(
+        context,
+        title: i18n('room_playback_timer_custom_hint'),
+        text: '${controller.sleepMinutes}',
+        numeric: true,
+        maxLength: 6,
+      );
+      if (!mounted || input == null || !identical(controller, _controller)) return;
+      selected = int.tryParse(input.trim());
+      if (selected == null || selected < 1 || selected > sleepTimerMaxMinutes) {
+        AppNavigator.toast(i18n('custom_sleep_minutes_range'));
+        return;
+      }
+    }
+    controller.setSleepTimer(enabled: selected > 0, minutes: selected > 0 ? selected : controller.sleepMinutes);
+    _hide();
+  }
+
+  Future<void> _showLiveRewind() async {
+    final session = _session;
+    if (session == null) return;
+    final window = await session.liveRewindWindow();
+    if (!mounted || !identical(session, _session)) return;
+    if (window == null) {
+      AppNavigator.toast(i18n('live_rewind_unavailable'));
+      return;
+    }
+    final position = window.position;
+    final range = window.range;
+    final previous = position - const Duration(seconds: 15);
+    final choice = await showTvChoice<Duration>(
+      context,
+      title: i18n('live_rewind_title'),
+      options: [
+        if (position > range.start)
+          TvChoice(value: previous < range.start ? range.start : previous, label: i18n('live_rewind_back')),
+        TvChoice(value: range.end - const Duration(milliseconds: 200), label: i18n('live_rewind_to_live')),
+      ],
+    );
+    if (mounted && identical(session, _session) && choice != null && !await session.seekLiveCache(choice) && mounted) {
+      AppNavigator.toast(i18n('live_rewind_unavailable'));
+    }
+  }
+
+  Future<void> _showSavedQueue() async {
+    try {
+      final store = ref.read(storeProvider).savedRoomQueue;
+      final rooms = await store.all();
+      if (!mounted) return;
+      final current = _room;
+      if (current == null) return;
+      final saved = rooms.any(current.hasSameIdentity);
+      final selected = await showTvChoice<Object>(
+        context,
+        title: i18n('room_switch_saved'),
+        options: [
+          TvChoice(
+            value: _QueueAction.toggleCurrent,
+            label: i18n(saved ? 'room_switch_saved_remove_current' : 'room_switch_saved_add_current'),
+          ),
+          if (_rotation.active)
+            TvChoice(value: _QueueAction.stop, label: i18n('room_rotation_stop'))
+          else if (rooms.length > 1 && saved)
+            TvChoice(value: _QueueAction.start, label: i18n('room_rotation_start')),
+          TvChoice(value: _QueueAction.schedule, label: i18n('room_schedule_title')),
+          for (final room in rooms) TvChoice(value: room, label: room.nick.isEmpty ? room.roomId : room.nick),
+        ],
+      );
+      if (!mounted || selected == null) return;
+      switch (selected) {
+        case _QueueAction.toggleCurrent:
+          final changed = await (saved ? store.remove(current) : store.add(current));
+          if (!changed && mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+        case _QueueAction.stop:
+          _rotation.stop();
+          _rotationRooms = const [];
+        case _QueueAction.start:
+          await _startQueueRotation(rooms);
+        case _QueueAction.schedule:
+          await _roomAppointment(current);
+        case final LiveRoom room:
+          await _queueRoomAction(room, rooms);
+        default:
+          break;
+      }
+    } on Object {
+      if (mounted) AppNavigator.toast(i18n('room_switch_saved_edit_failed'));
+    }
   }
 
   Future<void> _closeRoom() {
@@ -257,6 +500,8 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
 
   @override
   void dispose() {
+    _rotationLifecycle.dispose();
+    _rotation.dispose();
     if (_remoteTarget case final target?) _remote?.unregister(target);
     _autoRoomSwitch?.dispose();
     liveRouteObserver.currentRoute.removeListener(_syncAutoRoomSwitch);
@@ -279,6 +524,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       _superChatPanel = false;
     });
     _touch();
+    _syncAutoRoomSwitch();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && _controls && _firstControl.context != null) _firstControl.requestFocus();
     });
@@ -301,6 +547,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       _superChatPanel = false;
     });
     _keys.requestFocus();
+    _syncAutoRoomSwitch();
   }
 
   void _openPanel() {
@@ -311,6 +558,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       _superChatPanel = false;
       _controls = false;
     });
+    _syncAutoRoomSwitch();
   }
 
   void _openSettings() {
@@ -321,6 +569,7 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
       _superChatPanel = false;
       _controls = false;
     });
+    _syncAutoRoomSwitch();
   }
 
   /// Queues a switch by [delta] rooms; presses within [switchWindow] add up.
@@ -678,7 +927,15 @@ class TvLivePlayPageState extends ConsumerState<TvLivePlayPage> {
                         top: 0,
                         right: 0,
                         bottom: 0,
-                        child: TvRoomSettingsPanel(controller: controller, onClose: _hide),
+                        child: TvRoomSettingsPanel(
+                          controller: controller,
+                          onClose: _hide,
+                          onRoomQueue: () => unawaited(_showSavedQueue()),
+                          onSleepTimer: () => unawaited(_showSleepTimer()),
+                          onLiveRewind: ref.read(storeProvider).settings.get(Settings.livePlayRewind)
+                              ? () => unawaited(_showLiveRewind())
+                              : null,
+                        ),
                       ),
                   ],
                 ),

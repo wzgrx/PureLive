@@ -49,8 +49,18 @@ extern "C" {
  * Supported backends
  * ------------------
  *
+ * Direct3D 11: via MPV_RENDER_API_TYPE_D3D11, see render_d3d11.h header.
  * OpenGL: via MPV_RENDER_API_TYPE_OPENGL, see render_gl.h header.
  * Software: via MPV_RENDER_API_TYPE_SW, see section "Software renderer"
+ *
+ * Renderers
+ * ---------
+ *
+ * The backend determines the graphics API of the target surface. Which of
+ * mpv's video renderers draws into it is selected independently with
+ * MPV_RENDER_PARAM_RENDERER: the renderer of the `gpu-next` video output, or the
+ * renderer of the `gpu` video output. Both accept the same backend parameters,
+ * so you can switch between them without other changes.
  *
  * Threading
  * ---------
@@ -213,8 +223,9 @@ typedef enum mpv_render_param_type {
      * Control surface depth. Valid for mpv_render_context_render().
      * Type: int*
      * This implies the depth of the surface passed to the render function in
-     * bits per channel. If omitted or set to 0, the renderer will assume 8.
-     * Typically used to control dithering.
+     * bits per channel. If omitted or set to 0, the renderer will use the
+     * depth of the texture format with the Direct3D 11 backend, and assume 8
+     * otherwise. Typically used to control dithering.
      */
     MPV_RENDER_PARAM_DEPTH = 5,
     /**
@@ -422,10 +433,36 @@ typedef enum mpv_render_param_type {
      * See MPV_RENDER_PARAM_SW_STRIDE for alignment requirements.
      */
     MPV_RENDER_PARAM_SW_POINTER = 20,
-    /*
-     * MPV_RENDER_API_TYPE_DXGI only
+    /**
+     * Required parameters for initializing the Direct3D 11 renderer. Valid
+     * for mpv_render_context_create().
+     * Type: mpv_d3d11_init_params*
      */
-    MPV_RENDER_PARAM_DXGI_INIT_PARAMS = 21,
+    MPV_RENDER_PARAM_D3D11_INIT_PARAMS = 21,
+    /**
+     * Describes a D3D11 render target. Valid for mpv_render_context_render().
+     * Type: mpv_d3d11_fbo*
+     */
+    MPV_RENDER_PARAM_D3D11_FBO = 22,
+    /**
+     * Select the video renderer. Valid for mpv_render_context_create().
+     *
+     * Type: char*
+     *
+     * Defined renderers:
+     *
+     *   MPV_RENDER_RENDERER_GPU_NEXT ("gpu-next"):
+     *      The renderer of the gpu-next video output. (recommended)
+     *   MPV_RENDER_RENDERER_GPU ("gpu"):
+     *      The renderer of the gpu video output.
+     *
+     * If omitted, "gpu-next" is used if it initializes on the given backend,
+     * and "gpu" otherwise. Applications that depend on the options of one
+     * renderer should select it explicitly.
+     *
+     * Ignored with MPV_RENDER_API_TYPE_SW.
+     */
+    MPV_RENDER_PARAM_RENDERER = 23,
 } mpv_render_param_type;
 
 /**
@@ -468,12 +505,18 @@ typedef struct mpv_render_param {
 /**
  * Predefined values for MPV_RENDER_PARAM_API_TYPE.
  */
+// See render_d3d11.h
+#define MPV_RENDER_API_TYPE_D3D11 "d3d11"
 // See render_gl.h
 #define MPV_RENDER_API_TYPE_OPENGL "opengl"
 // See section "Software renderer"
 #define MPV_RENDER_API_TYPE_SW "sw"
-// See render_dxgi.h
-#define MPV_RENDER_API_TYPE_DXGI "dxgi"
+
+/**
+ * Predefined values for MPV_RENDER_PARAM_RENDERER.
+ */
+#define MPV_RENDER_RENDERER_GPU "gpu"
+#define MPV_RENDER_RENDERER_GPU_NEXT "gpu-next"
 
 /**
  * Flags used in mpv_render_frame_info.flags. Each value represents a bit in it.
@@ -560,6 +603,7 @@ typedef struct mpv_render_frame_info {
  * You should pass the following parameters:
  *  - MPV_RENDER_PARAM_API_TYPE to select the underlying backend/GPU API.
  *  - Backend-specific init parameter, like MPV_RENDER_PARAM_OPENGL_INIT_PARAMS.
+ *  - MPV_RENDER_PARAM_RENDERER to select the video renderer.
  *  - Setting MPV_RENDER_PARAM_ADVANCED_CONTROL and following its rules is
  *    strongly recommended.
  *  - If you want to use hwdec, possibly hwdec interop resources.
@@ -575,9 +619,9 @@ typedef struct mpv_render_frame_info {
  * @return error code, including but not limited to:
  *      MPV_ERROR_UNSUPPORTED: the OpenGL version is not supported
  *                             (or required extensions are missing)
- *      MPV_ERROR_NOT_IMPLEMENTED: an unknown API type was provided, or
- *                                 support for the requested API was not
- *                                 built in the used libmpv binary.
+ *      MPV_ERROR_NOT_IMPLEMENTED: an unknown API type or renderer was
+ *                                 provided, or support for the requested API
+ *                                 was not built in the used libmpv binary.
  *      MPV_ERROR_INVALID_PARAMETER: at least one of the provided parameters was
  *                                   not valid.
  */
