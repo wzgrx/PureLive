@@ -4,3 +4,6 @@
 
 # Recorded platform samples keep their exact bytes.
 fixtures/**/body.* -text
+
+# Unified diff blank context lines retain a significant leading space.
+tools/native/libmpv_apple/*.patch whitespace=-blank-at-eol
