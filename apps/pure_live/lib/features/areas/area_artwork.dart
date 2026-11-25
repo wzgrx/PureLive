@@ -1,9 +1,9 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 // Missevan's verified two-state category icons (3.x category_artwork.dart).
 const _missevanSpriteStems = {

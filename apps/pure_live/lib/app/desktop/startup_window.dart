@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:live_store/live_store.dart';
-import 'package:window_manager/window_manager.dart';
+import 'package:pure_live/app/desktop/app_window_api.dart';
 
 /// Last normal dimensions are separate from the user's fixed startup preset.
 const windowNormalSizeKey = 'window.normalSize';
@@ -26,8 +26,12 @@ Future<void> rememberNormalWindowSize(LiveStore store, Size size) async {
 
 /// Restore the complete native layout before runApp can submit its first frame.
 /// window_manager's optional callback is void and does not await async work.
-Future<void> restoreStartupWindow(WindowOptions options, Future<void> Function() restore) async {
-  await windowManager.waitUntilReadyToShow(options);
+Future<void> restoreStartupWindow(
+  AppWindowOptions options,
+  Future<void> Function() restore, {
+  Future<void> Function(AppWindowOptions)? prepare,
+}) async {
+  await (prepare ?? appWindow.waitUntilReadyToShow)(options);
   await restore();
   if (defaultTargetPlatform == TargetPlatform.windows) {
     await const MethodChannel('pure_live/window_startup').invokeMethod<void>('layoutReady');

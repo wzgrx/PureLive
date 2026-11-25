@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/i18n/i18n.dart';
 
 /// The in-app browser (flutter_inappwebview, 3.x's WebView): web search and

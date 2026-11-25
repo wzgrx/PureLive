@@ -1,11 +1,11 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/scope.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/live_theme.dart';
 import 'package:live_ui/src/theme/metrics.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The width of a panel on the right (docs/specs/UI.md §7).
 const double sidePanelWidth = 360;

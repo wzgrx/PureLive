@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/scope.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A cached network image the way 3.x's cards and avatars loaded theirs:
 /// the cache manager, headers and cache epoch of [LiveUiScope], a decode

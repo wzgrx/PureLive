@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 
 /// "扫码到手机" (A17.9 c15): the code on the left; on the right what it is

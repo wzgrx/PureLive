@@ -1,0 +1,26 @@
+diff --git a/FFmpegKit/src/cmdutils.c b/FFmpegKit/src/cmdutils.c
+index 75852dc..7a86f92 100755
+--- a/FFmpegKit/src/cmdutils.c
++++ b/FFmpegKit/src/cmdutils.c
+@@ -41,7 +41,7 @@
+ #include "libavutil/bprint.h"
+ #include "libavutil/display.h"
+ #include "libavutil/getenv_utf8.h"
+-#include "libavutil/libm.h"
++#include <math.h>
+ #include "libavutil/mem.h"
+ #include "libavutil/parseutils.h"
+ #include "libavutil/eval.h"
+diff --git a/FFmpegKit/src/ffprobe.c b/FFmpegKit/src/ffprobe.c
+index 4354481..1aa3486 100755
+--- a/FFmpegKit/src/ffprobe.c
++++ b/FFmpegKit/src/ffprobe.c
+@@ -56,7 +56,7 @@
+ #include "libavutil/stereo3d.h"
+ #include "libavutil/dict.h"
+ #include "libavutil/intreadwrite.h"
+-#include "libavutil/libm.h"
++#include <math.h>
+ #include "libavutil/parseutils.h"
+ #include "libavutil/timecode.h"
+ #include "ffmpegkit_session_context.h"

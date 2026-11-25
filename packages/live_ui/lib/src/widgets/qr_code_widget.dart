@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/theme/metrics.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:qr/qr.dart';
 
 /// The colours around a QR code: it is always dark on white, whatever the

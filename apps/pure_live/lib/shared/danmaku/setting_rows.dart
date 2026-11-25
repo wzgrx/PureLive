@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/i18n/i18n.dart';
 
 // The rows of the danmaku settings (docs/A-界面设计/A07-直播间界面/A07.6-直播间弹窗) shared by the

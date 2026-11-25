@@ -1,10 +1,10 @@
 // A17.9 stage 3: the TV's show-and-move editor, the side menu's order,
 // hidden entries and icons, and the colour grid.
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/settings/settings_dialogs.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/tv/home/tv_home_page.dart';

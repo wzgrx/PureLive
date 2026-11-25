@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 
 /// The Markdown of the update notes (3.x used markdown_widget): headings,

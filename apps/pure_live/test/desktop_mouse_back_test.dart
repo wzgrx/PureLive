@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/desktop/mouse_back.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 
@@ -45,11 +45,10 @@ void main() {
     );
     unawaited(router.push<void>('/child'));
     await tester.pumpAndSettle();
-    unawaited(
-      showDialog<void>(
-        context: tester.element(find.text('child')),
-        builder: (_) => const AlertDialog(content: Text('modal')),
-      ),
+
+    showDialog<void>(
+      context: tester.element(find.text('child')),
+      builder: (_) => const AlertDialog(content: Text('modal')),
     );
     await tester.pumpAndSettle();
     await back(tester);

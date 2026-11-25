@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/live_play/logic/room_switch.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/shared/rooms/platform_texts.dart';

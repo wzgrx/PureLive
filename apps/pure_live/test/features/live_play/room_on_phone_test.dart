@@ -4,7 +4,6 @@
 // figures, link and follow button (c6).
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +13,7 @@ import 'package:live_danmaku/live_danmaku.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/live_play/layout/room_info_bar.dart';
 import 'package:pure_live/features/live_play/live_play_page.dart';

@@ -1,18 +1,17 @@
+// ignore_for_file: avoid_web_libraries_in_flutter
 /// This file is a part of media_kit (https://github.com/media-kit/media-kit).
 ///
 /// Copyright © 2021 & onwards, Hitesh Kumar Saini <saini123hitesh@gmail.com>.
 /// All rights reserved.
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
-// ignore_for_file: avoid_web_libraries_in_flutter
-import 'dart:html';
 import 'dart:async';
+import 'dart:html';
+
 import 'package:flutter/widgets.dart';
 import 'package:media_kit_video/media_kit_video.dart';
-
 import 'package:media_kit_video/media_kit_video_controls/media_kit_video_controls.dart'
     as media_kit_video_controls;
 import 'package:media_kit_video/src/utils/dispose_safe_notifer.dart';
-
 import 'package:media_kit_video/src/utils/wakelock.dart';
 
 /// {@template video}
@@ -186,18 +185,18 @@ class VideoState extends State<Video> with WidgetsBindingObserver {
     /* VideoControlsBuilder? */ dynamic controls,
     SubtitleViewConfiguration? subtitleViewConfiguration,
   }) {
-    videoViewParametersNotifier.value =
-        videoViewParametersNotifier.value.copyWith(
-      width: width,
-      height: height,
-      fit: fit,
-      fill: fill,
-      alignment: alignment,
-      aspectRatio: aspectRatio,
-      filterQuality: filterQuality,
-      controls: controls,
-      subtitleViewConfiguration: subtitleViewConfiguration,
-    );
+    videoViewParametersNotifier.value = videoViewParametersNotifier.value
+        .copyWith(
+          width: width,
+          height: height,
+          fit: fit,
+          fill: fill,
+          alignment: alignment,
+          aspectRatio: aspectRatio,
+          filterQuality: filterQuality,
+          controls: controls,
+          subtitleViewConfiguration: subtitleViewConfiguration,
+        );
   }
 
   @override
@@ -207,8 +206,9 @@ class VideoState extends State<Video> with WidgetsBindingObserver {
     final currentParams = videoViewParametersNotifier.value;
 
     final newParams = currentParams.copyWith(
-      width:
-          widget.width != oldWidget.width ? widget.width : currentParams.width,
+      width: widget.width != oldWidget.width
+          ? widget.width
+          : currentParams.width,
       height: widget.height != oldWidget.height
           ? widget.height
           : currentParams.height,
@@ -226,7 +226,8 @@ class VideoState extends State<Video> with WidgetsBindingObserver {
       controls: widget.controls != oldWidget.controls
           ? widget.controls
           : currentParams.controls,
-      subtitleViewConfiguration: widget.subtitleViewConfiguration !=
+      subtitleViewConfiguration:
+          widget.subtitleViewConfiguration !=
               oldWidget.subtitleViewConfiguration
           ? widget.subtitleViewConfiguration
           : currentParams.subtitleViewConfiguration,
@@ -243,26 +244,26 @@ class VideoState extends State<Video> with WidgetsBindingObserver {
   void didChangeDependencies() {
     videoViewParametersNotifier =
         media_kit_video_controls.VideoStateInheritedWidget.maybeOf(
-              context,
-            )?.videoViewParametersNotifier ??
-            ValueNotifier<VideoViewParameters>(
-              VideoViewParameters(
-                width: widget.width,
-                height: widget.height,
-                fit: widget.fit,
-                fill: widget.fill,
-                alignment: widget.alignment,
-                aspectRatio: widget.aspectRatio,
-                filterQuality: widget.filterQuality,
-                controls: widget.controls,
-                subtitleViewConfiguration: widget.subtitleViewConfiguration,
-              ),
-            );
+          context,
+        )?.videoViewParametersNotifier ??
+        ValueNotifier<VideoViewParameters>(
+          VideoViewParameters(
+            width: widget.width,
+            height: widget.height,
+            fit: widget.fit,
+            fill: widget.fill,
+            alignment: widget.alignment,
+            aspectRatio: widget.aspectRatio,
+            filterQuality: widget.filterQuality,
+            controls: widget.controls,
+            subtitleViewConfiguration: widget.subtitleViewConfiguration,
+          ),
+        );
     _disposeNotifiers =
         media_kit_video_controls.VideoStateInheritedWidget.maybeOf(
-              context,
-            )?.disposeNotifiers ??
-            true;
+          context,
+        )?.disposeNotifiers ??
+        true;
     super.didChangeDependencies();
   }
 
@@ -295,47 +296,39 @@ class VideoState extends State<Video> with WidgetsBindingObserver {
     // --------------------------------------------------
     // Do not show the video frame until width & height are available.
     // Since [ValueNotifier<Rect?>] inside [VideoController] only gets updated by the render loop (i.e. it will not fire when video's width & height are not available etc.), it's important to handle this separately here.
-    _subscriptions.addAll(
-      [
-        widget.controller.player.stream.width.listen(
-          (value) {
-            _width = value;
-            final visible = (_width ?? 0) > 0 && (_height ?? 0) > 0;
-            if (_visible != visible) {
-              setState(() {
-                _visible = visible;
-              });
-            }
-          },
-        ),
-        widget.controller.player.stream.height.listen(
-          (value) {
-            _height = value;
-            final visible = (_width ?? 0) > 0 && (_height ?? 0) > 0;
-            if (_visible != visible) {
-              setState(() {
-                _visible = visible;
-              });
-            }
-          },
-        ),
-      ],
-    );
+    _subscriptions.addAll([
+      widget.controller.player.stream.width.listen((value) {
+        _width = value;
+        final visible = (_width ?? 0) > 0 && (_height ?? 0) > 0;
+        if (_visible != visible) {
+          setState(() {
+            _visible = visible;
+          });
+        }
+      }),
+      widget.controller.player.stream.height.listen((value) {
+        _height = value;
+        final visible = (_width ?? 0) > 0 && (_height ?? 0) > 0;
+        if (_visible != visible) {
+          setState(() {
+            _visible = visible;
+          });
+        }
+      }),
+    ]);
     // --------------------------------------------------
     if (widget.wakelock) {
       if (widget.controller.player.state.playing) {
         _wakelock.enable();
       }
       _subscriptions.add(
-        widget.controller.player.stream.playing.listen(
-          (value) {
-            if (value) {
-              _wakelock.enable();
-            } else {
-              _wakelock.disable();
-            }
-          },
-        ),
+        widget.controller.player.stream.playing.listen((value) {
+          if (value) {
+            _wakelock.enable();
+          } else {
+            _wakelock.disable();
+          }
+        }),
       );
     }
   }
@@ -400,11 +393,11 @@ class VideoState extends State<Video> with WidgetsBindingObserver {
                                         // Apply aspect ratio if provided.
                                         width:
                                             videoViewParameters.aspectRatio ==
-                                                    null
-                                                ? rect.width
-                                                : rect.height *
-                                                    videoViewParameters
-                                                        .aspectRatio!,
+                                                null
+                                            ? rect.width
+                                            : rect.height *
+                                                  videoViewParameters
+                                                      .aspectRatio!,
                                         height: rect.height,
                                         child: HtmlElementView(
                                           key: _key,

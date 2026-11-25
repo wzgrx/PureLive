@@ -4,20 +4,19 @@
 /// All rights reserved.
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
 import 'dart:typed_data';
-import 'package:universal_platform/universal_platform.dart';
 
-import 'package:media_kit/src/models/track.dart';
-import 'package:media_kit/src/models/playable.dart';
-import 'package:media_kit/src/models/playlist.dart';
-import 'package:media_kit/src/models/media/media.dart';
 import 'package:media_kit/src/models/audio_device.dart';
+import 'package:media_kit/src/models/media/media.dart';
+import 'package:media_kit/src/models/playable.dart';
 import 'package:media_kit/src/models/player_state.dart';
-import 'package:media_kit/src/models/playlist_mode.dart';
 import 'package:media_kit/src/models/player_stream.dart';
-
+import 'package:media_kit/src/models/playlist.dart';
+import 'package:media_kit/src/models/playlist_mode.dart';
+import 'package:media_kit/src/models/track.dart';
 import 'package:media_kit/src/player/native/player/player.dart';
-import 'package:media_kit/src/player/web/player/player.dart';
 import 'package:media_kit/src/player/platform_player.dart';
+import 'package:media_kit/src/player/web/player/player.dart';
+import 'package:universal_platform/universal_platform.dart';
 
 /// {@template player}
 ///
@@ -100,9 +99,7 @@ import 'package:media_kit/src/player/platform_player.dart';
 ///
 class Player {
   /// {@macro player}
-  Player({
-    PlayerConfiguration configuration = const PlayerConfiguration(),
-  }) {
+  Player({PlayerConfiguration configuration = const PlayerConfiguration()}) {
     if (UniversalPlatform.isWindows) {
       platform = NativePlayer(configuration: configuration);
     } else if (UniversalPlatform.isLinux) {
@@ -156,14 +153,8 @@ class Player {
   /// );
   /// ```
   ///
-  Future<void> open(
-    Playable playable, {
-    bool play = true,
-  }) async {
-    return platform?.open(
-      playable,
-      play: play,
-    );
+  Future<void> open(Playable playable, {bool play = true}) async {
+    return platform?.open(playable, play: play);
   }
 
   /// Stops the [Player].
@@ -317,9 +308,10 @@ class Player {
   /// On the native backend, if [includeLibassSubtitles] is `true` *and*
   /// [PlayerConfiguration.libass] is `true`, then the screenshot will include
   /// the on-screen subtitles. This option is ignored by the web backend.
-  Future<Uint8List?> screenshot(
-      {String? format = 'image/jpeg',
-      bool includeLibassSubtitles = false}) async {
+  Future<Uint8List?> screenshot({
+    String? format = 'image/jpeg',
+    bool includeLibassSubtitles = false,
+  }) async {
     return platform?.screenshot(
       format: format,
       includeLibassSubtitles: includeLibassSubtitles,
@@ -337,9 +329,10 @@ class Player {
   ///
   /// Encoded formats (`image/jpeg` & `image/png`) are already safe; for them,
   /// this method behaves the same as [screenshot].
-  Future<Uint8List?> safeScreenshot(
-      {String? format = 'image/jpeg',
-      bool includeLibassSubtitles = false}) async {
+  Future<Uint8List?> safeScreenshot({
+    String? format = 'image/jpeg',
+    bool includeLibassSubtitles = false,
+  }) async {
     return platform?.safeScreenshot(
       format: format,
       includeLibassSubtitles: includeLibassSubtitles,

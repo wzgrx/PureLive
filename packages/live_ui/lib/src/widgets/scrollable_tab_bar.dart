@@ -1,5 +1,5 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The width of the fade at the end of a scrolling tab strip
 /// (docs/A-界面设计/A09-浏览界面/A09.12-浏览界面真机对照修正 c1).

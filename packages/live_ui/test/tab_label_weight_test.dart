@@ -1,10 +1,10 @@
 // R01.3: a page turn blends the tab styles every frame; the label's weight
 // snaps at the half way so the app bar is not laid out again each frame
 // (on the K90 that was most of the 165 ms of text layout in 8 page turns).
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   test('the weight snaps to the nearer of the two', () {

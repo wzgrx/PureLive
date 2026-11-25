@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:live_net/live_net.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/downloads.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/version/app_version.dart';
@@ -438,12 +438,10 @@ void main() {
       final info = _info('9.0.0');
       debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
       try {
-        unawaited(
-          showDialog<void>(
-            context: context,
-            builder: (_) =>
-                NewVersionDialog(info: info, package: _apk('9.0.0'), sources: const ['https://a.example/x.apk']),
-          ),
+        showDialog<void>(
+          context: context,
+          builder: (_) =>
+              NewVersionDialog(info: info, package: _apk('9.0.0'), sources: const ['https://a.example/x.apk']),
         );
         await tester.pumpAndSettle();
         expect(find.text('下载并安装'), findsNothing, reason: 'an IPA is not installed from the app');

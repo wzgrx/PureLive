@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:live_ui/src/theme/metrics.dart';
 import 'package:live_ui/src/widgets/focus_ring.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A keyboard target for a long read-only scroll view. Arrows scroll while
 /// the viewport itself has focus; Right enters its controls and Left returns

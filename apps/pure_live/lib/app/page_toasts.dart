@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Closes a toast whose action belongs to the page left when [router]'s top
 /// page changes (A02.4 c3: "已取消关注 X · 撤销" followed the user from the

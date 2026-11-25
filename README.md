@@ -417,7 +417,11 @@
 
 ## 从源码构建
 
-需要 Linux 或 Windows 上的 Flutter 环境。工具链的版本统一写在 [`toolchain.env`](toolchain.env)（Flutter 3.47.8、Dart 3.13.7、Gradle 9.8.2、AGP 9.4.1、Kotlin 2.4.21、JDK 27、Android SDK 37.2、build-tools 37.0.0、platform-tools 37.0.1、cmdline-tools 23.0、NDK 30.0.16248370、CMake 4.1.2），升级时只改这一处（Android 构建直接读取其中的 compileSdk、build-tools、NDK、CMake；Gradle、AGP 另见 Z01）。
+### 构建工具链（2026-11-25）
+
+本轮升级固定Flutter 3.50.1 / Dart 3.14、Gradle 9.9.2 / AGP 9.5.2和JDK 27.0.1.1+4；Linux使用Clang 23.1.6，Windows使用Visual Studio 18.12.1，Apple固定Xcode 27.2。准确版本以`toolchain.env`为准。SDK语义补丁须在独立副本显式准备，不能直接使用未准备的共享SDK。
+
+需要 Linux 或 Windows 上的 Flutter 环境。工具链的版本统一写在 [`toolchain.env`](toolchain.env)（Flutter 3.50.1、Dart 3.14.0、Gradle 9.9.2、AGP 9.5.2、Kotlin 2.4.21、JDK 27、Android SDK 37.2、build-tools 37.0.0、platform-tools 37.0.3、cmdline-tools 23.0、NDK 30.0.16248370、CMake 4.1.2），升级时只改这一处（Android 构建直接读取其中的 compileSdk、build-tools、NDK、CMake；Gradle、AGP 另见 Z01）。
 
 ```bash
 git clone https://github.com/wzgrx/PureLive.git
@@ -425,10 +429,11 @@ cd PureLive
 
 # 1. 环境：按 toolchain.env 装好工具链，写一个环境脚本，每次构建前 source 一下
 #    （下面是示例路径，换成你自己的）
-export FLUTTER_ROOT="$HOME/tools/flutter-sdk/3.47.8"
+export FLUTTER_ROOT="$HOME/tools/flutter-sdk/3.50.1-purelive"
 export JAVA_HOME="$HOME/tools/jdk-27"
 export ANDROID_HOME="$HOME/Android/Sdk"
 export PATH="$FLUTTER_ROOT/bin:$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+python3 tools/flutter_sdk/prepare.py --apply --bootstrap-tests --sdk "$FLUTTER_ROOT"
 
 # 2. 录制用的 FFmpeg 原生包：下载一次后缓存在 ~/.cache/pure_live/ffmpeg_kit，之后离线也能构建
 bash tools/ffmpeg_kit/fetch.sh android

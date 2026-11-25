@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
@@ -7,6 +6,7 @@ import 'package:live_ui/src/theme/metrics.dart';
 import 'package:live_ui/src/theme/text_wrapping.dart';
 import 'package:live_ui/src/widgets/app_chip.dart';
 import 'package:live_ui/src/widgets/count_button.dart';
+import 'package:material_ui/material_ui.dart';
 
 // The settings row of every settings page (docs/A-界面设计/A11-设置界面/A11.1-设置总览, "设置行";
 // U.1c c14–c17): one look for link, switch, choice, slider and counter rows,

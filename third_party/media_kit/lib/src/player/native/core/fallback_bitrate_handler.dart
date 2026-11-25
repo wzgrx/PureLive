@@ -4,8 +4,9 @@
 /// All rights reserved.
 /// Use of this source code is governed by MIT license that can be found in the LICENSE file.
 import 'dart:io';
-import 'package:uri_parser/uri_parser.dart';
+
 import 'package:safe_local_storage/safe_local_storage.dart';
+import 'package:uri_parser/uri_parser.dart';
 
 abstract class FallbackBitrateHandler {
   static bool supported(String uri) => extractFilePath(uri) != null;

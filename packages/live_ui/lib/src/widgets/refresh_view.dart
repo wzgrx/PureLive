@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show precisionErrorTolerance;
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/scope.dart';
@@ -11,6 +10,7 @@ import 'package:live_ui/src/theme/metrics.dart';
 import 'package:live_ui/src/theme/motion.dart';
 import 'package:live_ui/src/theme/text_styles.dart';
 import 'package:live_ui/src/widgets/status_view.dart';
+import 'package:material_ui/material_ui.dart';
 
 // Pull to refresh with 3.x's feel (docs/A-界面设计/A03-动效和手感/A03.1-主列表手感/brief.md, research
 // 2026-10-02 §2.2–2.3 option A): 3.x's lists sat in easy_refresh 3.5.1's

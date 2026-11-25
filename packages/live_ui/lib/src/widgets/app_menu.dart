@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/text_styles.dart';
 import 'package:live_ui/src/widgets/anchored_menu.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// One row of the small menu ([showAppMenu], [AppMenuButton]).
 @immutable

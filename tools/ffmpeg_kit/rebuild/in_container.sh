@@ -22,21 +22,13 @@ for target in "$@"; do
         ./runner.sh --host=android --arch="$arch" -y --build-deps --base-bundle \
           --ffmpeg -ff --ff-disable-programs --kit -fk --no-bundle --release=local --skip --hide-banner
       done
-      # build_aar.sh reads the publishing account even for a local build and
-      # puts its "not found" message into the Gradle command line; the AAR's
-      # namespace is the owner's, as in their release.
-      # Gradle resolves its plugins from the network; a failed try resumes
-      # at the failed step (the script keeps its own state).
-      reset=--reset
-      for try in 1 2 3; do
-        GITHUB_USERNAME=akashskypatel GITHUB_REPO=ffmpeg-kit-builders \
-          OSSRH_USERNAME=unused OSSRH_PASSWORD=unused OSSRH_BASE64=unused \
-          bash scripts/android/build_aar.sh --platform=android-aarch64,android-armv7a,android-x86_64 \
-          --bundle=base --license=lgpl --not-small $reset --local && break
-        [[ $try -lt 3 ]] || exit 1
-        reset=
-        sleep 30
-      done
+      # Java/JNI entry points remain FFmpegKit 0.11.2. Reuse its verified
+      # Java API instead of resolving a Maven publication plugin just to zip
+      # an AAR. check.sh verifies the newly compiled native payload afterward.
+      python3 /usr/local/share/purelive-ffmpeg/pack_android.py \
+        /usr/local/share/ffmpeg-kit-api-baseline.aar \
+        prebuilt/android/jniLibs-base/jniLibs \
+        tools/android/build/outputs/aar/bundle-base-shared-lgpl-release.aar
       ;;
     linux | windows)
       bash scripts/build_all.sh --platform="$target-x86_64" --build=ffmpeg,kit,bundle \

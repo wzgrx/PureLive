@@ -48,7 +48,8 @@ class _VideoControlsThemeDataInjectorState
         widget.context ?? context,
       );
       final normal = theme?.normal ?? kDefaultCupertinoVideoControlsThemeData;
-      final fullscreen = theme?.fullscreen ??
+      final fullscreen =
+          theme?.fullscreen ??
           kDefaultCupertinoVideoControlsThemeDataFullscreen;
       return CupertinoVideoControlsTheme(
         normal: normal,
@@ -77,7 +78,8 @@ class _VideoControlsThemeDataInjectorState
       );
       final normal =
           theme?.normal ?? kDefaultMaterialDesktopVideoControlsThemeData;
-      final fullscreen = theme?.fullscreen ??
+      final fullscreen =
+          theme?.fullscreen ??
           kDefaultMaterialDesktopVideoControlsThemeDataFullscreen;
       return MaterialDesktopVideoControlsTheme(
         normal: normal,

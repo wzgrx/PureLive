@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 // The panel itself moved to lib/shared (the multi-view page shows it too).
 export 'package:pure_live/shared/panels/side_panel.dart';

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Colours of everything drawn over the video: the control bars, their text
 /// and icons, the status messages and the gesture cards (docs/specs/UI.md

@@ -419,7 +419,11 @@ Download the package for your platform from [Releases](https://github.com/wzgrx/
 
 ## Building from source
 
-You need Flutter on Linux or Windows. Toolchain versions are pinned in [`toolchain.env`](toolchain.env) (Flutter 3.47.8, Dart 3.13.7, Gradle 9.8.2, AGP 9.4.1, Kotlin 2.4.21, JDK 27, Android SDK 37.2, build-tools 37.0.0, platform-tools 37.0.1, cmdline-tools 23.0, NDK 30.0.16248370, CMake 4.1.2); upgrade them there only (the Android build reads compileSdk, build-tools, NDK and CMake from it).
+### Build toolchain (2026-11-25)
+
+This upgrade pins Flutter 3.50.1 / Dart 3.14, Gradle 9.9.2 / AGP 9.5.2, and JDK 27.0.1.1+4. Linux uses Clang 23.1.6; Windows uses Visual Studio 18.12.1; Apple uses Xcode 27.2. `toolchain.env` is authoritative. Explicitly prepare the semantics patch in an isolated Flutter SDK before building.
+
+You need Flutter on Linux or Windows. Toolchain versions are pinned in [`toolchain.env`](toolchain.env) (Flutter 3.50.1, Dart 3.14.0, Gradle 9.9.2, AGP 9.5.2, Kotlin 2.4.21, JDK 27, Android SDK 37.2, build-tools 37.0.0, platform-tools 37.0.3, cmdline-tools 23.0, NDK 30.0.16248370, CMake 4.1.2); upgrade them there only (the Android build reads compileSdk, build-tools, NDK and CMake from it).
 
 ```bash
 git clone https://github.com/wzgrx/PureLive.git
@@ -427,10 +431,11 @@ cd PureLive
 
 # 1. Environment: install the toolchain from toolchain.env and source an env script before each build
 #    (example paths, use your own)
-export FLUTTER_ROOT="$HOME/tools/flutter-sdk/3.47.8"
+export FLUTTER_ROOT="$HOME/tools/flutter-sdk/3.50.1-purelive"
 export JAVA_HOME="$HOME/tools/jdk-27"
 export ANDROID_HOME="$HOME/Android/Sdk"
 export PATH="$FLUTTER_ROOT/bin:$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+python3 tools/flutter_sdk/prepare.py --apply --bootstrap-tests --sdk "$FLUTTER_ROOT"
 
 # 2. FFmpeg native packages for recording: downloaded once into ~/.cache/pure_live/ffmpeg_kit, offline afterwards
 bash tools/ffmpeg_kit/fetch.sh android

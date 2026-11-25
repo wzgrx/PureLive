@@ -1,10 +1,10 @@
 // U.6c: the video page, the portrait and audience pages it opens, the
 // player page and its mpv option pages, the floating-window danmaku page
 // (docs/A-界面设计/A11-设置界面/A11.3-播放).
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/settings/playback_tiles.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/danmaku/danmaku_color_palette.dart';

@@ -20,7 +20,6 @@ class DesktopCapturerSourceNative extends DesktopCapturerSource {
     return source;
   }
 
-  //ignore: close_sinks
   final StreamController<String> _onNameChanged =
       StreamController.broadcast(sync: true);
 

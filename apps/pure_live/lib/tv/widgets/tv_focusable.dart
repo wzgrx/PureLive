@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/widgets/tv_focus_region.dart';
 
@@ -38,7 +38,6 @@ typedef TvKeyHandler = KeyEventResult Function(FocusNode node, KeyEvent event);
 
 /// Builds a focusable's content for its focus state.
 // The builder shape of pure_live_TV's `TvFocusableBuilder`.
-// ignore: avoid_positional_boolean_parameters
 typedef TvFocusBuilder = Widget Function(BuildContext context, bool focused);
 
 /// One remote-control target with the TV's single focus look

@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:loading_indicator/loading_indicator.dart';
+import 'package:material_ui/material_ui.dart';
 
 Widget _app(Widget child, {LiveUiConfig config = const LiveUiConfig()}) => MaterialApp(
   theme: const LiveTheme(primaryColor: Colors.indigo).light,

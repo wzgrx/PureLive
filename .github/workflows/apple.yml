@@ -82,7 +82,7 @@ jobs:
       - name: Packages and native bundles
         run: |
           set -euo pipefail
-          python3 tools/flutter_sdk/prepare.py --apply
+          python3 tools/flutter_sdk/prepare.py --apply --bootstrap-tests
           python3 tools/flutter_sdk/prepare.py --test
           flutter --version
           flutter pub get --enforce-lockfile
@@ -338,7 +338,7 @@ jobs:
       - name: Probe dependencies
         run: |
           set -euo pipefail
-          python3 tools/flutter_sdk/prepare.py --apply
+          python3 tools/flutter_sdk/prepare.py --apply --bootstrap-tests
           python3 tools/flutter_sdk/prepare.py --test
           flutter pub get --enforce-lockfile
           bash tools/ffmpeg_kit/fetch.sh macos

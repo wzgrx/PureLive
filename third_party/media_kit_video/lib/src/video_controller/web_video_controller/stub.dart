@@ -12,16 +12,12 @@ import 'package:media_kit_video/src/video_controller/platform_video_controller.d
 class WebVideoController extends PlatformVideoController {
   static const bool supported = false;
 
-  WebVideoController._(
-    super.player,
-    super.configuration,
-  );
+  WebVideoController._(super.player, super.configuration);
 
   static Future<PlatformVideoController> create(
     Player player,
     VideoControllerConfiguration configuration,
-  ) =>
-      throw UnimplementedError();
+  ) => throw UnimplementedError();
 
   @override
   Future<void> setSize({int? width, int? height, bool force = false}) =>

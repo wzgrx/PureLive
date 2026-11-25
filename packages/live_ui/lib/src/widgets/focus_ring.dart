@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/metrics.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Whether focus frames show: the user moves the focus with a keyboard
 /// (or a remote), not with touch (UI_PLAN §5.4: "焦点框只在用键盘时显示").

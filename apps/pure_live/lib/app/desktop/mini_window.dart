@@ -5,8 +5,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 import 'package:live_store/live_store.dart';
+import 'package:pure_live/app/desktop/app_window_api.dart';
 import 'package:pure_live/app/desktop/display_geometry.dart';
-import 'package:window_manager/window_manager.dart';
 
 /// What the room's desktop mini window asks of the window system (U.2j;
 /// 3.x `WindowHelper`'s picture-in-picture): the desktop shell provides it,
@@ -151,11 +151,11 @@ final class WindowManagerMiniHost implements MiniWindowHost {
 
   @override
   Future<void> enter({required double aspectRatio, required bool onTop}) async {
-    if (await windowManager.isFullScreen()) await windowManager.setFullScreen(false);
-    _maximized = await windowManager.isMaximized();
-    if (_maximized) await windowManager.unmaximize();
-    final normal = _normal = await windowManager.getBounds();
-    _onTop = await windowManager.isAlwaysOnTop();
+    if (await appWindow.isFullScreen()) await appWindow.setFullScreen(false);
+    _maximized = await appWindow.isMaximized();
+    if (_maximized) await appWindow.unmaximize();
+    final normal = _normal = await appWindow.getBounds();
+    _onTop = await appWindow.isAlwaysOnTop();
     try {
       final displays = readDesktopDisplays();
       final primary = displays.where((display) => display.isPrimary).firstOrNull ?? displays.firstOrNull;
@@ -167,13 +167,13 @@ final class WindowManagerMiniHost implements MiniWindowHost {
         workAreas: [for (final display in displays) _area(display)],
         saved: _savedBounds(current),
       );
-      await windowManager.setMinimumSize(miniWindowMinimum);
-      if (canPin) await windowManager.setAlwaysOnTop(onTop);
+      await appWindow.setMinimumSize(miniWindowMinimum);
+      if (canPin) await appWindow.setAlwaysOnTop(onTop);
       if (Platform.isMacOS) {
         // c5: no traffic lights over the mini window.
-        await windowManager.setTitleBarStyle(TitleBarStyle.hidden, windowButtonVisibility: false);
+        await appWindow.setTitleBarStyle(TitleBarStyle.hidden, windowButtonVisibility: false);
       }
-      await windowManager.setBounds(bounds);
+      await appWindow.setBounds(bounds);
     } on Object {
       await _restore();
       rethrow;
@@ -182,11 +182,11 @@ final class WindowManagerMiniHost implements MiniWindowHost {
 
   Future<void> _restore() async {
     final steps = <Future<void> Function()>[
-      () => windowManager.setAlwaysOnTop(_onTop),
-      () => windowManager.setMinimumSize(normalMinimum),
-      if (Platform.isMacOS) () => windowManager.setTitleBarStyle(TitleBarStyle.hidden),
-      if (_normal case final normal?) () => windowManager.setBounds(normal),
-      if (_maximized) windowManager.maximize,
+      () => appWindow.setAlwaysOnTop(_onTop),
+      () => appWindow.setMinimumSize(normalMinimum),
+      if (Platform.isMacOS) () => appWindow.setTitleBarStyle(TitleBarStyle.hidden),
+      if (_normal case final normal?) () => appWindow.setBounds(normal),
+      if (_maximized) appWindow.maximize,
     ];
     for (final step in steps) {
       try {
@@ -200,40 +200,40 @@ final class WindowManagerMiniHost implements MiniWindowHost {
   @override
   Future<void> exit() async {
     final normal = _normal;
-    await windowManager.setAlwaysOnTop(_onTop);
-    await windowManager.setMinimumSize(normalMinimum);
-    if (Platform.isMacOS) await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
-    if (normal != null) await windowManager.setBounds(normal);
-    if (_maximized) await windowManager.maximize();
+    await appWindow.setAlwaysOnTop(_onTop);
+    await appWindow.setMinimumSize(normalMinimum);
+    if (Platform.isMacOS) await appWindow.setTitleBarStyle(TitleBarStyle.hidden);
+    if (normal != null) await appWindow.setBounds(normal);
+    if (_maximized) await appWindow.maximize();
     _normal = null;
     _maximized = false;
   }
 
   @override
-  Future<void> setOnTop({required bool onTop}) => windowManager.setAlwaysOnTop(onTop);
+  Future<void> setOnTop({required bool onTop}) => appWindow.setAlwaysOnTop(onTop);
 
   @override
-  Future<void> hide() => windowManager.hide();
+  Future<void> hide() => appWindow.hide();
 
   @override
   Future<void> minimize() async {
-    await windowManager.minimize();
+    await appWindow.minimize();
     // A hidden window may stay hidden instead (the mini window's ✕ hides it
     // first): show it, then down to the taskbar.
     await Future<void>.delayed(const Duration(milliseconds: 150));
-    if (await windowManager.isVisible()) return;
-    await windowManager.show(inactive: true);
-    await windowManager.minimize();
+    if (await appWindow.isVisible()) return;
+    await appWindow.show(inactive: true);
+    await appWindow.minimize();
   }
 
   @override
-  Future<void> startDragging() => windowManager.startDragging();
+  Future<void> startDragging() => appWindow.startDragging();
 
   @override
   Future<void> saveGeometry() async {
     if (!_settings.get(Settings.rememberPipPosition)) return;
     try {
-      final bounds = await windowManager.getBounds();
+      final bounds = await appWindow.getBounds();
       final displays = readDesktopDisplays();
       final display =
           _displayAt(displays, bounds.center) ??

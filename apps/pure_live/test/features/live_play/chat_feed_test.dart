@@ -1,9 +1,9 @@
 // B08 c1, c2: the chat feed tells its listeners at most once a frame, the
 // line parses its emoticons once, and the names read at 4.5:1.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/live_play/danmaku/chat_feed.dart';
 import 'package:pure_live/features/live_play/danmaku/chat_list.dart';
 import 'package:pure_live/shared/danmaku/emotes.dart';

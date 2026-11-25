@@ -6,7 +6,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +16,7 @@ import 'package:live_media/live_media.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/app.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/live_play/buttons/room_menu_button.dart';
@@ -291,11 +291,10 @@ void main() {
       expect(_key('live-play-portrait-stack'), findsOneWidget);
 
       // A dialog over the room closes first.
-      unawaited(
-        showDialog<void>(
-          context: AppNavigator.navigatorContext!,
-          builder: (context) => const AlertDialog(content: Text('对话框')),
-        ),
+
+      showDialog<void>(
+        context: AppNavigator.navigatorContext!,
+        builder: (context) => const AlertDialog(content: Text('对话框')),
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));

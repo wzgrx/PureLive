@@ -29,10 +29,7 @@ class FullscreenInheritedWidget extends InheritedWidget {
 
   static FullscreenInheritedWidget of(BuildContext context) {
     final FullscreenInheritedWidget? result = maybeOf(context);
-    assert(
-      result != null,
-      'No [FullscreenInheritedWidget] found in [context]',
-    );
+    assert(result != null, 'No [FullscreenInheritedWidget] found in [context]');
     return result!;
   }
 
@@ -48,9 +45,7 @@ class FullscreenInheritedWidget extends InheritedWidget {
 /// {@endtemplate}
 class _FullscreenInheritedWidgetPopScope extends StatefulWidget {
   final Widget child;
-  const _FullscreenInheritedWidgetPopScope({
-    required this.child,
-  });
+  const _FullscreenInheritedWidgetPopScope({required this.child});
 
   @override
   State<_FullscreenInheritedWidgetPopScope> createState() =>

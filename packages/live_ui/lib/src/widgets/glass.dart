@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Liquid glass (A01.5): a pane of frosted, tinted glass with a light rim,
 /// for a bar that floats over scrolling content. Off by default

@@ -5,16 +5,16 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_danmaku/live_danmaku.dart';
 import 'package:live_media/live_media.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:pure_live/app/desktop/app_window_api.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
 import 'package:pure_live/features/live_play/logic/background_playback.dart';
 import 'package:pure_live/features/live_play/logic/room_controller.dart';
-import 'package:window_manager/window_manager.dart';
 
 import '../features/live_play/live_play_support.dart' show FakeSite;
 
@@ -150,8 +150,8 @@ Future<void> main() async {
     await controller.start();
     await stage('waiting_for_native_playback');
     await until(() => engine.player.state.playing && engine.player.state.position > Duration.zero, 'native playback');
-    await windowManager.show();
-    await windowManager.focus();
+    await appWindow.show();
+    await appWindow.focus();
     await until(
       () =>
           WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed ||
@@ -174,7 +174,7 @@ Future<void> main() async {
           WidgetsBinding.instance.lifecycleState == AppLifecycleState.inactive,
       'uncover',
     );
-    await windowManager.minimize();
+    await appWindow.minimize();
     await until(() => DesktopWindow.minimized.value, 'native minimize');
     final minimizedAt = engine.player.state.position;
     await Future<void>.delayed(const Duration(seconds: 3));
@@ -182,20 +182,20 @@ Future<void> main() async {
       throw StateError('Default minimize unexpectedly paused');
     }
     result['default_minimize_plays'] = true;
-    await windowManager.restore();
+    await appWindow.restore();
     await until(() => !DesktopWindow.minimized.value, 'native restore');
     await store.settings.set(Settings.desktopPauseWhenMinimized, true);
-    await windowManager.minimize();
+    await appWindow.minimize();
     await until(() => DesktopWindow.minimized.value && !engine.player.state.playing, 'opt-in minimize pause');
     result['opt_in_minimize_pauses'] = true;
-    await windowManager.restore();
+    await appWindow.restore();
     await until(() => !DesktopWindow.minimized.value && engine.player.state.playing, 'opt-in restore resumes');
     result['restore_resumes_policy_pause'] = true;
     await session.pause();
-    await windowManager.minimize();
+    await appWindow.minimize();
     await until(() => DesktopWindow.minimized.value, 'manual pause minimize');
     await Future<void>.delayed(const Duration(seconds: 2));
-    await windowManager.restore();
+    await appWindow.restore();
     await until(() => !DesktopWindow.minimized.value, 'manual pause restore');
     await Future<void>.delayed(const Duration(seconds: 2));
     if (engine.player.state.playing) throw StateError('Restore resumed a user pause');

@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/live_theme.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The colours of the TV's colour grid (A17.9 c12): a row of common ones
 /// (the brand blue first, pure_live_TV's presets, then the phone's

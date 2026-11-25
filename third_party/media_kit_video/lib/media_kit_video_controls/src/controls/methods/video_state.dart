@@ -17,8 +17,8 @@ DisposeSafeNotifier<BuildContext?> contextNotifier(BuildContext context) =>
 
 /// Returns the [ValueNotifier<VideoViewParameters>] associated with the [Video] present in the current [BuildContext].
 ValueNotifier<VideoViewParameters> videoViewParametersNotifier(
-        BuildContext context) =>
-    VideoStateInheritedWidget.of(context).videoViewParametersNotifier;
+  BuildContext context,
+) => VideoStateInheritedWidget.of(context).videoViewParametersNotifier;
 
 /// Returns the [VideoController] associated with the [Video] present in the current [BuildContext].
 VideoController controller(BuildContext context) =>

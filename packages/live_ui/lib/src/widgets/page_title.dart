@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/live_theme.dart';
 import 'package:live_ui/src/theme/text_styles.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A page's name with a short line under it, for an app bar's title
 /// (docs/A-界面设计/A09-浏览界面/A09.8-网页搜索, U.5c: "网页搜索 / 哔哩哔哩 · 晚风", "观看记录 /

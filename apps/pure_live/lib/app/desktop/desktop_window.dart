@@ -4,10 +4,11 @@ import 'dart:io';
 import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_store/live_store.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/commands.dart';
+import 'package:pure_live/app/desktop/app_window_api.dart';
 import 'package:pure_live/app/desktop/close_dialog.dart';
 import 'package:pure_live/app/desktop/display_geometry.dart';
 import 'package:pure_live/app/desktop/mini_window.dart';
@@ -23,7 +24,6 @@ import 'package:pure_live/app/recording.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_observer.dart';
-import 'package:window_manager/window_manager.dart';
 
 export 'package:pure_live/app/desktop/mini_window.dart' show MiniWindowHost;
 
@@ -211,21 +211,21 @@ final class _WindowManagerControls implements WindowControls {
   const new();
 
   @override
-  Future<void> minimize() => windowManager.minimize();
+  Future<void> minimize() => appWindow.minimize();
 
   @override
-  Future<void> maximize() => windowManager.maximize();
+  Future<void> maximize() => appWindow.maximize();
 
   @override
-  Future<void> restore() => windowManager.unmaximize();
+  Future<void> restore() => appWindow.unmaximize();
 
   @override
-  Future<void> showSystemMenu() => windowManager.popUpWindowMenu();
+  Future<void> showSystemMenu() => appWindow.popUpWindowMenu();
 
   @override
   Future<void> startDragging() async {
     try {
-      await windowManager.startDragging();
+      await appWindow.startDragging();
     } on Object {
       // The pointer went up before the window system took it.
     }
@@ -239,7 +239,7 @@ final class _WindowManagerControls implements WindowControls {
 /// does ([WindowCloser]), the window's name with the room (c11), new
 /// windows over the shared data (c12, c14) and the start-up entry
 /// ([Settings.enableStartUp]).
-final class DesktopShell with WindowListener {
+final class DesktopShell with AppWindowListener {
   new _(this._store, {required this.primary, this._recording, this._dataRoot, this._instanceId = ''});
 
   /// A listener without native startup, for platform event-sequence regressions.
@@ -309,7 +309,7 @@ final class DesktopShell with WindowListener {
   SettingsStore get _prefs => _store.settings;
 
   Future<void> _start() async {
-    await windowManager.ensureInitialized();
+    await appWindow.ensureInitialized();
     // Never larger than the screen's work area (a size kept from a bigger
     // display, or the default on a small one, put the window's left part
     // off the screen on the Mac runner).
@@ -317,7 +317,7 @@ final class DesktopShell with WindowListener {
     final size = fitWindowSize(geometry.size, await _workArea());
     final position = primary ? parseWindowPosition(await _store.meta.get(windowPositionKey)) : null;
     final maximize = geometry.maximized;
-    final options = WindowOptions(
+    final options = AppWindowOptions(
       size: size,
       minimumSize: minimumSize,
       center: position == null,
@@ -325,22 +325,22 @@ final class DesktopShell with WindowListener {
       titleBarStyle: TitleBarStyle.hidden,
     );
     await restoreStartupWindow(options, () async {
-      await windowManager.setPreventClose(true);
+      await appWindow.setPreventClose(true);
       if (position != null) {
         // A monitor unplugged since last time: back to the middle (c6).
         if (await _onScreen(position, size)) {
-          await windowManager.setPosition(position);
+          await appWindow.setPosition(position);
         } else {
-          await windowManager.center();
+          await appWindow.center();
         }
       }
-      if (maximize) await windowManager.maximize();
-      await windowManager.show();
-      await windowManager.focus();
+      if (maximize) await appWindow.maximize();
+      await appWindow.show();
+      await appWindow.focus();
     });
     DesktopWindow.maximized.value = maximize;
-    windowManager.addListener(this);
-    DesktopWindow._setFullScreen = ({required on}) => windowManager.setFullScreen(on);
+    appWindow.addListener(this);
+    DesktopWindow._setFullScreen = ({required on}) => appWindow.setFullScreen(on);
     DesktopWindow.controls = const _WindowManagerControls();
     DesktopWindow.miniHost = _mini = WindowManagerMiniHost(_prefs, normalMinimum: minimumSize);
     final mac = DesktopWindow.macStyle;
@@ -356,10 +356,10 @@ final class DesktopShell with WindowListener {
       hasTray: () => _tray != null,
       recordings: () => _activeRecordings,
       ask: _ask,
-      hide: windowManager.hide,
-      minimize: windowManager.minimize,
+      hide: appWindow.hide,
+      minimize: appWindow.minimize,
       // macOS quits through the system (⌘Q's path), which asks [_exitRequested].
-      exit: mac ? windowManager.destroy : exit,
+      exit: mac ? appWindow.destroy : exit,
       show: show,
       failed: () => AppNavigator.toast(i18n('window_close_action_failed')),
       hideOnClose: mac,
@@ -402,7 +402,7 @@ final class DesktopShell with WindowListener {
     try {
       _tray = DesktopTray.create(
         onShow: show,
-        onHide: windowManager.hide,
+        onHide: appWindow.hide,
         onExit: _closer.exitFromTray,
         mac: DesktopWindow.macStyle,
         onRecordCenter: () async {
@@ -452,9 +452,9 @@ final class DesktopShell with WindowListener {
   /// the window manager refused.
   Future<bool> resize(Size size) async {
     try {
-      if (await windowManager.isFullScreen()) await windowManager.setFullScreen(false);
-      if (await windowManager.isMaximized()) await windowManager.unmaximize();
-      await windowManager.setSize(size);
+      if (await appWindow.isFullScreen()) await appWindow.setFullScreen(false);
+      if (await appWindow.isMaximized()) await appWindow.unmaximize();
+      await appWindow.setSize(size);
       return true;
     } on Object catch (error, stack) {
       log('Window size not applied', name: 'Desktop', error: error, stackTrace: stack);
@@ -464,16 +464,16 @@ final class DesktopShell with WindowListener {
 
   /// Shows and focuses the window (tray, second launch).
   Future<void> show() async {
-    await windowManager.show();
-    await windowManager.focus();
+    await appWindow.show();
+    await appWindow.focus();
   }
 
   /// Closes this window's app: stops its recordings (what was recorded is
   /// kept), saves the window and leaves (3.x `exitDesktopApplication`).
   Future<void> exit() async {
     await _beforeExit();
-    await windowManager.setPreventClose(false);
-    await windowManager.destroy();
+    await appWindow.setPreventClose(false);
+    await appWindow.destroy();
   }
 
   /// macOS is asked to quit (⌘Q, the Dock's or the menu bar icon's "退出",
@@ -542,7 +542,7 @@ final class DesktopShell with WindowListener {
     final title = nativeWindowTitle(i18nOr('app_name', 'PureLive'), roomNameOf(liveRouteObserver.topPage.value));
     if (title == _title) return;
     _title = title;
-    unawaited(windowManager.setTitle(title).catchError((Object _) {}));
+    unawaited(appWindow.setTitle(title).catchError((Object _) {}));
   }
 
   @override
@@ -555,9 +555,8 @@ final class DesktopShell with WindowListener {
   }
 
   @override
-  void onWindowResize() => unawaited(
-    windowManager.getSize().then((size) => DesktopWindow.resizing.value = size, onError: (Object _) => null),
-  );
+  void onWindowResize() =>
+      unawaited(appWindow.getSize().then((size) => DesktopWindow.resizing.value = size, onError: (Object _) => null));
 
   @override
   void onWindowMoved() => _scheduleSave();
@@ -619,12 +618,10 @@ final class DesktopShell with WindowListener {
     }
     if (!primary) return;
     try {
-      if (await windowManager.isMaximized() ||
-          await windowManager.isMinimized() ||
-          await windowManager.isFullScreen()) {
+      if (await appWindow.isMaximized() || await appWindow.isMinimized() || await appWindow.isFullScreen()) {
         return;
       }
-      final bounds = await windowManager.getBounds();
+      final bounds = await appWindow.getBounds();
       await rememberNormalWindowSize(_store, bounds.size);
       await _store.meta.set(windowPositionKey, formatWindowPosition(bounds.topLeft));
     } on Object catch (error, stack) {
@@ -643,7 +640,7 @@ final class DesktopShell with WindowListener {
   Future<void> dispose() async {
     _uninstall?.dispose();
     await projection?.dispose();
-    windowManager.removeListener(this);
+    appWindow.removeListener(this);
     _exitListener?.dispose();
     liveRouteObserver.topPage.removeListener(_retitle);
     _saveTimer?.cancel();

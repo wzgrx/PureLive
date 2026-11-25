@@ -6,7 +6,7 @@
 
 路径规则按 OWNERS.toml 里的顺序第一条匹配的生效，所以一条目录规则只管前面的规则没拿走的文件。本页只随归属表、设置、来源和通道变化，加删代码文件不用重新生成。
 
-路径规则 248 条；设置 308 个（分节默认 24 条、单独指定 120 个）；来源 35 个；通道 24 个。
+路径规则 249 条；设置 308 个（分节默认 24 条、单独指定 120 个）；来源 35 个；通道 24 个。
 
 | 子分类 | 路径规则 | 设置 | 播放 | 弹幕 | 通道 |
 |---|---:|---:|---:|---:|---:|
@@ -53,7 +53,7 @@
 | H03 录制设置和存储 | 4 | 13 |  |  |  |
 | H04 自动录制和排队 | 1 | 6 |  |  |  |
 | H05 录制通知 | 1 |  |  |  |  |
-| I01 首页外壳和全局 | 5 | 3 |  |  |  |
+| I01 首页外壳和全局 | 6 | 3 |  |  |  |
 | I02 热门 | 4 | 4 |  |  |  |
 | I03 分区 | 2 | 1 |  |  |  |
 | I04 关注 | 3 | 7 |  |  |  |
@@ -307,7 +307,7 @@
 
 ## I01 首页外壳和全局
 
-- 代码：`apps/pure_live/lib/app/`、`apps/pure_live/lib/main.dart`、`apps/pure_live/lib/routes/`、`apps/pure_live/lib/platform/plugins.dart`、`apps/pure_live/lib/features/home/home_menu.dart`
+- 代码：`apps/pure_live/lib/app/`、`apps/pure_live/lib/main.dart`、`apps/pure_live/lib/routes/`、`apps/pure_live/lib/platform/directory_picker_path.dart`（目录选择URI映射和存储位置校验）、`apps/pure_live/lib/platform/plugins.dart`、`apps/pure_live/lib/features/home/home_menu.dart`
 - 设置：`savedMenuIds`、`enableLocalLog`、`logLevel`
 
 ## I02 热门

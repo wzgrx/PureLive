@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/widgets/network_image.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The width, in physical pixels, a cover is decoded at for the ambient
 /// background: small enough that drawing it large reads as a soft blur.

@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/scope.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/widgets/loading_styles.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The diameter of the [VideoCentreButton] on a room's picture (64).
 const double videoCentreButtonSize = 64;

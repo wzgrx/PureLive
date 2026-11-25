@@ -61,6 +61,29 @@ def prepare(sdk, *, apply=False):
     print("Flutter SDK: applied and verified official merged semantics patch")
 
 
+
+def bootstrap_tests(sdk):
+    """Resolve SDK test caches, preserving the pinned upstream source lock."""
+    policy = json.loads((HERE / "patch.json").read_text(encoding="utf-8"))
+    expected = policy["test_bootstrap_lock"]
+    lock = sdk / "pubspec.lock"
+    before = lock.read_bytes()
+    if digest(lock, text=True) != expected["before_lf_sha256"]:
+        raise ValueError("SDK test bootstrap requires the unchanged upstream lock")
+    flutter = sdk / "bin" / ("flutter.bat" if os.name == "nt" else "flutter")
+    try:
+        subprocess.run([str(flutter), "pub", "get"], cwd=sdk, check=True)
+    finally:
+        resolved = digest(lock, text=True)
+        if resolved not in (expected["before_lf_sha256"], expected["resolved_lf_sha256"]):
+            raise ValueError("SDK dependency resolution changed unexpectedly; preserve this SDK for diagnosis")
+        # Pub only raises the SDK floor of this pinned lock on Dart 3.14.
+        # Restore these known bytes; never reset unrelated user changes.
+        lock.write_bytes(before)
+    prepare(sdk)
+    print("Flutter SDK: test dependencies prepared; upstream lock preserved")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sdk", type=Path)
@@ -68,6 +91,7 @@ def main():
     mode.add_argument("--apply", action="store_true", help="Explicitly modify an isolated SDK copy")
     mode.add_argument("--check", action="store_true", help="Check only (the default); never modify SDK sources")
     mode.add_argument("--test", action="store_true", help="Check then run the upstream semantics regression file")
+    parser.add_argument("--bootstrap-tests", action="store_true", help="Explicitly prepare SDK test dependency caches and preserve its known lock")
     args = parser.parse_args()
     sdk = args.sdk
     if sdk is None:
@@ -81,10 +105,12 @@ def main():
             parser.error("Set FLUTTER_ROOT or pass --sdk")
     sdk = sdk.resolve(strict=True)
     prepare(sdk, apply=args.apply)
+    if args.bootstrap_tests:
+        bootstrap_tests(sdk)
     if args.test:
         flutter = sdk / "bin" / ("flutter.bat" if os.name == "nt" else "flutter")
         subprocess.run(
-            [str(flutter), "test", "test/semantics/semantics_update_test.dart", "--reporter", "expanded"],
+            [str(flutter), "test", "--no-pub", "test/semantics/semantics_update_test.dart", "--reporter", "expanded"],
             cwd=sdk / "packages/flutter",
             check=True,
         )

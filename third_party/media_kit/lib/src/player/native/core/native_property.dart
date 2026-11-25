@@ -94,14 +94,22 @@ final class NativeNodeMap {
 }
 
 /// Copies bounded seekable-cache intervals while the mpv event owns the node.
-List<({double start, double end})> copyNativeSeekRanges(Pointer<mpv_node> pointer) {
+List<({double start, double end})> copyNativeSeekRanges(
+  Pointer<mpv_node> pointer,
+) {
   mpv_node? member(mpv_node node, String key) {
-    if (node.format != mpv_format.MPV_FORMAT_NODE_MAP || node.u.list == nullptr) return null;
+    if (node.format != mpv_format.MPV_FORMAT_NODE_MAP || node.u.list == nullptr)
+      return null;
     final map = node.u.list.ref;
-    if (map.num < 0 || map.num > 64 || map.keys == nullptr || map.values == nullptr) return null;
+    if (map.num < 0 ||
+        map.num > 64 ||
+        map.keys == nullptr ||
+        map.values == nullptr)
+      return null;
     for (var i = 0; i < map.num; i++) {
       final name = map.keys[i];
-      if (name != nullptr && name.cast<Utf8>().toDartString() == key) return map.values[i];
+      if (name != nullptr && name.cast<Utf8>().toDartString() == key)
+        return map.values[i];
     }
     return null;
   }
@@ -118,7 +126,10 @@ List<({double start, double end})> copyNativeSeekRanges(Pointer<mpv_node> pointe
 
   if (pointer == nullptr) return const [];
   final ranges = member(pointer.ref, 'seekable-ranges');
-  if (ranges == null || ranges.format != mpv_format.MPV_FORMAT_NODE_ARRAY || ranges.u.list == nullptr) return const [];
+  if (ranges == null ||
+      ranges.format != mpv_format.MPV_FORMAT_NODE_ARRAY ||
+      ranges.u.list == nullptr)
+    return const [];
   final list = ranges.u.list.ref;
   if (list.num < 0 || list.num > 16 || list.values == nullptr) return const [];
   final result = <({double start, double end})>[];
@@ -126,7 +137,8 @@ List<({double start, double end})> copyNativeSeekRanges(Pointer<mpv_node> pointe
     final interval = list.values[i];
     final start = number(member(interval, 'start'));
     final end = number(member(interval, 'end'));
-    if (start != null && end != null && end > start) result.add((start: start, end: end));
+    if (start != null && end != null && end > start)
+      result.add((start: start, end: end));
   }
   return List.unmodifiable(result);
 }

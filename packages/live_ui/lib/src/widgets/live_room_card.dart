@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/icons/platform_logo.dart';
 import 'package:live_ui/src/scope.dart';
@@ -12,6 +11,7 @@ import 'package:live_ui/src/widgets/avatar.dart';
 import 'package:live_ui/src/widgets/network_image.dart';
 import 'package:live_ui/src/widgets/room_card.dart';
 import 'package:live_ui/src/widgets/room_card_appearance.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The room card of the browsing pages (docs/A-界面设计/A09-浏览界面/A09.1-房间卡片): popular,
 /// follows, area rooms, and later search and history (U.5).

@@ -2,13 +2,13 @@
 // mini bar, the play mode, recent plays, the import.
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
 import 'package:live_vod/live_vod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/music_catalog.dart';
 import 'package:pure_live/app/music_library.dart';
 import 'package:pure_live/app/music_player.dart';

@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_vod/live_vod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/live_play/live_play_page.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/route_args.dart';

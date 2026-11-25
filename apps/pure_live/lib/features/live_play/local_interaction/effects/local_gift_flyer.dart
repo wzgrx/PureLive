@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/live_play/danmaku/gift_count_pulse.dart';
 import 'package:pure_live/features/live_play/local_interaction/local_interaction_scope.dart';
 import 'package:pure_live/i18n/i18n.dart';

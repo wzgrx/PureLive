@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +12,7 @@ import 'package:live_iptv/live_iptv.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/app.dart';
 import 'package:pure_live/app/iptv_library.dart';
 import 'package:pure_live/app/recording.dart';
@@ -437,11 +437,10 @@ void main() {
     addTearDown(() => _close(tester, services));
     await _openMenuWithRemote(tester, 'history');
     final context = tester.element(find.byType(TvHomePage));
-    unawaited(
-      showDialog<void>(
-        context: context,
-        builder: (_) => const AlertDialog(content: Text('覆盖页面')),
-      ),
+
+    showDialog<void>(
+      context: context,
+      builder: (_) => const AlertDialog(content: Text('覆盖页面')),
     );
     await _settle(tester);
     final before = FocusManager.instance.primaryFocus;

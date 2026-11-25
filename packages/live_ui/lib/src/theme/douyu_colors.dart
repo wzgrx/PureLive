@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Douyu's fan-medal colour by level (3.x `DanmakuItem`): light blue through
 /// level 5, then green-blue, orange, red, purple and finally deep purple. The

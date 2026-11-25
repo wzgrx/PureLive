@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 
 Widget _app(Widget child, {bool reduceMotion = false}) => MaterialApp(
   theme: const LiveTheme().light,

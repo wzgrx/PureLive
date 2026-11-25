@@ -2,7 +2,6 @@
 // (docs/D-弹幕/D08-本地互动/D08.1-结构化的本地历史): entries written by what is
 // sent, the old lines taken in once, read in the language of now, the
 // history's parts and "再发一次", the export, and entering a room again.
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +9,7 @@ import 'package:live_core/live_core.dart';
 import 'package:live_danmaku/live_danmaku.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/live_play/local_interaction/local_interaction_scope.dart';
 import 'package:pure_live/features/live_play/local_interaction/local_interaction_settings_page.dart';

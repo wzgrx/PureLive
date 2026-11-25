@@ -4,30 +4,30 @@ publish_to: none
 version: 0.1.0
 
 environment:
-  sdk: ^3.13.0
-  flutter: ">=3.47.0"
+  sdk: ^3.14.0
+  flutter: ">=3.50.0"
 
 resolution: workspace
 
 dependencies:
   # Room card covers and avatars (3.x kept the decoded entries on disk).
-  cached_network_image: ^4.0.5
+  cached_network_image: ^4.0.7
   # The system palette on Android 12+ and Windows (3.x "dynamic theme").
   dynamic_color: ^2.1.0
   flutter:
     sdk: flutter
-  flutter_cache_manager: ^3.4.5
+  flutter_cache_manager: ^3.5.0
   # The three libraries behind the 85 selectable loading styles of 3.x.
   flutter_spinkit: ^5.2.2
   # 3.x's danmaku on/off/settings pictures on the video (assets/images/video).
-  flutter_svg: ^2.3.0
+  flutter_svg: ^2.5.0
   loading_animation_widget: ^1.3.0
   loading_indicator: ^4.0.2
   # dynamic_color 2.x and cached_network_image 4.x use the decoupled Material
   # library; MaterialUiThemeBridge mirrors the app theme into it.
-  material_ui: ^1.8.0
+  material_ui: ^1.11.1
   # QR codes (Bilibili login); the painting stays here.
-  qr: ^4.0.0
+  qr: ^4.0.1
   # The icon set of 3.x's pages (re-exported).
   remixicon: ^4.9.3
   # Smooth mouse-wheel scrolling on Windows.

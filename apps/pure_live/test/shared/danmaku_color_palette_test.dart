@@ -1,8 +1,8 @@
 // A08.7: the mini window danmaku colour unfolds a palette under its row
 // instead of a centred dialog.
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/shared/danmaku/danmaku_color_palette.dart';
 
 import '../support.dart';

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/shared/danmaku/chat_list_settings.dart';
 
 /// The two text roles of a chat line (docs/A-界面设计/A08-弹幕界面/A08.10-弹幕列表名字和内容分开

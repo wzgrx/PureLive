@@ -4,10 +4,11 @@ import 'dart:io';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_riverpod/misc.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pure_live/app/image_cache.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/backup/backup_page.dart';
@@ -18,6 +19,7 @@ import 'package:pure_live/features/recorder/recorder_page.dart';
 import 'package:pure_live/features/settings/data_tools.dart';
 import 'package:pure_live/features/settings/font_manager_page.dart';
 import 'package:pure_live/i18n/i18n.dart';
+import 'package:pure_live/platform/directory_picker_path.dart';
 import 'package:pure_live/platform/overlay_window.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/shared/background/custom_background.dart';
@@ -87,7 +89,7 @@ Size _windowSize() {
 }
 
 /// The update download folder (3.x `FileUtils.pickDirectory`).
-Future<String?> pickDownloadDirectory() => FilePicker.getDirectoryPath(dialogTitle: i18n('download_directory'));
+Future<String?> pickDownloadDirectory() => _pickDirectory(i18n('download_directory'));
 
 /// Opens [path] in the system file manager (DocumentsUI) with a document
 /// folder intent (3.x `FileUtils.openDirectory`); false when the folder has
@@ -176,7 +178,7 @@ Future<File?> pickIptvFile(BuildContext context, IptvImportKind kind) async {
 Future<String?> pickBackupPath(BuildContext context, {required String initial, required bool pickFile}) async {
   final start = Directory(initial).existsSync() ? initial : null;
   if (!pickFile) {
-    return await FilePicker.getDirectoryPath(dialogTitle: i18n('backup_directory'), initialDirectory: start);
+    return await _pickDirectory(i18n('backup_directory'), initialDirectory: start);
   }
   final file = await FilePicker.pickFile(
     dialogTitle: i18n('recover_backup'),
@@ -188,4 +190,15 @@ Future<String?> pickBackupPath(BuildContext context, {required String initial, r
 }
 
 /// The record folder (3.x `FilePicker.platform.getDirectoryPath`).
-Future<String?> pickRecordDirectory() => FilePicker.getDirectoryPath(dialogTitle: i18n('record_save_path'));
+Future<String?> pickRecordDirectory() => _pickDirectory(i18n('record_save_path'));
+
+Future<String?> _pickDirectory(String title, {String? initialDirectory}) async {
+  final uri = await FilePicker.pickDirectory(dialogTitle: title, initialDirectory: initialDirectory);
+  String? externalRoot;
+  if (Platform.isAndroid && uri?.scheme == 'content') {
+    final external = await getExternalStorageDirectory();
+    final value = external?.path;
+    if (value != null && value.contains('/Android/')) externalRoot = value.split('/Android/').first;
+  }
+  return pickedDirectoryPath(uri, windows: Platform.isWindows, externalStorageRoot: externalRoot);
+}

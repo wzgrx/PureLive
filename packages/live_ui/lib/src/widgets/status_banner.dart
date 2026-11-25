@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/scope.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/text_styles.dart';
 import 'package:live_ui/src/theme/text_wrapping.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The colour of a [StatusBanner].
 enum StatusBannerKind {

@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:live_ui/src/icons/app_icons.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/metrics.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The words of [LiveColorPicker] (the app passes the current language's).
 @immutable

@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/page_toasts.dart';
 
 // A02.4 c3: "已取消关注 X · 撤销" followed the user from the room to home
@@ -56,11 +56,10 @@ void main() {
     showAppToastOn(messenger.currentState!, undo());
     await tester.pumpAndSettle();
     final context = tester.element(find.text('room'));
-    unawaited(
-      showDialog<void>(
-        context: context,
-        builder: (context) => const AlertDialog(content: Text('dialog')),
-      ),
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => const AlertDialog(content: Text('dialog')),
     );
     await tester.pumpAndSettle();
     Navigator.of(tester.element(find.text('dialog'))).pop();

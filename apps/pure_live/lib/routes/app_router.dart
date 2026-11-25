@@ -1,8 +1,8 @@
-import 'package:flutter/cupertino.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/about/about_page.dart';
 import 'package:pure_live/features/account/account_page.dart';
 import 'package:pure_live/features/area_rooms/area_rooms_page.dart';

@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:live_player/live_player.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/features/live_play/logic/mini_window.dart';
 import 'package:pure_live/features/live_play/logic/room_orientation.dart';
 import 'package:pure_live/i18n/i18n.dart';

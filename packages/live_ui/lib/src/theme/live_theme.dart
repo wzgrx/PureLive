@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/metrics.dart';
 import 'package:live_ui/src/theme/page_transitions.dart';
 import 'package:live_ui/src/widgets/app_chip.dart';
 import 'package:live_ui/src/widgets/focus_ring.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The page transitions (A03.5): a spring slide on every platform but
 /// Apple's (3.x had Flutter's fade-forwards on Android and Windows, which

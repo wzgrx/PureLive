@@ -3,13 +3,13 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/app.dart';
 import 'package:pure_live/app/desktop/close_dialog.dart';
 import 'package:pure_live/app/desktop/desktop_window.dart';
@@ -314,11 +314,9 @@ void main() {
       expect(roomNameOf(liveRouteObserver.topPage.value), '晚风');
       expect(nativeWindowTitle('纯粹直播', roomNameOf(liveRouteObserver.topPage.value)), '晚风 - 纯粹直播');
 
-      unawaited(
-        showDialog<void>(
-          context: navigator.context,
-          builder: (_) => const AlertDialog(content: Text('m')),
-        ),
+      showDialog<void>(
+        context: navigator.context,
+        builder: (_) => const AlertDialog(content: Text('m')),
       );
       await tester.pumpAndSettle();
       expect(find.text(' · 晚风'), findsOneWidget, reason: 'a dialog over the room is not a page');

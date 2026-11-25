@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/motion.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Pages pushed and popped with a spring (A03.5): the new page slides in
 /// from the right with a soft shadow on its edge, the page under it moves a

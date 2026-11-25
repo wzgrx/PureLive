@@ -1,9 +1,7 @@
-import 'dart:async';
-
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/tv/settings/tv_settings_section_page.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/widgets/tv_button.dart';
@@ -148,13 +146,12 @@ void main() {
       ),
     );
     await tester.pump();
-    unawaited(
-      showDialog<void>(
-        context: navigator.currentContext!,
-        builder: (context) => AlertDialog(
-          title: const Text('Temporary dialog'),
-          actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
-        ),
+
+    showDialog<void>(
+      context: navigator.currentContext!,
+      builder: (context) => AlertDialog(
+        title: const Text('Temporary dialog'),
+        actions: [TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close'))],
       ),
     );
     await tester.pump(const Duration(seconds: 1));
@@ -166,11 +163,10 @@ void main() {
     expect(first.hasFocus, isTrue, reason: 'the first usable row is now attached and uncovered');
     second.requestFocus();
     await tester.pump();
-    unawaited(
-      showDialog<void>(
-        context: navigator.currentContext!,
-        builder: (context) => const AlertDialog(title: Text('Another dialog')),
-      ),
+
+    showDialog<void>(
+      context: navigator.currentContext!,
+      builder: (context) => const AlertDialog(title: Text('Another dialog')),
     );
     await tester.pump(const Duration(seconds: 1));
     navigator.currentState!.pop();

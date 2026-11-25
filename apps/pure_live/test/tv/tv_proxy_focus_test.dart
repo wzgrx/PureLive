@@ -1,10 +1,10 @@
 // A17.17: disabled proxy fields must not swallow directional TV focus.
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:live_store/live_store.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/settings/settings_model.dart';
 import 'package:pure_live/tv/settings/tv_settings_section_page.dart';

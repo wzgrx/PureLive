@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:live_core/live_core.dart';
 import 'package:path/path.dart' as p;
 import 'package:pure_live/app/data_root.dart';
+import 'package:pure_live/app/desktop/app_window_api.dart';
 import 'package:pure_live/app/desktop/display_geometry.dart';
 import 'package:pure_live/app/desktop/projection_channel.dart';
 import 'package:pure_live/app/intake/system_intake.dart';
@@ -12,7 +13,6 @@ import 'package:pure_live/app/services.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
-import 'package:window_manager/window_manager.dart';
 
 /// Opens a wall selection in the receiver's existing window.
 void navigateProjectionRoom(LiveRoom room) {
@@ -44,7 +44,7 @@ final class ProjectionRuntime {
       onClose: () async {
         await runtime.dispose();
         if ((services.recording?.activeCount ?? 0) > 0) return;
-        await windowManager.destroy();
+        await appWindow.destroy();
       },
     );
     runtime._displays = Timer.periodic(const Duration(seconds: 5), (_) => unawaited(runtime._checkDisplay()));
@@ -77,10 +77,10 @@ final class ProjectionRuntime {
             displays.where((display) => display.isPrimary).firstOrNull ??
             displays.firstOrNull;
         if (target != null) {
-          final fullscreen = await windowManager.isFullScreen();
-          if (fullscreen) await windowManager.setFullScreen(false);
-          await windowManager.setBounds(target.workArea);
-          if (fullscreen) await windowManager.setFullScreen(true);
+          final fullscreen = await appWindow.isFullScreen();
+          if (fullscreen) await appWindow.setFullScreen(false);
+          await appWindow.setBounds(target.workArea);
+          if (fullscreen) await appWindow.setFullScreen(true);
           _display = target.persistenceKey;
         }
       } else {

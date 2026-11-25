@@ -21,7 +21,7 @@ on:
         default: fac2076d06a473b8e1c1ed5a1fabe52ee974a5c0 # tag v0.11.2-android
       ffmpeg:
         description: FFmpeg tag
-        default: n9.0.2
+        default: n9.1
 
 permissions:
   contents: read
@@ -58,6 +58,10 @@ jobs:
           scripts/toolchain/setup-macos-tools.sh
           sudo xcodebuild -license accept
           bash purelive-config/tools/toolchain/apple.sh
+          # Build host tools before the runner switches SDKROOT to iOS.
+          # Installing cargo-c afterward compiles libgit2 against iOS headers.
+          brew list cargo-c >/dev/null 2>&1 || brew install cargo-c
+          cargo cinstall --version
 
       - name: Pin FFmpeg
         env:
@@ -66,10 +70,13 @@ jobs:
           set -euo pipefail
           perl -pi -e 's/^export ffmpeg_git_checkout_version=.*/export ffmpeg_git_checkout_version="$ENV{FFMPEG_TAG}"/' scripts/variable.sh
           grep -n '^export ffmpeg_git_checkout_version=' scripts/variable.sh
+          git apply purelive-config/tools/ffmpeg_kit/rebuild/ffmpeg-9.1-compat.patch
 
       - name: Build
         run: |
           set -euo pipefail
+          export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
+          export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
           sudo -E "$HOMEBREW_BASH" scripts/build_all.sh \
             --platform=ios-aarch64,iphonesimulator-aarch64,macos-aarch64,macos-x86_64 \
             --build=ffmpeg,kit,bundle --bundle=base --license=lgpl --not-small --local --reset --deps
@@ -102,9 +109,34 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+      - name: Prepare Apple player tools
+        run: |
+          set -euo pipefail
+          brew list nasm >/dev/null 2>&1 || brew install nasm
+          brew list cmake >/dev/null 2>&1 || brew install cmake
+          python3 -m venv "$RUNNER_TEMP/player-python"
+          "$RUNNER_TEMP/player-python/bin/python" -m pip install meson ninja jinja2 packaging
+          echo "$RUNNER_TEMP/player-python/bin" >> "$GITHUB_PATH"
+
+      - name: Build Apple player
+        run: |
+          set -euo pipefail
+          python3 purelive-config/tools/native/libmpv_apple/build.py \
+            --work "$RUNNER_TEMP/purelive-libmpv-0.42" --output "$GITHUB_WORKSPACE/player-dist"
+          (cd player-dist && shasum -a 256 *.tar.gz provenance.json | tee SHA256SUMS)
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: libmpv-apple
+          path: player-dist
+          if-no-files-found: error
+          compression-level: 0
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: ffmpeg-kit-apple-log
-          path: build.log
+          path: |
+            build.log
+            logs/**
           if-no-files-found: ignore

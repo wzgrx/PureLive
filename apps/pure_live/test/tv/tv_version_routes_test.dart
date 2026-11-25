@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/version/app_version.dart';
 import 'package:pure_live/features/version/update_feed.dart';
@@ -346,13 +346,12 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       final focus = FocusNode();
       addTearDown(focus.dispose);
-      unawaited(
-        showDialog<void>(
-          context: AppNavigator.navigatorContext!,
-          builder: (context) => AlertDialog(
-            title: const Text('Covering dialog'),
-            actions: [TextButton(focusNode: focus, autofocus: true, onPressed: () {}, child: const Text('Keep focus'))],
-          ),
+
+      showDialog<void>(
+        context: AppNavigator.navigatorContext!,
+        builder: (context) => AlertDialog(
+          title: const Text('Covering dialog'),
+          actions: [TextButton(focusNode: focus, autofocus: true, onPressed: () {}, child: const Text('Keep focus'))],
         ),
       );
       await tester.pump(const Duration(seconds: 1));

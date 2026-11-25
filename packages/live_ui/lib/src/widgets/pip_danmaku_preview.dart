@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:live_ui/src/theme/live_colors.dart';
 import 'package:live_ui/src/theme/metrics.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The preview of the mini windows' danmaku on the settings page (3.x
 /// `PipDanmakuPreview`, U.6c): a dark 16:9 picture with up to 20 lines of
