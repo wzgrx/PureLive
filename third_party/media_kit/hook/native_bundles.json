@@ -54,29 +54,29 @@
       "library": "libmpv.so.2"
     },
     "ios_arm64": {
-      "url": "https://github.com/Predidit/libmpv-darwin-build/releases/download/0.6.8/libmpv-xcframeworks_0.6.8_ios-universal-video-default.tar.gz",
-      "sha256": "d428641cc6c100de8234eae04e229966e46949eb73fcabd526a008a02e9bf968",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-ios-0.42.0-ffmpeg-9.1.tar.gz",
+      "sha256": "e1d508e0f28f69e3f14b96657e6f4723a3a656c2051bda3f9abbbfb07434c033",
       "format": "tar.gz",
       "library": "Mpv",
       "xcframework": true
     },
     "ios_x64": {
-      "url": "https://github.com/Predidit/libmpv-darwin-build/releases/download/0.6.8/libmpv-xcframeworks_0.6.8_ios-universal-video-default.tar.gz",
-      "sha256": "d428641cc6c100de8234eae04e229966e46949eb73fcabd526a008a02e9bf968",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-ios-0.42.0-ffmpeg-9.1.tar.gz",
+      "sha256": "e1d508e0f28f69e3f14b96657e6f4723a3a656c2051bda3f9abbbfb07434c033",
       "format": "tar.gz",
       "library": "Mpv",
       "xcframework": true
     },
     "macos_arm64": {
-      "url": "https://github.com/Predidit/libmpv-darwin-build/releases/download/0.6.8/libmpv-xcframeworks_0.6.8_macos-universal-video-default.tar.gz",
-      "sha256": "c396976a267eaaa64bc603f3cc1a2ee02d27c7d5d57935d2458f364afdf0f3cb",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-macos-0.42.0-ffmpeg-9.1.tar.gz",
+      "sha256": "a318624ae70ade7527997c913ade98b6b031c5978c21ad1bec2312c23f111b7b",
       "format": "tar.gz",
       "library": "Mpv",
       "xcframework": true
     },
     "macos_x64": {
-      "url": "https://github.com/Predidit/libmpv-darwin-build/releases/download/0.6.8/libmpv-xcframeworks_0.6.8_macos-universal-video-default.tar.gz",
-      "sha256": "c396976a267eaaa64bc603f3cc1a2ee02d27c7d5d57935d2458f364afdf0f3cb",
+      "url": "https://github.com/wzgrx/PureLive/releases/download/native-libmpv-0.42.0-ff9.1-b1/libmpv-macos-0.42.0-ffmpeg-9.1.tar.gz",
+      "sha256": "a318624ae70ade7527997c913ade98b6b031c5978c21ad1bec2312c23f111b7b",
       "format": "tar.gz",
       "library": "Mpv",
       "xcframework": true

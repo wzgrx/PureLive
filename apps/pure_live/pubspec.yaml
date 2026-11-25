@@ -38,11 +38,11 @@ dependencies:
   # Windows DPAPI and the GBK code page (no plugin needed for either).
   ffi: ^2.2.0
   # FFmpeg of the recorder (3.x's engine; M8's FfmpegRunner). Keep this exact:
-  # its build hook pins the native API (1.0.0: FFmpegKit 0.11.2), and the
+  # its build hook pins the native API (1.0.2: FFmpegKit 0.11.2), and the
   # native bundle must be built for that API — 0.11.2 changed the global log
   # and statistics callbacks' arguments under the same function names, so a
-  # 0.11.1 bundle crashes the first recording. The bundle (our FFmpeg 9.0.2
-  # build for 0.11.2, Z01.2) is chosen by `ffmpeg_kit_extended_config` in the
+  # 0.11.1 bundle crashes the first recording. The bundle (our FFmpeg 9.1
+  # build for 0.11.2, Z01.4) is chosen by `ffmpeg_kit_extended_config` in the
   # workspace pubspec, where the plugin's build hook reads it; it is never
   # committed.
   ffmpeg_kit_extended_flutter: 1.0.2
