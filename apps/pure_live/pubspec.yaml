@@ -31,6 +31,7 @@ dependencies:
   connectivity_plus: ^7.3.2
   # Streams SHA-256 over final update packages; already locked by the workspace.
   crypto: 3.0.8
+  cupertino_icons: ^2.0.0
   cupertino_ui: ^1.1.7
   # The IPTV tables in live_store's database (M12.1).
   drift: ^2.35.4

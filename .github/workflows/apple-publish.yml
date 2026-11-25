@@ -111,7 +111,7 @@ jobs:
             count=$((count + 1))
           done < SHA256SUMS
           [[ "$count" == 2 ]]
-          cp SHA256SUMS SHA256SUMS-apple.txt
+          sed 's/  provenance.json$/  provenance-apple.json/' SHA256SUMS > SHA256SUMS-apple.txt
           gh release upload "$TAG" SHA256SUMS-apple.txt --repo "$GITHUB_REPOSITORY" --clobber
           if [[ -f provenance.json ]]; then
             [[ "$(jq -r .source_ref provenance.json)" == "$(jq -r .head_sha ../run.json)" ]]

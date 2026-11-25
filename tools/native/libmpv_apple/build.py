@@ -95,6 +95,13 @@ def framework(root, name, binary, platform):
     return folder
 
 
+def select_targets(target):
+    if target is None: return list(TARGETS)
+    selected = [item for item in TARGETS if item[0] == target]
+    if len(selected) != 1: raise ValueError('Unknown Apple target')
+    return selected
+
+
 def build(work, dist, target=None):
     dependencies = json.loads((HERE / 'dependencies.json').read_text())
     for asset in dependencies['assets']:
@@ -113,9 +120,9 @@ def build(work, dist, target=None):
     text = meson_file.read_text()
     if "link_language: 'cpp'" not in text:
         text = text.replace("        'c',", "        'c', 'cpp',", 1)
-        target = "libmpv = library('mpv', sources, dependencies: dependencies, gnu_symbol_visibility: 'hidden',"
-        if target not in text:raise ValueError('Unexpected libmpv target')
-        text = text.replace(target, target + "\n                 link_language: 'cpp',", 1)
+        meson_target = "libmpv = library('mpv', sources, dependencies: dependencies, gnu_symbol_visibility: 'hidden',"
+        if meson_target not in text:raise ValueError('Unexpected libmpv target')
+        text = text.replace(meson_target, meson_target + "\n                 link_language: 'cpp',", 1)
         meson_file.write_text(text)
     # Keep numeric conversion compatible with iOS15/macOS12; newer SDK
     # declarations alone do not make newer libc++ entry points available.
@@ -141,9 +148,7 @@ def build(work, dist, target=None):
     receipts = []
     frameworks = {}
     jobs = str(min(12, os.cpu_count() or 4))
-    for name, sdk, label, arch, triple in TARGETS:
-        if target is not None and name != target:
-            continue
+    for name, sdk, label, arch, triple in select_targets(target):
         prefix = work / name / 'prefix'
         prefix.mkdir(parents=True, exist_ok=True)
         include = prefix / 'include'; libraries = prefix / 'lib'; pcs = libraries / 'pkgconfig'

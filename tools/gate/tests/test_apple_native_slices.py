@@ -13,6 +13,26 @@ PACK = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(PACK)
 
 
+BUILD_SPEC = importlib.util.spec_from_file_location('apple_native_build', ROOT / 'tools/native/libmpv_apple/build.py')
+BUILD = importlib.util.module_from_spec(BUILD_SPEC)
+BUILD_SPEC.loader.exec_module(BUILD)
+
+
+class NativeTargetSelection(unittest.TestCase):
+    def test_every_requested_slice_selects_exactly_one_target(self):
+        for target in PACK.TARGETS:
+            with self.subTest(target=target):
+                selected = BUILD.select_targets(target)
+                self.assertEqual(len(selected), 1)
+                self.assertEqual(selected[0][0], target)
+
+    def test_full_build_keeps_all_existing_slices(self):
+        self.assertEqual([item[0] for item in BUILD.select_targets(None)], PACK.TARGETS)
+
+    def test_unknown_target_is_rejected(self):
+        with self.assertRaises(ValueError): BUILD.select_targets('another-target')
+
+
 class NativeSlices(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

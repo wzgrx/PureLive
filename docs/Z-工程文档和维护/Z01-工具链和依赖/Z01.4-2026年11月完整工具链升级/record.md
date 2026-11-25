@@ -45,3 +45,21 @@
 24a6836e云运行的录制Build、Check and hash及录制artifact上传成功，后续播放器失败不作为录制包失败或客户端通过的证据。播放器iOS编译暴露avfoundation自动检测选中macOS专用音频代码；iOS明确禁用该后端，保留AudioUnit。改为五个独立slice任务并行构建，再严格核对同一源码、工具链、最低系统和每个二进制SHA后组合通用框架；不足五个或来源不一致拒绝组装。
 
 5.7.0本地集成首轮全部测试通过，仅Downloads URI代码的一条多行if风格检查未通过；已补block。新增组装契约测试覆盖缺slice、跨源码和字节变化；重新通过静态检查后再跑完整门禁。
+
+
+## 正常客户端运行复核
+
+f8c79bbee源码14成员门禁通过；Android正常入口profile构建成功，并在API27进入首页。AAR保留三ABI导致profile包包含额外FFmpeg ABI，不能用“全部so仅x64”作为诊断包检查条件；x64 Flutter引擎和libmpv实际存在。正式三个split包另行严格核对。
+
+正常HLS房间出现初始化失败，不能用CLI软件解码结果替代完整客户端通过。原因定位到AndroidHelper：内核未导出可选mpv_lavc_set_java_vm shim，但已导出其静态FFmpeg的av_jni_set_java_vm；原fallback仅查独立libavcodec.so。适配为先用当前同一mpv模块直接导出的JNI，再保留动态avcodec兼容路径。
+
+构建同时提示Cupertino图标字体未打包，补官方cupertino_icons2.0.0。Windows冷构建暴露NuGet路径缺失；独立安装官方8.0.0.137、Microsoft有效签名，保留7.9旧文件，配置最新路径后Windows预检包构建通过。新增打包前版本检查避免依赖旧CMake缓存。
+
+
+## 客户端兼容闭环
+
+Android静态JNI路径修正并打包官方Cupertino字体后，正常profile应用的同一生成HLS房间出现实际视频；此前初始化失败截图和日志保留。Windows Source f8c79预检包实际HLS视频正常显示，但冷启动停在骨架，最大化才显示已存在的房间。诊断runner只在自有实例记录固定flags，确认layout/frame到达且第一次恢复后立即停止，未保留首次内容后的恢复。保留一次后续有界恢复后，未手动改大小的冷启动直接显示房间，日志两次恢复；诊断日志代码不进入产品。
+
+Apple录制artifact本地存储下载缓慢，沿用仓库现有GitHub内转发布办法。两个Apple原生zip已挂到native-ffmpeg9.1并从公开发布地址重新下载，摘要及每个Mach-O slice的n9.1标签通过；录制五平台清单已统一9.1。
+
+Apple矩阵第一轮的target局部变量覆盖选择参数，任务提前退出；这是本轮构建工具改动引入，现改专用Meson锚点变量并增加独立目标选择测试。原失败运行保留，不作为Apple播放器编译通过依据。
