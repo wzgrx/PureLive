@@ -63,3 +63,17 @@ Android静态JNI路径修正并打包官方Cupertino字体后，正常profile应
 Apple录制artifact本地存储下载缓慢，沿用仓库现有GitHub内转发布办法。两个Apple原生zip已挂到native-ffmpeg9.1并从公开发布地址重新下载，摘要及每个Mach-O slice的n9.1标签通过；录制五平台清单已统一9.1。
 
 Apple矩阵第一轮的target局部变量覆盖选择参数，任务提前退出；这是本轮构建工具改动引入，现改专用Meson锚点变量并增加独立目标选择测试。原失败运行保留，不作为Apple播放器编译通过依据。
+
+
+## 最新内核客户端与构建环境实测
+
+392b56b7e源码完整all/14门禁通过。专用purelive-env.sh先备份后切到新版SDK/JDK/Clang/CMake/Android CLI，逐项核对实际执行版本，旧目录和缓存保留。工作区直接依赖已是当前官方版本；六项间接依赖保留SDK/上游可解算范围，未强行提升不兼容主版本。
+
+Android自有API27正常客户端进入本地生成HLS房间，视频连续变化且横屏全屏正常。真实FfmpegKitRunner把生成PCM转换成有效RIFF/WAVE，退出码0；测试脚本最初误查cache，实际Directory.systemTemp为code_cache，保留更正记录及真实输出，恢复正常测试包并保留生成数据。
+
+Linux新Clang/CMake冷构建成功，隔离XDG和Xvfb实际首页、两帧HLS视频正常。libmpv/录制库自身最高glibc2.28，但整个客户端的nativeapi/webrtc插件需要glibc2.38、GLIBCXX3.4.32；不能把内核兼容下限当成整个安装包下限，发行版覆盖仍有边界。
+
+Apple五slice已通过目标选择并实际编译FFmpeg9.1。macOS arm64在mpv配置时因全局prefer_static使SDK仅提供动态stub的iconv消失而失败。对照Meson1.12.1 IconvSystemDependency和mpv0.42原声明，仅对Apple系统iconv明确static:false，第三方依赖仍静态，最终framework依赖仍严格限制为系统路径。失败日志保留，须重跑云编译后才接受Apple新播放器。
+
+
+完整门禁一次在SDK测试加载前出现本地握手中断，尚未执行测试断言。保留原运行日志；去掉测试进程的代理变量、显式直连localhost后，独立语义测试7项通过，再重新执行完整门禁。不修改断言，不将中断的运行记为通过。

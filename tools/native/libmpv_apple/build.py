@@ -124,6 +124,15 @@ def build(work, dist, target=None):
         if meson_target not in text:raise ValueError('Unexpected libmpv target')
         text = text.replace(meson_target, meson_target + "\n                 link_language: 'cpp',", 1)
         meson_file.write_text(text)
+    # Apple SDK iconv is a system dylib stub, not a static archive. Keep
+    # third-party dependencies static without making this system-only
+    # dependency disappear under Meson's prefer_static setting.
+    text = meson_file.read_text()
+    original_iconv = "iconv = dependency('iconv', required: get_option('iconv'))"
+    system_iconv = "iconv = dependency('iconv', required: get_option('iconv'), static: false)"
+    if system_iconv not in text:
+        if text.count(original_iconv) != 1:raise ValueError('Unexpected iconv dependency declaration')
+        meson_file.write_text(text.replace(original_iconv, system_iconv, 1))
     # Keep numeric conversion compatible with iOS15/macOS12; newer SDK
     # declarations alone do not make newer libc++ entry points available.
     convert = placebo / 'src/convert.cc'
