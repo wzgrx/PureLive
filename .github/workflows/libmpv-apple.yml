@@ -1,0 +1,33 @@
+name: Libmpv Apple
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  player:
+    runs-on: xcode-27
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install official stable Python
+        run: bash tools/toolchain/macos_python.sh
+      - name: Select stable Apple toolchain
+        run: bash tools/toolchain/apple.sh
+      - name: Prepare native tools
+        run: bash tools/native/libmpv_apple/prepare.sh
+      - name: Build player
+        run: |
+          set -euo pipefail
+          python3 tools/native/libmpv_apple/build.py --work "$RUNNER_TEMP/purelive-player" --output "$GITHUB_WORKSPACE/player-dist"
+          (cd player-dist && shasum -a 256 *.tar.gz provenance.json | tee SHA256SUMS)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: libmpv-apple
+          path: player-dist
+          if-no-files-found: error
+          compression-level: 0

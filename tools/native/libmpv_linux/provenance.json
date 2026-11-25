@@ -1,0 +1,21 @@
+{
+  "mpv": "b0841e8c4d156b8403dc1876c4cbd9011eb583f3",
+  "ffmpeg": "74e4393595cf2b5857f0da925c4e0dd74ea306e5",
+  "libplacebo": "275f7dea27924cdd34ab2e6c20e448b6bc4fab65",
+  "libass": "0.17.5",
+  "dav1d": "1.5.5",
+  "static_runtime": {
+    "xpresent_source_url": "https://www.x.org/releases/individual/lib/libXpresent-1.0.2.tar.xz",
+    "xpresent_source_sha256": "4e5b21b4812206a4b223013606ae31170502c1043038777a1ef8f70c09d37602",
+    "mpv_link_patch_sha256": "1414b84a9337708419ab26942d35d4a9b7aff89fb437a5cf10a63c0c407eecea",
+    "reason": "Static libplacebo requires a C++ linker; retain XPresent without adding a client system dependency"
+  },
+  "artifact": {
+    "file": "libmpv_x86_64.zip",
+    "sha256": "0ec1d8028215391c62134ddef4d6939f05e3e4b062cc2d7f6a432aeb0faf9ea6"
+  },
+  "mpv_license": "GPL-2.0-or-later",
+  "ffmpeg_gpl_components": false,
+  "maximum_glibc": "2.28",
+  "system_ca_patch_sha256": "02b1d236ed0551a224fe35a00aaa76f8b086e9d29b49e35b1de1caf69094990d"
+}

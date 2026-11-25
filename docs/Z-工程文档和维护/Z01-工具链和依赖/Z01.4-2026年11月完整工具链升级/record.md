@@ -21,3 +21,11 @@
 - 新SDK的RawTooltip在焦点树之前处理Esc，以先关闭可见提示。单独运行复现了同一变化；回归明确核对提示→面板→全屏的逐层关闭，保留播放会话与窗口状态断言。
 - 恢复格式迁移误删的原基准`avoid_print`注释；基准输出仍仅用于测试。
 - Apple云日志证实cargo-c宿主编译误用了iOS SDK头文件，改为切换跨平台环境前准备宿主工具；同时新增独立的mpv0.42/FFmpeg9.1 Apple动态框架构建，五个slice保持iOS15/macOS12最低要求，使用系统TLS信任与AV1软件解码。
+
+
+## 原生内核与信任库验证
+
+- Android0.42/FFmpeg9.1在自有API27模拟器先复现：本地H264/AAC正常，默认验证开启的公网HTTPS因未知CA失败。接入系统信任库后同一HTTPS正常解码；未知测试证书仍拒绝，显式测试CA才接受。三ABI重编译后完整API26强导入、16KB及helper字节保留再次通过。
+- Windows采用官方0.42 LGPL包，核对发布摘要；实际本地和公网HTTPS解码通过，验证保持yes。官方包内FFmpeg报告其Git快照，不能冒充同版录制用FFmpeg9.1。
+- Linux先捕获静态libplacebo的C++转换符号缺失和新增XPresent动态依赖，改为C++链接器、严格未解析符号检查并静态链接XPresent。保持glibc2.28、X11/VAAPI/VDPAU，播放器启用GPL，录制仍是LGPL基础包。受下载代理环境影响的一次公网探针未在时限内推进，清空该环境后本地/公网HTTPS解码通过；不据此宣称修复所有代理场景。
+- Apple录制云构建已通过Xcode27.2/Python3.15.2/CocoaPods检查及宿主cargo-c准备，仍在编译。播放器单独提供构建工作流，补齐静态C++链接和旧OS数值转换保护；最终运行结果尚待取得。

@@ -1,0 +1,19 @@
+diff --git a/meson.build b/meson.build
+index b15f310..1b4c633 100644
+--- a/meson.build
++++ b/meson.build
+@@ -1,5 +1,5 @@
+ project('mpv',
+-        'c',
++        'c', 'cpp',
+         license: ['GPL2+', 'LGPL2.1+'],
+         license_files: ['LICENSE.GPL', 'LICENSE.LGPL', 'Copyright'],
+         version: files('./MPV_VERSION'),
+@@ -1839,6 +1839,7 @@ minor = client_h_define.split('|')[1].strip('() ')
+ client_api_version = major + '.' + minor + '.0'
+ 
+ libmpv = library('mpv', sources, dependencies: dependencies, gnu_symbol_visibility: 'hidden',
++                 link_language: 'cpp',
+                  include_directories: incdir_public,
+                  link_args: cc.get_supported_link_arguments(['-Wl,-Bsymbolic']),
+                  version: client_api_version, install: get_option('libmpv'),

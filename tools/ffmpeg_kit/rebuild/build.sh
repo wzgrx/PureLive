@@ -72,7 +72,16 @@ else
   baseline="$here/pack_android.py"
 fi
 
-docker run --rm --network host --user root -e NDK_VERSION="$ndk" \
+ndk_mount=()
+if [[ " ${targets[*]} " == *" android "* ]]; then
+  sdk="${ANDROID_HOME:?ANDROID_HOME (source the PureLive environment)}"
+  [[ -d "$sdk/ndk/$ndk" ]] || { echo "Pinned NDK $ndk is missing" >&2; exit 1; }
+  # A cached tools image may contain an earlier NDK. Always use this pinned
+  # host copy, as in the verified 9.1 build, without rewriting either SDK.
+  ndk_mount=(-v "$sdk/ndk/$ndk:/usr/local/android-sdk/ndk/$ndk:ro")
+fi
+
+docker run --rm --network host --user root -e NDK_VERSION="$ndk" "${ndk_mount[@]}" \
   -v "$builders:/workspace" -v "$here/in_container.sh:/usr/local/bin/in_container.sh:ro" \
 +  -v "$here:/usr/local/share/purelive-ffmpeg:ro" -v "$baseline:/usr/local/share/ffmpeg-kit-api-baseline.aar:ro" \
   --entrypoint bash "$tools" -c "in_container.sh ${targets[*]}; status=\$?; chown -R $(id -u):$(id -g) /workspace; exit \$status"

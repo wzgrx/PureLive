@@ -55,6 +55,11 @@ def git_source(root, name, repo, ref):
     actual = output('git', '-C', source, 'rev-parse', 'HEAD')
     if len(ref) == 40 and actual != ref:
         raise ValueError(f'Unexpected {name} source commit: {actual}')
+    tag = {"mpv": "v0.42.0", "ffmpeg": "n9.1", "libplacebo": "v7.387.0", "dav1d": "1.5.5"}.get(name)
+    if tag:
+        run(['git', '-C', source, 'fetch', '--depth', '1', 'origin', f'refs/tags/{tag}:refs/tags/{tag}'])
+        if output('git', '-C', source, 'rev-parse', tag + '^{commit}') != actual:
+            raise ValueError(f'Unexpected release tag for {name}')
     return source
 
 
@@ -63,7 +68,8 @@ def crossfile(path, arch, flags, pkgdirs):
     text += f"[host_machine]\nsystem = 'darwin'\ncpu_family = '{'aarch64' if arch == 'arm64' else 'x86_64'}'\ncpu = '{arch}'\nendian = 'little'\n"
     text += f'[properties]\nneeds_exe_wrapper = true\npkg_config_libdir = {pkgdirs!r}\n[built-in options]\n'
     for key in ['c_args', 'cpp_args', 'objc_args', 'objcpp_args', 'c_link_args', 'cpp_link_args', 'objc_link_args', 'objcpp_link_args']:
-        text += f'{key} = {flags!r}\n'
+        scoped = flags + (['-DHAS_STD_TO_CHARS_FP=0', '-DHAS_STD_FROM_CHARS_FP=0'] if key in ['cpp_args', 'objcpp_args'] else [])
+        text += f'{key} = {scoped!r}\n'
     path.write_text(text)
 
 
@@ -101,6 +107,26 @@ def build(work, dist):
     mpv = git_source(work, 'mpv', 'https://github.com/mpv-player/mpv.git', MPV)
     placebo = git_source(work, 'libplacebo', 'https://github.com/haasn/libplacebo.git', PLACEBO)
     run(['git', '-C', placebo, 'submodule', 'update', '--init', '--recursive'])
+    # Static C++ dependencies need a C++ linker even though libmpv's own
+    # sources are C/Objective-C. Reject unresolved imports at link time.
+    meson_file = mpv / 'meson.build'
+    text = meson_file.read_text()
+    if "link_language: 'cpp'" not in text:
+        text = text.replace("        'c',", "        'c', 'cpp',", 1)
+        target = "libmpv = library('mpv', sources, dependencies: dependencies, gnu_symbol_visibility: 'hidden',"
+        if target not in text:raise ValueError('Unexpected libmpv target')
+        text = text.replace(target, target + "\n                 link_language: 'cpp',", 1)
+        meson_file.write_text(text)
+    # Keep numeric conversion compatible with iOS15/macOS12; newer SDK
+    # declarations alone do not make newer libc++ entry points available.
+    convert = placebo / 'src/convert.cc'
+    text = convert.read_text()
+    guard = 'constexpr bool has_std_from_chars = has_std_from_chars_impl<T>::value;'
+    if 'HAS_STD_FROM_CHARS_FP' not in text:
+        if guard not in text:raise ValueError('Unexpected libplacebo conversion source')
+        text = text.replace(guard, guard + "\n#if defined(HAS_STD_FROM_CHARS_FP) && HAS_STD_FROM_CHARS_FP == 0\ntemplate <> constexpr bool has_std_from_chars<float> = false;\ntemplate <> constexpr bool has_std_from_chars<double> = false;\n#endif", 1)
+        convert.write_text(text)
+
     ffmpeg = git_source(work, 'ffmpeg', 'https://github.com/FFmpeg/FFmpeg.git', '74e4393595cf2b5857f0da925c4e0dd74ea306e5')
     dav1d = git_source(work, 'dav1d', 'https://github.com/videolan/dav1d.git', '1.5.5')
     uchardet_archive = fetch(
@@ -178,7 +204,7 @@ def build(work, dist):
         run(['make', 'install'], cwd=fbuild, env=env)
         mbuild = work / name / 'mpv'
         options = ['-Dlibmpv=true', '-Dcplayer=false', '-Dgpl=false', '-Dbuild-date=false',
-                   '-Dtests=false', '-Dgl=enabled', '-Dplain-gl=enabled', '-Diconv=enabled',
+                   '-Dtests=false', '-Db_lundef=true', '-Dprefer_static=true', '-Dgl=enabled', '-Dplain-gl=enabled', '-Diconv=enabled',
                    '-Duchardet=enabled', '-Dlibavdevice=disabled', '-Dvulkan=disabled',
                    '-Dlua=disabled', '-Djavascript=disabled', '-Dlcms2=disabled', '-Dswift-build=disabled',
                    '-Dmacos-cocoa-cb=disabled', '-Dmacos-media-player=disabled', '-Dmacos-touchbar=disabled']
