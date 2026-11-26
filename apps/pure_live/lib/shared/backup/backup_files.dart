@@ -4,10 +4,12 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pure_live/shared/backup/backup_data.dart';
 
-/// The name of a new backup file, 3.x's names (`purelive_<date>.txt`,
-/// `purelive_favorites_<date>.txt`) so 3.x's file picker still lists them.
-/// A data-only backup says so in its name (`purelive_data_<date>.txt`), the
-/// sensitive flag stays out of it: the file itself carries it.
+/// The name of a new backup file: 3.x's prefixes (`purelive_`,
+/// `purelive_favorites_`) and date, the JSON gzipped (`<date>.json.gz`,
+/// J03.1 — a full backup is megabytes of JSON and a few hundred KB
+/// compressed). A data-only backup says so in its name
+/// (`purelive_data_<date>.json.gz`), the sensitive flag stays out of it: the
+/// file itself carries it.
 String backupFileName(BackupScope scope, DateTime now, {BackupContents contents = BackupContents.settings}) {
   String two(int value) => value.toString().padLeft(2, '0');
   final date = '${now.year}-${two(now.month)}-${two(now.day)}T${two(now.hour)}_${two(now.minute)}_${two(now.second)}';
@@ -16,7 +18,7 @@ String backupFileName(BackupScope scope, DateTime now, {BackupContents contents 
       : contents == BackupContents.data
       ? 'purelive_data'
       : 'purelive';
-  return '${prefix}_$date.txt';
+  return '${prefix}_$date.json.gz';
 }
 
 /// The name of a scheduled WebDAV backup (J04.2): 3.x's prefixes stay, and
@@ -28,9 +30,11 @@ String autoBackupFileName(BackupScope scope, DateTime now) {
 }
 
 /// Matches the files [autoBackupFileName] writes; manual `purelive_<date>`
-/// files and renamed files do not match.
+/// files and renamed files do not match. A `.txt` or `.json` tail is a
+/// scheduled backup written before the files were gzipped: retention still
+/// counts it.
 final RegExp _autoBackupName = RegExp(
-  r'^purelive(?:_favorites)?_auto_(\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2})\.txt$',
+  r'^purelive(?:_favorites)?_auto_(\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2})\.(?:json\.gz|txt|json)$',
   caseSensitive: false,
 );
 
@@ -44,8 +48,11 @@ String? autoBackupTimeKey(String name) => _autoBackupName.firstMatch(name)?.grou
 /// added before the extension (3.x overwrote a backup made in the same
 /// second).
 File freeBackupFile(Directory folder, String name) {
-  final base = p.basenameWithoutExtension(name);
-  final extension = p.extension(name);
+  // `.json.gz`: the suffix stays whole, `_2` goes before it.
+  const suffix = '.json.gz';
+  final hasSuffix = name.toLowerCase().endsWith(suffix);
+  final base = hasSuffix ? name.substring(0, name.length - suffix.length) : p.basenameWithoutExtension(name);
+  final extension = hasSuffix ? suffix : p.extension(name);
   var file = File(p.join(folder.path, name));
   for (var i = 2; file.existsSync(); i++) {
     file = File(p.join(folder.path, '${base}_$i$extension'));
@@ -85,7 +92,8 @@ final class LocalBackupFile {
       : 'backup_kind_full';
 }
 
-/// The backups in [folder] (`purelive*.txt` / `.json`), newest first.
+/// The backups in [folder] (`purelive*.json.gz`, and the plain `.txt` /
+/// `.json` files 3.x wrote), newest first.
 /// Throws [FileSystemException] when the folder cannot be read.
 Future<List<LocalBackupFile>> listBackupFiles(Directory folder) async {
   if (!folder.existsSync()) return const [];
@@ -93,7 +101,8 @@ Future<List<LocalBackupFile>> listBackupFiles(Directory folder) async {
   await for (final entity in folder.list(followLinks: false)) {
     if (entity is! File) continue;
     final name = p.basename(entity.path).toLowerCase();
-    if (!name.startsWith('purelive') || !(name.endsWith('.txt') || name.endsWith('.json'))) continue;
+    final backup = name.endsWith('.json.gz') || name.endsWith('.txt') || name.endsWith('.json');
+    if (!name.startsWith('purelive') || !backup) continue;
     try {
       final stat = entity.statSync();
       found.add(LocalBackupFile(file: entity, modified: stat.modified, size: stat.size));

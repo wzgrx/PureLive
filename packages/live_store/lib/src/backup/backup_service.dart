@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:live_store/src/block_lists.dart';
 import 'package:live_store/src/legacy/legacy_snapshot.dart';
@@ -204,10 +205,10 @@ final class BackupService {
     }
     if (staged.existsSync()) await staged.delete();
     try {
-      // Encoded off the UI isolate, as Obtainium's encodeJsonBytesOffIsolate:
-      // a long history is megabytes of JSON and the page would drop frames.
-      final bytes = await Isolate.run(() => JsonUtf8Encoder('  ').convert(data), debugName: 'backup-encode');
-      await staged.writeAsBytes(bytes, flush: true);
+      // Encoded and gzipped off the UI isolate, as Obtainium's
+      // encodeJsonBytesOffIsolate: a long history is megabytes of JSON and
+      // the page would drop frames; gzip takes it down to a tenth or less.
+      await staged.writeAsBytes(await encode(data), flush: true);
       final hadPrevious = file.existsSync();
       if (hadPrevious) await file.rename(previous.path);
       try {
@@ -230,8 +231,24 @@ final class BackupService {
   }
 
   /// Reads a backup file; [FormatException] when it is not a JSON object.
-  static Future<Map<String, Object?>> readFile(File file) async {
-    final data = jsonDecode(await file.readAsString());
+  static Future<Map<String, Object?>> readFile(File file) async => decode(await file.readAsBytes());
+
+  /// The bytes of a backup file: the indented JSON, gzipped (J03.1).
+  /// Encoded off the UI isolate: a long history is megabytes of JSON and
+  /// the restore page would drop frames.
+  static Future<Uint8List> encode(Map<String, Object?> data) => Isolate.run(
+    () => Uint8List.fromList(gzip.encode(JsonUtf8Encoder('  ').convert(data))),
+    debugName: 'backup-encode',
+  );
+
+  /// A backup file's bytes as its JSON object. Gzip when the bytes carry
+  /// the gzip header (every v4 file); plain UTF-8 JSON otherwise, which is
+  /// what 3.x wrote. [FormatException] when it is not a JSON object.
+  static Map<String, Object?> decode(List<int> bytes) {
+    final text = bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b
+        ? utf8.decode(gzip.decode(bytes), allowMalformed: true)
+        : utf8.decode(bytes, allowMalformed: true);
+    final data = jsonDecode(text);
     if (data is! Map<String, Object?>) throw const FormatException('Not a backup file');
     return data;
   }

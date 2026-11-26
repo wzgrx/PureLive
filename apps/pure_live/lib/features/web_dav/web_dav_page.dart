@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:math' as math;
 
@@ -270,7 +269,7 @@ class _WebDavPageState extends ConsumerState<WebDavPage> {
     final name = _freeName(backupFileName(scope, ref.read(webDavClockProvider)(), contents: contents), taken);
     try {
       final data = await exportBackup(ref.read(backupServiceProvider), _store, scope, contents: contents);
-      await client.write([...dir, name], utf8.encode(jsonEncode(data)));
+      await client.write([...dir, name], await BackupService.encode(data));
     } on Object catch (error, stack) {
       log('Uploading the backup failed', name: 'WebDav', error: error, stackTrace: stack);
       _failed(
@@ -304,9 +303,8 @@ class _WebDavPageState extends ConsumerState<WebDavPage> {
           scope: scope,
           readFailedKey: 'webdav_download_failed',
           read: () async {
-            final data = jsonDecode(utf8.decode(await client.read(entry.path), allowMalformed: true));
-            if (data is! Map<String, Object?>) throw const FormatException('Not a backup file');
-            return data;
+            // Gzipped v4 files and the plain .txt files 3.x wrote.
+            return BackupService.decode(await client.read(entry.path));
           },
         );
       });

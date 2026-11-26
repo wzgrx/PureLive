@@ -116,12 +116,17 @@ void main() {
     });
 
     test('file names, the TV document and TV addresses', () async {
-      expect(backupFileName(BackupScope.all, _now), 'purelive_2026-10-01T20_00_00.txt');
-      expect(backupFileName(BackupScope.follows, _now), 'purelive_favorites_2026-10-01T20_00_00.txt');
+      expect(backupFileName(BackupScope.all, _now), 'purelive_2026-10-01T20_00_00.json.gz');
+      expect(backupFileName(BackupScope.follows, _now), 'purelive_favorites_2026-10-01T20_00_00.json.gz');
       final dir = await Directory.systemTemp.createTemp('backup_names');
       addTearDown(() => dir.delete(recursive: true));
       File(p(dir, 'purelive_a.txt')).writeAsStringSync('{}');
       expect(freeBackupFile(dir, 'purelive_a.txt').path, p(dir, 'purelive_a_2.txt'));
+      expect(
+        freeBackupFile(dir, 'purelive_b.json.gz').path,
+        p(dir, 'purelive_b.json.gz'),
+        reason: 'a name that is free keeps it',
+      );
 
       final full = await BackupService(services.store).exportAll();
       final document = tvSyncDocument(full);
@@ -262,12 +267,13 @@ void main() {
       expect(find.text('新建备份'), findsOneWidget);
       await tester.tap(find.text('应用与设置（不含敏感数据）'));
       await _settle(tester);
-      final file = File(p(folder, 'purelive_2026-10-01T20_00_00.txt'));
+      final file = File(p(folder, 'purelive_2026-10-01T20_00_00.json.gz'));
       expect(file.existsSync(), isTrue);
-      final saved = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+      expect(file.readAsBytesSync().take(2), [0x1f, 0x8b], reason: 'gzipped (J03.1)');
+      final saved = BackupService.decode(file.readAsBytesSync());
       expect((saved['favorite']! as Map)['favoriteRooms'], hasLength(1));
-      expect(_toasts, ['已备份到 purelive_2026-10-01T20_00_00.txt']);
-      expect(find.text('purelive_2026-10-01T20_00_00.txt'), findsOneWidget);
+      expect(_toasts, ['已备份到 purelive_2026-10-01T20_00_00.json.gz']);
+      expect(find.text('purelive_2026-10-01T20_00_00.json.gz'), findsOneWidget);
       expect(findWords('完整备份'), findsOneWidget);
       expect(find.text('目录中的备份 · 1'), findsOneWidget);
     });
@@ -288,14 +294,14 @@ void main() {
       // App only: no settings section, the name says so, the row shows it.
       await tester.tap(find.text('仅应用'));
       await _settle(tester);
-      final data = File(p(folder, 'purelive_data_2026-10-01T20_00_00.txt'));
+      final data = File(p(folder, 'purelive_data_2026-10-01T20_00_00.json.gz'));
       expect(data.existsSync(), isTrue);
-      final appOnly = jsonDecode(data.readAsStringSync()) as Map<String, Object?>;
+      final appOnly = BackupService.decode(data.readAsBytesSync());
       expect(appOnly['settingsIncluded'], isFalse);
       expect(appOnly.containsKey('app'), isFalse, reason: 'no preference travels');
       expect(appOnly.containsKey('theme'), isFalse);
       expect((appOnly['favorite']! as Map)['favoriteRooms'], hasLength(1));
-      expect(find.text('purelive_data_2026-10-01T20_00_00.txt'), findsOneWidget);
+      expect(find.text('purelive_data_2026-10-01T20_00_00.json.gz'), findsOneWidget);
       expect(findWords('仅应用数据'), findsOneWidget);
       // The choice is remembered (Obtainium's dropdown keeps its value) and
       // preselected next time.
@@ -321,8 +327,8 @@ void main() {
       await _settle(tester);
       await tester.tap(find.text('应用与设置（含敏感数据）'));
       await _settle(tester);
-      final full = File(p(folder, 'purelive_2026-10-01T20_00_00.txt'));
-      final withAccounts = jsonDecode(full.readAsStringSync()) as Map<String, Object?>;
+      final full = File(p(folder, 'purelive_2026-10-01T20_00_00.json.gz'));
+      final withAccounts = BackupService.decode(full.readAsBytesSync());
       expect(withAccounts['settingsIncluded'], isTrue);
       expect(withAccounts['sensitiveDataIncluded'], isTrue);
       expect((withAccounts['cookie']! as Map)['douyuCookie'], 'dy_auth=1');

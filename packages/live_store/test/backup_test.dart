@@ -243,4 +243,31 @@ void main() {
     expect(dir.listSync().map((e) => p.basename(e.path)), ['purelive_backup.txt']);
     await dir.delete(recursive: true);
   });
+
+  test('a written file is gzipped and much smaller than its JSON', () async {
+    final dir = await Directory.systemTemp.createTemp('live_store_gzip_');
+    final file = File(p.join(dir.path, 'purelive_backup.json.gz'));
+    final data = {
+      'backupVersion': 4,
+      ...v3Backup(),
+      'history': {
+        'historyRooms': [for (var i = 0; i < 200; i++) {'platform': 'bilibili', 'roomId': 'room$i', 'title': 'x'}],
+      },
+    };
+    await BackupService.writeFile(file, data);
+    final bytes = file.readAsBytesSync();
+    expect(bytes.take(2), [0x1f, 0x8b], reason: 'the gzip header (J03.1)');
+    final plain = const JsonEncoder.withIndent('  ').convert(data).length;
+    expect(bytes.length, lessThan(plain ~/ 4), reason: 'a backup is a tenth or less of its JSON');
+    expect(await BackupService.readFile(file), contains('backupVersion'));
+    await dir.delete(recursive: true);
+  });
+
+  test('a 3.x plain .txt file still reads', () async {
+    final dir = await Directory.systemTemp.createTemp('live_store_plain_');
+    final file = File(p.join(dir.path, 'purelive_2026-01-01T00_00_00.txt'));
+    await file.writeAsString(const JsonEncoder.withIndent('  ').convert(v3Backup()));
+    expect(await BackupService.readFile(file), containsPair('backupVersion', 3));
+    await dir.delete(recursive: true);
+  });
 }
