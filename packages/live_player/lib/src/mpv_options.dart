@@ -123,20 +123,22 @@ final class MpvEngineConfig {
   }
 
   /// The `ao` sent to mpv (3.x's `effectiveMpvAudioOutputDriverForPlatform`):
-  /// Android prefers AudioTrack with AAudio and OpenSL ES as fallbacks,
-  /// Linux uses ALSA, the others keep mpv's default.
+  /// Android prefers AudioTrack with AAudio and OpenSL ES as fallbacks.
+  /// Desktop and iOS leave native device probing enabled; forcing ALSA on
+  /// Linux bypasses PulseAudio/PipeWire and ties playback to ALSA plugins.
   String? get audioOutput {
     final platformDefault = switch (platform) {
       MpvPlatform.android => 'audiotrack,aaudio,opensles,',
-      MpvPlatform.linux => 'alsa',
       _ => null,
     };
     if (!customOutput) return platformDefault;
     final driver = audioOutputDriver.trim();
-    if (platform == MpvPlatform.android && (driver == 'auto' || !androidAudioOutputDrivers.contains(driver))) {
+    // "auto" is the setting's sentinel, not an audio output backend name.
+    if (driver.isEmpty || driver == 'auto') return platformDefault;
+    if (platform == MpvPlatform.android && !androidAudioOutputDrivers.contains(driver)) {
       return platformDefault;
     }
-    return driver.isEmpty ? 'auto' : driver;
+    return driver;
   }
 
   /// Whether audio is switched off (`ao=null`): an automatic recovery must
