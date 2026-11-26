@@ -5,6 +5,33 @@ import 'package:live_player/live_player.dart';
 import 'package:media_kit/media_kit.dart';
 
 void main() {
+  test('issue266: Linux uses native audio probing without forcing a distro-specific ALSA backend', () {
+    const config = MpvEngineConfig(platform: MpvPlatform.linux);
+    expect(config.audioOutput, isNull);
+    expect(config.liveProperties.containsKey('ao'), isFalse);
+    expect(config.audioDisabled, isFalse);
+  });
+
+  test('issue266: expert auto and an empty audio choice retain native platform probing', () {
+    for (final platform in [MpvPlatform.linux, MpvPlatform.windows, MpvPlatform.macos, MpvPlatform.ios]) {
+      for (final driver in ['auto', '']) {
+        final config = MpvEngineConfig(platform: platform, customOutput: true, audioOutputDriver: driver);
+        expect(config.audioOutput, isNull, reason: '$platform/$driver');
+        expect(config.audioDisabled, isFalse);
+      }
+    }
+  });
+
+  test('issue266: explicit desktop outputs and disabled audio stay explicit', () {
+    for (final driver in ['pulse', 'pipewire', 'alsa', 'null']) {
+      final config = MpvEngineConfig(platform: MpvPlatform.linux, customOutput: true, audioOutputDriver: driver);
+      expect(config.audioOutput, driver);
+      expect(config.liveProperties['ao'], driver);
+      expect(config.audioDisabled, driver == 'null');
+    }
+    expect(const MpvEngineConfig(customOutput: true).audioOutput, 'audiotrack,aaudio,opensles,');
+  });
+
   test("live properties: G03.1's probe and 3.x's bounded buffer", () {
     const config = MpvEngineConfig();
     final properties = config.liveProperties;
@@ -68,7 +95,7 @@ void main() {
       'wasapi',
     );
     expect(const MpvEngineConfig(customOutput: true, audioOutputDriver: 'null').audioDisabled, isTrue);
-    expect(const MpvEngineConfig(platform: MpvPlatform.linux).audioOutput, 'alsa');
+    expect(const MpvEngineConfig(platform: MpvPlatform.linux).audioOutput, isNull);
   });
 
   test('HEVC FLV is rewritten only where the bundled FFmpeg is older or unknown', () {
