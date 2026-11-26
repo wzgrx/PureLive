@@ -88,7 +88,13 @@ final class DouyinSite extends LiveSite
     implements LiveSiteRoomRefresher, LiveSiteRecordRoomResolver, LivePlayUrlResolver, LivePlayRecoveryResolver {
   /// Creates the adapter. [cookies] holds the user's cookie, if any; [now]
   /// and [random] (visitor id, msToken, a_bogus) are injectable for tests.
-  factory(LiveHttp http, {CookieVault? cookies, DateTime Function()? now, Random? random}) {
+  factory(
+    LiveHttp http, {
+    CookieVault? cookies,
+    DateTime Function()? now,
+    Random? random,
+    bool Function()? preferH264,
+  }) {
     final source = random ?? Random.secure();
     final clock = now ?? DateTime.now;
     return DouyinSite._(
@@ -97,10 +103,11 @@ final class DouyinSite extends LiveSite
       clock,
       DouyinSigner.visitorId(source),
       DouyinSigner(userAgent: DouyinApi.userAgent, now: clock, random: source),
+      preferH264 ?? () => true,
     );
   }
 
-  new _(this.http, this._cookies, this._now, this.visitorId, this._signer);
+  new _(this.http, this._cookies, this._now, this.visitorId, this._signer, this._preferH264);
 
   /// Transport.
   final LiveHttp http;
@@ -112,6 +119,10 @@ final class DouyinSite extends LiveSite
   final CookieVault? _cookies;
   final DateTime Function() _now;
   final DouyinSigner _signer;
+
+  /// Whether H.264 is preferred, in which case no room page is fetched for
+  /// HEVC (the room page is the only source of Douyin's HEVC streams).
+  final bool Function() _preferH264;
   _Session? _session;
 
   /// Rooms the recommendation draws already delivered since page 1.
@@ -538,12 +549,41 @@ final class DouyinSite extends LiveSite
       }),
       DouyinApi.apiHeaders(cookie),
     );
-    return (
-      room: DouyinApi.enter(response.text, webRid: webRid, status: response.status, headers: response.headers),
-      issuedAt: _now(),
-      cookie: cookie,
-    );
+    var room = DouyinApi.enter(response.text, webRid: webRid, status: response.status, headers: response.headers);
+    if (!_preferH264() && !DouyinApi.hasHevc(room.streamUrl)) {
+      final hevc = await _pageHevc(webRid, room.streamUrl);
+      if (hevc != null) room = _withHevc(room, hevc);
+    }
+    return (room: room, issuedAt: _now(), cookie: cookie);
   }
+
+  /// The room page's HEVC `stream_data` set for [streamUrl]'s stream, or
+  /// null. Only called when H.264 is not preferred: the page is an extra
+  /// request for a codec the room may not send, so every failure (403,
+  /// risk control, a page without HEVC) is a silent fall back to H.264
+  /// rather than a failed entry.
+  Future<Map<String, dynamic>?> _pageHevc(String webRid, Map<String, dynamic>? streamUrl) async {
+    if (streamUrl == null) return null;
+    try {
+      final cookie = await _cookie();
+      final response = await _get(Uri.https(_live, '/$webRid'), DouyinApi.apiHeaders(cookie));
+      if (response.status != 200) return null;
+      final data = DouyinApi.roomPageHevcData(response.text, streamUrl: streamUrl);
+      return data.isEmpty ? null : data;
+    } on Exception catch (_) {
+      return null;
+    }
+  }
+
+  /// [room] with [hevc] merged into its `stream_url` (H.264's structure is
+  /// kept, HEVC goes under `stream_data_h265`).
+  static DouyinRoom _withHevc(DouyinRoom room, Map<String, dynamic> hevc) => (
+    room: room.room,
+    roomId: room.roomId,
+    streamUrl: DouyinApi.mergeHevc(room.streamUrl!, hevc),
+    userUniqueId: room.userUniqueId,
+    sessionEnded: room.sessionEnded,
+  );
 
   /// The room page with the session cookie (3.x first sent a HEAD for
   /// `ttwid`, `__ac_nonce` and `msToken`; the recorded page needed only the
@@ -551,11 +591,12 @@ final class DouyinSite extends LiveSite
   Future<_Fetched> _roomPage(String webRid) async {
     final cookie = await _cookie();
     final response = await _get(Uri.https(_live, '/$webRid'), DouyinApi.apiHeaders(cookie));
-    return (
-      room: DouyinApi.roomPage(response.text, webRid: webRid, status: response.status, headers: response.headers),
-      issuedAt: _now(),
-      cookie: cookie,
-    );
+    var room = DouyinApi.roomPage(response.text, webRid: webRid, status: response.status, headers: response.headers);
+    if (!_preferH264() && !DouyinApi.hasHevc(room.streamUrl)) {
+      final data = DouyinApi.roomPageHevcData(response.text, streamUrl: room.streamUrl);
+      if (data.isNotEmpty) room = _withHevc(room, data);
+    }
+    return (room: room, issuedAt: _now(), cookie: cookie);
   }
 
   Future<_Fetched> _reflow(String roomId) async {

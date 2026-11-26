@@ -63,12 +63,15 @@ final ReplaySample _homeWithoutTtwid = _fake('https://live.douyin.com/?from_nav=
 
 typedef _Setup = ({DouyinSite site, ReplayHttp http});
 
-_Setup _replay(List<Object> samples, {CookieVault? cookies, DateTime Function()? now}) {
+_Setup _replay(List<Object> samples, {CookieVault? cookies, DateTime Function()? now, bool Function()? preferH264}) {
   final http = ReplayHttp([
     for (final sample in samples)
       if (sample is String) ReplaySample.load('$_root/$sample') else sample as ReplaySample,
   ], ignoredQuery: _ignored);
-  return (site: DouyinSite(http, cookies: cookies, now: now ?? () => _capturedAt, random: Random(1)), http: http);
+  return (
+    site: DouyinSite(http, cookies: cookies, now: now ?? () => _capturedAt, random: Random(1), preferH264: preferH264),
+    http: http,
+  );
 }
 
 List<String> _paths(ReplayHttp http) => [
@@ -1182,6 +1185,83 @@ void main() {
         ),
       ]);
       expect(await site.account(cookie: 'sessionid=ok'), '主播');
+    });
+  });
+  group('douyin HEVC from the room page', () {
+    /// The stream name of the recorded enter answer.
+    String streamName() {
+      final body = jsonDecode(Fixture.load('douyin', 'S04-enter-live').body) as Map<String, dynamic>;
+      final room = ((body['data'] as Map)['data'] as List).first as Map<String, dynamic>;
+      final pull = ((room['stream_url'] as Map)['live_core_sdk_data'] as Map)['pull_data'] as Map;
+      final data = pull['stream_data'];
+      final streamData = data is String ? jsonDecode(data) as Map<String, dynamic> : data as Map<String, dynamic>;
+      return (streamData['common'] as Map)['stream'] as String;
+    }
+
+    /// A room page whose room object carries [stream]'s HEVC `web_stream_url`
+    /// (the JSON API never does; the page does).
+    String page(String stream) {
+      final room = {
+        'web_stream_url': {
+          'live_core_sdk_data': {
+            'pull_data': {
+              'stream_data': {
+                'common': {'stream': stream},
+                'data': {
+                  'uhd': {
+                    'main': {
+                      'flv': 'https://pull-flv-q1.douyincdn.com/thirdgame/stream-1_hiquhd5.flv?keeptime=00093a80&wsSecret=ab&wsTime=6b085e4e',
+                      'sdk_params': {'VCodec': 'h265', 'vbitrate': 7600000, 'resolution': '1920x1080'},
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+      final text = jsonEncode({
+        'roomStore': {
+          'roomInfo': {'room': room},
+        },
+      });
+      return '<html><script>self.__pace_f.push([1,${jsonEncode('0:$text\n')}])</script></html>';
+    }
+
+    test('preferH264 false: one page request, the HEVC twin appears; true: nothing extra', () async {
+      final hevc = _replay([
+        'S01-home',
+        'S04-enter-live',
+        _fake('https://live.douyin.com/$_webRid', body: page(streamName())),
+        'S05-reflow-live',
+      ], preferH264: () => false);
+      final detail = await hevc.site.getRoomDetail(roomId: _webRid);
+      final qualities = await hevc.site.getPlayQualities(detail: detail);
+      expect(qualities.map((quality) => quality.id), contains('uhd+h265'));
+      expect(qualities.firstWhere((quality) => quality.id == 'uhd+h265').codec, 'hevc');
+      expect(_paths(hevc.http), [_home, _enter, 'GET live.douyin.com/$_webRid', _reflow]);
+
+      final avc = _replay(['S01-home', 'S04-enter-live', 'S05-reflow-live'], preferH264: () => true);
+      final plain = await avc.site.getRoomDetail(roomId: _webRid);
+      expect(
+        (await avc.site.getPlayQualities(detail: plain)).map((quality) => quality.id),
+        isNot(contains('uhd+h265')),
+      );
+      expect(_paths(avc.http), [_home, _enter, _reflow], reason: 'no extra request when H.264 is preferred');
+    });
+
+    test('a refused page (403) falls back to H.264 silently', () async {
+      final hevc = _replay([
+        'S01-home',
+        'S04-enter-live',
+        _fake('https://live.douyin.com/$_webRid', status: 403, body: 'forbidden'),
+        'S05-reflow-live',
+      ], preferH264: () => false);
+      final detail = await hevc.site.getRoomDetail(roomId: _webRid);
+      final qualities = await hevc.site.getPlayQualities(detail: detail);
+      expect(qualities, isNotEmpty);
+      expect(qualities.map((quality) => quality.id), isNot(contains('uhd+h265')));
+      expect(_paths(hevc.http), [_home, _enter, 'GET live.douyin.com/$_webRid', _reflow]);
     });
   });
 }
