@@ -293,6 +293,7 @@
     "backup_kind_data": "Nur App-Daten",
     "backup_kind_follows": "Nur Gefolgte",
     "backup_kind_full": "Vollständiges Backup",
+    "backup_newer_version": "Diese Sicherung stammt von einer neueren PureLive-Version ({version}); aktualisiere zuerst die App",
     "backup_no_follows": "Diese Datei hat keine Folgeliste",
     "backup_not_backup": "Das ist kein Pure-Live-Backup oder die Datei ist beschädigt",
     "backup_open_folder": "Backup-Ordner öffnen",

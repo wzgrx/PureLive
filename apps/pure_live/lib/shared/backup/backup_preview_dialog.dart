@@ -166,6 +166,12 @@ Future<bool> restoreWithPreview(
     return false;
   }
   try {
+    BackupService.checkVersion(json);
+  } on FormatException {
+    AppNavigator.toast(i18n('backup_newer_version', args: {'version': '${json['backupVersion']}'}));
+    return false;
+  }
+  try {
     preview = await previewRestore(store, json, scope);
   } on FormatException {
     AppNavigator.toast(i18n(scope == BackupScope.follows ? 'backup_no_follows' : 'backup_not_backup'));

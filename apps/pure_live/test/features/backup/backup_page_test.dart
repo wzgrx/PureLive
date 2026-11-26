@@ -297,6 +297,21 @@ void main() {
       expect((appOnly['favorite']! as Map)['favoriteRooms'], hasLength(1));
       expect(find.text('purelive_data_2026-10-01T20_00_00.txt'), findsOneWidget);
       expect(findWords('仅应用数据'), findsOneWidget);
+      // The choice is remembered (Obtainium's dropdown keeps its value) and
+      // preselected next time.
+      expect(services.store.settings.get(Settings.backupContents), 'data');
+      await tester.tap(find.text('创建备份'));
+      await _settle(tester);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('backup-contents-data')),
+          matching: find.byIcon(AppIcons.selected),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('取消'));
+      await _settle(tester);
+      expect(find.text('新建备份'), findsNothing);
 
       // Settings with the accounts: the sensitive flag and the cookies.
       await tester.runAsync(() async {
@@ -312,6 +327,21 @@ void main() {
       expect(withAccounts['sensitiveDataIncluded'], isTrue);
       expect((withAccounts['cookie']! as Map)['douyuCookie'], 'dy_auth=1');
       expect(find.text('目录中的备份 · 2'), findsOneWidget);
+      expect(services.store.settings.get(Settings.backupContents), 'sensitive');
+    });
+
+    testWidgets('a file from a newer app is refused with its version', (tester) async {
+      final services = await pump(tester);
+      await tester.runAsync(
+        () => File(p(folder, 'purelive_2027-01-01T00_00_00.txt'))
+            .writeAsString(jsonEncode({..._legacyBackup([_room('1')]), 'backupVersion': 9})),
+      );
+      await refresh(tester);
+      await tester.tap(find.text('purelive_2027-01-01T00_00_00.txt'));
+      await _settle(tester);
+      expect(find.byKey(const ValueKey('backup-preview')), findsNothing);
+      expect(_toasts, ['这个备份来自更新的纯粹直播（版本 9），请先升级应用再恢复']);
+      expect(await tester.runAsync(() => _followIds(services.store)), isEmpty);
     });
 
     testWidgets('restores a 3.x file from the folder after showing what changes; the others grey out meanwhile', (

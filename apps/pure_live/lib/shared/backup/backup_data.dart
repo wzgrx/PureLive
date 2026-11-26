@@ -56,6 +56,13 @@ enum BackupContents {
   bool get includesSensitiveData => this == BackupContents.sensitive;
 }
 
+/// The [BackupContents] of the stored name ([Settings.backupContents]), or
+/// [BackupContents.settings] for a value this build does not know (or none
+/// saved yet) — Obtainium's dropdown starts at "apps and settings without
+/// secrets" the same way.
+BackupContents storedBackupContents(String? name) =>
+    BackupContents.values.where((contents) => contents.name == name).firstOrNull ?? BackupContents.settings;
+
 /// The [BackupContents] a file states about itself: its `settingsIncluded`
 /// and `sensitiveDataIncluded` keys (a 3.x file has neither and carried
 /// settings without accounts).
@@ -307,6 +314,7 @@ Future<RestorePreview> previewRestore(
   BackupScope scope, {
   IptvLibrary? iptv,
 }) async {
+  BackupService.checkVersion(json);
   final snapshot = LegacySnapshot.fromBackup(json);
   final version = switch (json['backupVersion']) {
     final num value => value.toInt(),

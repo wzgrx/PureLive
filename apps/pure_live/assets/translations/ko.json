@@ -293,6 +293,7 @@
     "backup_kind_data": "앱 데이터만",
     "backup_kind_follows": "팔로우만",
     "backup_kind_full": "전체 백업",
+    "backup_newer_version": "이 백업은 더 새로운 버전의 PureLive({version})에서 만들어졌습니다. 앱을 업데이트한 뒤 복원하세요",
     "backup_no_follows": "이 파일에는 팔로우 목록이 없습니다",
     "backup_not_backup": "Pure Live 백업이 아니거나 파일이 손상되었습니다",
     "backup_open_folder": "백업 폴더 열기",

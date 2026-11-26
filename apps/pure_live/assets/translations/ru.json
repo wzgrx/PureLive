@@ -293,6 +293,7 @@
     "backup_kind_data": "Только данные приложения",
     "backup_kind_follows": "Только подписки",
     "backup_kind_full": "Полная копия",
+    "backup_newer_version": "Эта резервная копия сделана более новой версией PureLive ({version}); обновите приложение перед восстановлением",
     "backup_no_follows": "В этом файле нет списка подписок",
     "backup_not_backup": "Это не резервная копия Pure Live или файл повреждён",
     "backup_open_folder": "Открыть папку резервных копий",

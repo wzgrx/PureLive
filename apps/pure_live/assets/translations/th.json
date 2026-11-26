@@ -293,6 +293,7 @@
     "backup_kind_data": "เฉพาะข้อมูลแอป",
     "backup_kind_follows": "เฉพาะการติดตาม",
     "backup_kind_full": "สำรองข้อมูลทั้งหมด",
+    "backup_newer_version": "ไฟล์สำรองนี้มาจาก PureLive เวอร์ชันใหม่กว่า ({version}) โปรดอัปเดตแอปก่อนกู้คืน",
     "backup_no_follows": "ไฟล์นี้ไม่มีรายการติดตาม",
     "backup_not_backup": "นี่ไม่ใช่ข้อมูลสำรองของ Pure Live หรือไฟล์เสียหาย",
     "backup_open_folder": "เปิดโฟลเดอร์สำรองข้อมูล",

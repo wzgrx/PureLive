@@ -178,13 +178,17 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       });
 
   /// "创建备份": the three kinds of file first (J03.1, as Obtainium asks
-  /// "apps" or "apps and settings"), then the write.
+  /// "apps" or "apps and settings"), then the write. The last choice is
+  /// remembered ([Settings.backupContents]) and preselected, as Obtainium's
+  /// dropdown keeps its value.
   Future<void> _createChoices() async {
     if (_busy != null) return;
+    final stored = storedBackupContents(_store.settings.get(Settings.backupContents));
     final contents = await showAppOptionDialog<BackupContents>(
       context: context,
       title: i18n('backup_contents_title'),
       icon: AppIcons.backupCreate,
+      selected: stored,
       options: [
         for (final contents in BackupContents.values)
           AppDialogOption(
@@ -202,6 +206,14 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       ],
     );
     if (contents == null || !mounted) return;
+    // A preference of this device: failing to store it must not stop the
+    // backup.
+    try {
+      await _store.settings.set(Settings.backupContents, contents.name);
+    } on Object catch (error, stack) {
+      log('Remembering the backup contents failed', name: 'Backup', error: error, stackTrace: stack);
+    }
+    if (!mounted) return;
     await _create(BackupScope.all, contents: contents);
   }
 

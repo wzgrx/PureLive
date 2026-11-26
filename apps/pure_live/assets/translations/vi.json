@@ -293,6 +293,7 @@
     "backup_kind_data": "Chỉ dữ liệu ứng dụng",
     "backup_kind_follows": "Chỉ danh sách theo dõi",
     "backup_kind_full": "Sao lưu đầy đủ",
+    "backup_newer_version": "Bản sao lưu này đến từ phiên bản PureLive mới hơn ({version}); hãy cập nhật ứng dụng trước khi khôi phục",
     "backup_no_follows": "Tệp này không có danh sách theo dõi",
     "backup_not_backup": "Đây không phải bản sao lưu Pure Live hoặc tệp đã hỏng",
     "backup_open_folder": "Mở thư mục sao lưu",

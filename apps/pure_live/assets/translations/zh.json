@@ -293,6 +293,7 @@
     "backup_kind_data": "仅应用数据",
     "backup_kind_follows": "仅关注列表",
     "backup_kind_full": "完整备份",
+    "backup_newer_version": "这个备份来自更新的纯粹直播（版本 {version}），请先升级应用再恢复",
     "backup_no_follows": "这个文件里没有关注列表",
     "backup_not_backup": "这不是纯粹直播的备份文件，或文件已损坏",
     "backup_open_folder": "打开备份目录",

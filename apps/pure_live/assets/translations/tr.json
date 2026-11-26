@@ -293,6 +293,7 @@
     "backup_kind_data": "Yalnızca uygulama verileri",
     "backup_kind_follows": "Yalnızca takipler",
     "backup_kind_full": "Tam yedek",
+    "backup_newer_version": "Bu yedek daha yeni bir PureLive sürümünden ({version}); geri yüklemeden önce uygulamayı güncelleyin",
     "backup_no_follows": "Bu dosyada takip listesi yok",
     "backup_not_backup": "Bu bir Pure Live yedeği değil ya da dosya bozuk",
     "backup_open_folder": "Yedek klasörünü aç",

@@ -240,6 +240,7 @@ const Map<String, Object> v3Defaults = {
   'localInteraction.danmakuShadowOffset': 1.0,
   'localInteraction.danmakuFixedDurationMs': 4000,
   'backupDirectory': '',
+  'backupContents': 'settings',
   'downloadDirectoryPath': '',
   'downloadDirectoryDecisionMade': false,
   'bilibiliUid': 0,

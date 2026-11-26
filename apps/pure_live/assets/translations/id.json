@@ -293,6 +293,7 @@
     "backup_kind_data": "Hanya data aplikasi",
     "backup_kind_follows": "Ikutan saja",
     "backup_kind_full": "Cadangan lengkap",
+    "backup_newer_version": "Cadangan ini berasal dari PureLive versi lebih baru ({version}); perbarui aplikasi sebelum memulihkannya",
     "backup_no_follows": "File ini tidak memiliki daftar ikutan",
     "backup_not_backup": "Ini bukan cadangan Pure Live, atau file rusak",
     "backup_open_folder": "Buka folder cadangan",

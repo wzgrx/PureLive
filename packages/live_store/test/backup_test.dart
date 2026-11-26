@@ -103,6 +103,15 @@ void main() {
     expect(await store.follows.count(), 1);
   });
 
+  test('a file from a newer app is refused before anything changes', () async {
+    await store.follows.add(LiveRoom(platform: 'bilibili', roomId: '1'));
+    final newer = v3Backup()..['backupVersion'] = BackupService.version + 1;
+    await expectLater(backup.restoreAll(newer), throwsFormatException);
+    await expectLater(backup.restoreFollows(newer), throwsFormatException);
+    expect(await store.follows.count(), 1, reason: 'nothing was replaced');
+    expect(store.settings.get(Settings.themeMode), 'System');
+  });
+
   test('a malformed file writes nothing', () async {
     await store.follows.add(LiveRoom(platform: 'bilibili', roomId: '1'));
     final broken = v3Backup()..['history'] = 'not a section';

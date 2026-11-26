@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:live_store/src/block_lists.dart';
 import 'package:live_store/src/legacy/legacy_snapshot.dart';
@@ -109,12 +110,22 @@ final class BackupService {
     },
   };
 
+  /// Throws [FormatException] for a file written by a newer app
+  /// (`backupVersion` above [version]): Obtainium refuses a newer
+  /// schemaVersion the same way instead of reading it half-way.
+  static void checkVersion(Map<String, Object?> json) {
+    if (json['backupVersion'] case final int fileVersion when fileVersion > version) {
+      throw const FormatException('Backup written by a newer version');
+    }
+  }
+
   /// Restores a full backup. The whole file is read and checked first
   /// ([FormatException] before anything is written); then each part the
   /// file has replaces the stored one. Parts the file does not have stay as
   /// they are (3.x reset them to defaults). A follows-only file is refused
   /// here, as in 3.x. One restore at a time ([StateError]).
   Future<void> restoreAll(Map<String, Object?> json) => _exclusive(() async {
+    checkVersion(json);
     if (json['backupScope'] == 'favorites') {
       throw const FormatException('Favorites-only backup requires favorites restore');
     }
@@ -148,6 +159,7 @@ final class BackupService {
   /// else stays (3.x `restoreFavoriteSettings`). Accepts full and
   /// follows-only files.
   Future<void> restoreFollows(Map<String, Object?> json) => _exclusive(() async {
+    checkVersion(json);
     final version = json['backupVersion'];
     if (version != null && (version is! int || version < 1)) throw const FormatException('Invalid backup version');
     final favorite = version == null ? json : json['favorite'];
@@ -192,7 +204,10 @@ final class BackupService {
     }
     if (staged.existsSync()) await staged.delete();
     try {
-      await staged.writeAsString(const JsonEncoder.withIndent('  ').convert(data), flush: true);
+      // Encoded off the UI isolate, as Obtainium's encodeJsonBytesOffIsolate:
+      // a long history is megabytes of JSON and the page would drop frames.
+      final bytes = await Isolate.run(() => JsonUtf8Encoder('  ').convert(data), debugName: 'backup-encode');
+      await staged.writeAsBytes(bytes, flush: true);
       final hadPrevious = file.existsSync();
       if (hadPrevious) await file.rename(previous.path);
       try {

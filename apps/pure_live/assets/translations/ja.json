@@ -293,6 +293,7 @@
     "backup_kind_data": "アプリのデータのみ",
     "backup_kind_follows": "フォローのみ",
     "backup_kind_full": "フルバックアップ",
+    "backup_newer_version": "このバックアップは新しいバージョンの PureLive（{version}）のものです。アプリを更新してから復元してください",
     "backup_no_follows": "このファイルにはフォローリストがありません",
     "backup_not_backup": "Pure Live のバックアップではないか、ファイルが破損しています",
     "backup_open_folder": "バックアップフォルダを開く",

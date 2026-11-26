@@ -293,6 +293,7 @@
     "backup_kind_data": "Somente dados do app",
     "backup_kind_follows": "Somente seguidos",
     "backup_kind_full": "Backup completo",
+    "backup_newer_version": "Este backup vem de uma versão mais recente do PureLive ({version}); atualize o app antes de restaurar",
     "backup_no_follows": "Este arquivo não tem lista de seguidos",
     "backup_not_backup": "Não é um backup do Pure Live ou o arquivo está danificado",
     "backup_open_folder": "Abrir a pasta de backup",
