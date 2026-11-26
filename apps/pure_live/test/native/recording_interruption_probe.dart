@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:live_core/live_core.dart';
 import 'package:live_record/live_record.dart';
 import 'package:path/path.dart' as p;
 import 'package:pure_live/platform/recording_platform.dart';
+
+import 'recording_input.dart';
 
 /// Uses generated media and the real recorder/native muxer. Fault injection
 /// removes only this owned fixture's final journal row after cancellation,
@@ -13,27 +16,7 @@ Future<Map<String, Object?>> probeInterruptedRecording(Directory root) async {
   await root.create(recursive: true);
   final native = FfmpegKitRunner();
   final clip = File(p.join(root.path, 'generated.mp4'));
-  final generation = await native.start([
-    '-hide_banner',
-    '-nostdin',
-    '-y',
-    '-f',
-    'lavfi',
-    '-i',
-    'testsrc2=size=160x90:rate=12',
-    '-t',
-    '8',
-    '-an',
-    '-c:v',
-    'mpeg4',
-    '-q:v',
-    '6',
-    clip.path,
-  ]);
-  final generationCode = await generation.exitCode.timeout(const Duration(seconds: 45));
-  if (generationCode != 0 || !clip.existsSync() || clip.lengthSync() == 0) {
-    throw StateError('Native fixture encoding failed');
-  }
+  await clip.writeAsBytes(base64Decode(recordingInputBase64), flush: true);
   final bytes = await clip.readAsBytes();
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   server.listen((request) async {
@@ -126,6 +109,10 @@ Future<Map<String, Object?>> probeInterruptedRecording(Directory root) async {
       'committed_mp4': committed,
       'decode_exit_code': decodeCode,
       'pending_attempts': task.pendingAttempts.length,
+      'pending_open_tail_flags': task.pendingAttempts.map((a) => a.openTail).toList(),
+      'last_error_stage': task.lastErrorStage,
+      'last_error': task.lastError,
+      'fixture_codec': 'h264',
       'task_status': task.status.name,
       'generated_media_only': true,
     };
