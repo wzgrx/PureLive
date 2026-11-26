@@ -9,6 +9,7 @@ import audio_session
 import audio_service
 import bonsoir_darwin
 import connectivity_plus
+import cross_file_darwin
 import dynamic_color
 import ffmpeg_kit_extended_flutter
 import file_picker_darwin
@@ -27,6 +28,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   AudioServicePlugin.register(with: registry.registrar(forPlugin: "AudioServicePlugin"))
   SwiftBonsoirPlugin.register(with: registry.registrar(forPlugin: "SwiftBonsoirPlugin"))
   ConnectivityPlusPlugin.register(with: registry.registrar(forPlugin: "ConnectivityPlusPlugin"))
+  CrossFileDarwinPlugin.register(with: registry.registrar(forPlugin: "CrossFileDarwinPlugin"))
   DynamicColorPlugin.register(with: registry.registrar(forPlugin: "DynamicColorPlugin"))
   FfmpegKitExtendedFlutterPlugin.register(with: registry.registrar(forPlugin: "FfmpegKitExtendedFlutterPlugin"))
   FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))

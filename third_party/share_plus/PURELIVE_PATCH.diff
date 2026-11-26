@@ -1,0 +1,59 @@
+--- a/lib/src/share_plus_web.dart
++++ b/lib/src/share_plus_web.dart
+@@ -174,7 +174,10 @@
+         final anchor = document.createElement('a') as HTMLAnchorElement
+           ..href = Uri.dataFromBytes(bytes).toString()
+           ..style.display = 'none'
+-          ..download = fileNameOverrides?.elementAt(index) ?? file.name;
++          ..download =
++              fileNameOverrides?.elementAt(index) ??
++              await file.name() ??
++              'shared-file';
+         document.body!.children.add(anchor);
+         anchor.click();
+         anchor.remove();
+@@ -189,17 +192,16 @@
+ 
+   static Future<File> _fromXFile(XFile file, {String? nameOverride}) async {
+     final bytes = await file.readAsBytes();
++    final name = nameOverride ?? await file.name() ?? 'shared-file';
+     return File(
+-      [bytes.buffer.toJS].toJS,
+-      nameOverride ?? file.name,
+-      FilePropertyBag()..type = file.mimeType ?? _mimeTypeForPath(file, bytes),
++      [bytes.toJS].toJS,
++      name,
++      FilePropertyBag()
++        ..type =
++            lookupMimeType(name, headerBytes: bytes) ??
++            'application/octet-stream',
+     );
+   }
+-
+-  static String _mimeTypeForPath(XFile file, Uint8List bytes) {
+-    return lookupMimeType(file.name, headerBytes: bytes) ??
+-        'application/octet-stream';
+-  }
+ }
+ 
+ const _resultDismissed = ShareResult('', ShareResultStatus.dismissed);
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -28,7 +28,7 @@
+         pluginClass: SharePlusWindowsPluginCApi
+ 
+ dependencies:
+-  cross_file: ^0.3.5+2
++  cross_file: ^0.4.0
+   meta: ^1.17.0
+   mime: ^2.0.0
+   flutter:
+@@ -51,6 +51,6 @@
+   flutter_lints: ^6.0.0
+ 
+ environment:
+-  sdk: ">=3.10.0 <4.0.0"
+-  flutter: ">=3.38.1"
++  sdk: ">=3.11.0 <4.0.0"
++  flutter: ">=3.41.0"
+ 

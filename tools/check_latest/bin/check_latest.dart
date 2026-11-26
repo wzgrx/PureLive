@@ -48,6 +48,17 @@ Future<void> main(List<String> arguments) async {
     ]);
   }
 
+  // Published consumers remain visible when their compatibility patch is local.
+  final consumers = File('$root/third_party/cross_file_consumers.json');
+  if (!options.flag('skip-pub') && consumers.existsSync()) {
+    final packages = jsonDecode(consumers.readAsStringSync()) as Map<String, dynamic>;
+    for (final name in packages.keys) {
+      final spec = loadYaml(File('$root/third_party/$name/pubspec.yaml').readAsStringSync()) as YamlMap;
+      if (spec['name'] != name) throw FormatException('Vendored package name mismatch: $name');
+      pub[name] = spec['version'].toString();
+    }
+  }
+
   final findings = await collect(env: env, pub: pub);
   if (options.flag('json')) {
     stdout.writeln(const JsonEncoder.withIndent('  ').convert(findings.map((f) => f.toJson()).toList()));

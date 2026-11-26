@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>下载 5.7.0</b></a>
-  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.7.0.md">更新说明</a>
+  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>下载 5.7.1</b></a>
+  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.7.1.md">更新说明</a>
   &nbsp;·&nbsp; <a href="#功能详解">功能</a>
   &nbsp;·&nbsp; <a href="#支持的平台">支持的平台</a>
   &nbsp;·&nbsp; <a href="#从源码构建">从源码构建</a>
@@ -105,6 +105,8 @@
 5.6.5 批量刷新已知 B 站关注，Windows 更新保留同目标桌面快捷方式。宽屏底栏可关闭，多屏联动记住所选显示器，全屏醒目留言入口随控制栏显示。
 
 5.7.0 升级 Flutter/Dart、构建工具链和播放/录制内核，适配新版界面组件与窗口管理，并修复 Android 静态 JNI 初始化和 Windows 冷启动内容刷新。整合房间列表与轮播、可选的画面长按切房、TV 双画面、前台预约、CHZZK 公开回放和直播缓存回看。新增选项保持默认关闭；缓存回看仅限当前连续内存范围，预约需应用运行并处于前台。原设备和账号未确认的问题继续跟踪。
+
+5.7.1 完成剩余六项依赖升级，为文件选择和分享插件移植 cross_file 0.4 兼容代码；保留文件和目录操作、备份格式及现有数据。受限文件分享改为流式复制，修正失败后的临时文件清理，并同步 AGP 9.5.3 和 flutter_svg 2.5.1。额外修复 Android 受限 URI 可读性误判及原生流未关闭造成的句柄泄漏。
 
 > 从 5.0.0 起项目搬到这个独立仓库 [wzgrx/PureLive](https://github.com/wzgrx/PureLive)。原来的 [wzgrx/pure_live](https://github.com/wzgrx/pure_live)（[liuchuancong/pure_live](https://github.com/liuchuancong/pure_live) 的分支）保留不删，装着 3.x、4.x 的设备会照常收到更新提示并下载到这里的新版本。
 
@@ -421,11 +423,13 @@
 
 ### 构建工具链（2026-11-25）
 
-本轮升级固定Flutter 3.50.1 / Dart 3.14、Gradle 9.9.2 / AGP 9.5.2和JDK 27.0.1.1+4；Linux使用Clang 23.1.6，Windows使用Visual Studio 18.12.1，Apple固定Xcode 27.2。准确版本以`toolchain.env`为准。SDK语义补丁须在独立副本显式准备，不能直接使用未准备的共享SDK。
+本轮升级固定Flutter 3.50.1 / Dart 3.14、Gradle 9.9.2 / AGP 9.5.3和JDK 27.0.1.1+4；Linux使用Clang 23.1.6，Windows使用Visual Studio 18.12.1，Apple固定Xcode 27.2。准确版本以`toolchain.env`为准。SDK语义补丁须在独立副本显式准备，不能直接使用未准备的共享SDK。
+
+本地文件选择与分享兼容补丁的上游版本、归档哈希、许可证和精确差异记录在 `third_party/cross_file_consumers.json` 及各包的 `PURELIVE_PATCH.md`/`PURELIVE_PATCH.diff`。最新版 cross_file 0.4 与六项依赖已统一解算；这些消费者沿用上游稳定版本号，并明确标注本地适配。
 
 工作区直接依赖已更新到当前官方版本；六项间接依赖受 Flutter SDK 或上游范围约束，保留最新可解算版本，未强行覆盖跨主版本约束。具体锁定结果见 `pubspec.lock`。
 
-需要 Linux 或 Windows 上的 Flutter 环境。工具链的版本统一写在 [`toolchain.env`](toolchain.env)（Flutter 3.50.1、Dart 3.14.0、Gradle 9.9.2、AGP 9.5.2、Kotlin 2.4.21、JDK 27、Android SDK 37.2、build-tools 37.0.0、platform-tools 37.0.3、cmdline-tools 23.0、NDK 30.0.16248370、CMake 4.1.2），升级时只改这一处（Android 构建直接读取其中的 compileSdk、build-tools、NDK、CMake；Gradle、AGP 另见 Z01）。
+需要 Linux 或 Windows 上的 Flutter 环境。工具链的版本统一写在 [`toolchain.env`](toolchain.env)（Flutter 3.50.1、Dart 3.14.0、Gradle 9.9.2、AGP 9.5.3、Kotlin 2.4.21、JDK 27、Android SDK 37.2、build-tools 37.0.0、platform-tools 37.0.3、cmdline-tools 23.0、NDK 30.0.16248370、CMake 4.1.2），升级时只改这一处（Android 构建直接读取其中的 compileSdk、build-tools、NDK、CMake；Gradle、AGP 另见 Z01）。
 
 ```bash
 git clone https://github.com/wzgrx/PureLive.git
@@ -485,7 +489,7 @@ docs/                   开发计划、模块记录、界面设计和功能清�
 
 按 [D-092 / 维护方针](MAINTENANCE.md) 恢复功能需求与开发；下表列出已交付范围，后续需求按可行性和验证结果推进。
 
-| 客户端 | 5.7.0（现在） | 以后 |
+| 客户端 | 5.7.1（现在） | 以后 |
 |---|---|---|
 | **Android 手机和平板** | 正式版：液态玻璃底栏、阻尼和弹簧动效，八个平台的官方登录，15 种界面语言 | 持续修平台变化 |
 | **Android 电视** | 正式版：直播、视频（哔哩哔哩点播）、音乐三个模式，壁纸，电视样式的设置目录，扫码用手机输入 | 在更多电视真机上验证和调整 |

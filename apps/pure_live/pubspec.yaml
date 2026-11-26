@@ -2,7 +2,7 @@ name: pure_live
 description: Pure Live, a third-party live stream aggregator (docs/specs/ENGINEERING.md). The app shell (M12) - entry, routes, home, languages, Android and Windows.
 publish_to: none
 # 3.x's version until the first v4 release (AGENTS.md: changed only when releasing).
-version: 5.7.0+5146
+version: 5.7.1+5147
 
 environment:
   sdk: ^3.14.0
@@ -30,6 +30,7 @@ dependencies:
   # Network type: mobile-data notice, offline precheck, mobile-data quality.
   connectivity_plus: ^7.3.2
   # Streams SHA-256 over final update packages; already locked by the workspace.
+  cross_file: ^0.4.0
   crypto: 3.0.8
   cupertino_icons: ^2.0.0
   cupertino_ui: ^1.1.7
@@ -109,16 +110,21 @@ dependencies:
   window_manager: ^0.7.1
 
 dev_dependencies:
-  # The host side of `flutter drive` for the frame benchmarks (P05): it
-  # writes what integration_test/perf_test.dart reports to build/.
+  android_file_picker: ^2.2.1
+  cross_file_io: ^1.0.0
+  cross_file_platform_interface: ^1.0.0
+  file_picker_darwin: ^2.5.2
+  file_picker_linux: ^2.0.5
   flutter_driver:
     sdk: flutter
   flutter_test:
     sdk: flutter
-  # The frame benchmarks in profile mode on a phone (P05, UI_PLAN §9.4).
   integration_test:
     sdk: flutter
+  path_provider_platform_interface: ^2.1.2
+  share_plus_platform_interface: ^7.2.0
   very_good_analysis: ^11.0.0
+  windows_file_picker: ^2.0.2
 
 flutter:
   # The shell and live_ui's widgets use Material icons.

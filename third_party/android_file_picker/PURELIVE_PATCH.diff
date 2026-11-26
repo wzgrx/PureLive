@@ -1,0 +1,55 @@
+--- a/lib/src/android_platform_file.dart
++++ b/lib/src/android_platform_file.dart
+@@ -51,7 +51,6 @@
+       name: name,
+       uri: uri,
+       safHandle: safHandle,
+-      xFile: path.isNotEmpty ? XFile(path, name: name) : null,
+       bytesLength: data['size'] as int?,
+     );
+   }
+@@ -68,15 +67,14 @@
+   final XFile? _xFile;
+   final int? _bytesLength;
+ 
++  /// A [FileSystemXFile] for a picked file cached on disk, or a
++  /// [ScopedStorageXFile] for a Storage Access Framework `content://` URI.
+   @override
+-  XFile get xFile {
+-    final file = _xFile;
+-    if (file != null) return file;
+-    if (uri.scheme == 'file') {
+-      return XFile(uri.toFilePath(), name: name);
+-    }
+-    return XFile(uri.toString(), name: name);
+-  }
++  XFile get xFile =>
++      _xFile ??
++      (uri.scheme == 'file'
++          ? XFile.fileSystem(path: uri.toFilePath())
++          : XFile.scopedStorage(uri: uri.toString()));
+ 
+   /// The size Android already reported for this file when it was picked.
+   @override
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -10,8 +10,8 @@
+ resolution: workspace
+ 
+ environment:
+-  sdk: ">=3.10.0 <4.0.0"
+-  flutter: ">=3.38.0"
++  sdk: ">=3.11.0 <4.0.0"
++  flutter: ">=3.41.0"
+ 
+ flutter:
+   plugin:
+@@ -26,7 +26,7 @@
+   flutter:
+     sdk: flutter
+   file_picker_platform_interface: ^4.3.0
+-  cross_file: ^0.3.5+4
++  cross_file: ^0.4.0
+   path: ^1.9.0
+ 
+ dev_dependencies:

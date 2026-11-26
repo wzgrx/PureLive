@@ -25,6 +25,33 @@ workspace:
 
 # Overrides apply to the whole workspace and may only be declared here.
 dependency_overrides:
+  # Z01.5: fix content-provider readability and close native streams.
+  cross_file_android:
+    path: third_party/cross_file_android
+  # Z01.5: stable file/share consumers migrated to official cross_file0.4.
+  android_file_picker:
+    path: third_party/android_file_picker
+  file_picker:
+    path: third_party/file_picker
+  file_picker_darwin:
+    path: third_party/file_picker_darwin
+  file_picker_linux:
+    path: third_party/file_picker_linux
+  file_picker_platform_interface:
+    path: third_party/file_picker_platform_interface
+  file_picker_web:
+    path: third_party/file_picker_web
+  share_plus:
+    path: third_party/share_plus
+  share_plus_platform_interface:
+    path: third_party/share_plus_platform_interface
+  windows_file_picker:
+    path: third_party/windows_file_picker
+  # ffigen_js only uses unchanged ANSI and package-config2 JSON APIs.
+  cli_util: 0.6.1
+  package_config: 3.0.0
+  # Same Material APIs; tested hue-normalization patch over Flutter pin.
+  material_color_utilities: 0.13.1
   # flutter_webrtc 1.6.3 with track-scoped Android projection-stop events.
   # Source, license and minimal patch are in PURELIVE_PATCH.md.
   flutter_webrtc:

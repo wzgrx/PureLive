@@ -19,7 +19,7 @@
 
 ## 3. 工程底座
 
-- **工具链**：`toolchain.env` 是唯一来源。`tools/check_latest` 对照官方渠道检查 Flutter、Dart、Gradle、AGP、Kotlin、JDK、NDK、Android SDK、mpv、FFmpeg 和 pub 依赖的最新稳定版：`GITHUB_TOKEN=$(gh auth token) dart run tools/check_latest/bin/check_latest.dart`。Flutter 3.47.8 使用固定 revision 与官方已合并的语义树补丁（D-067、X01.4）；按 [tools/flutter_sdk/README.md](../../tools/flutter_sdk/README.md) 显式准备独立 SDK 副本，门禁检查同一补丁与官方回归，不修改共享 SDK。
+- **工具链**：`toolchain.env` 是唯一来源。`tools/check_latest` 对照官方渠道检查 Flutter、Dart、Gradle、AGP、Kotlin、JDK、NDK、Android SDK、mpv、FFmpeg 和 pub 依赖的最新稳定版：`GITHUB_TOKEN=$(gh auth token) dart run tools/check_latest/bin/check_latest.dart`。Flutter 3.50.1 使用固定 revision 与官方已合并的语义树补丁（D-067、X01.4）；按 [tools/flutter_sdk/README.md](../../tools/flutter_sdk/README.md) 显式准备独立 SDK 副本，门禁检查同一补丁与官方回归，不修改共享 SDK。
 - **结构**：pub workspace，全部成员共用根目录的 `pubspec.lock`；依赖覆盖只能写在根 `pubspec.yaml`。
 - **门禁**：`tools/gate/gate.sh`，依次检查依赖、FFmpeg 包、依赖方向（`check_deps.py`）、样本隐私（`check_fixtures.py`）、界面结构（`check_ui_structure.py`）、文档（`tools/docs/docs.py --check`），再对每个成员检查格式、`dart analyze --fatal-infos` 和测试。`--all` 是每次推送前必跑的，日志里出现 `gate: passed` 才算通过。不带参数时只查和 `origin/master` 比有改动的成员；只改了 `docs/`、`fixtures/`、`tools/` 或根目录的说明文件时也跑依赖方向、样本隐私、界面结构、文档这四项，改了 `tools/gate/`、`tools/docs/` 时再跑门禁自己的测试（Z02.3）。
 - **构建**：只在本机构建。Android 在 WSL，Windows 在主机；不用 GitHub Actions。例外：苹果平台（iOS、iPadOS、macOS）在 GitHub 的 macOS 云构建机上构建（D-041，`.github/workflows/apple.yml`；发布时 `apple-publish.yml` 在 GitHub 上把同一次构建检查过的包挂到发布页，不下载到本机）。同一时间只跑一个重任务；不要在门禁运行时在同一份代码里构建正式包。

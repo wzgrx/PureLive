@@ -1,0 +1,72 @@
+{
+  "android_file_picker": {
+    "version": "2.2.1",
+    "source": "https://pub.dev/packages/android_file_picker/versions/2.2.1",
+    "archive_sha256": "b8462091dcdd075511a842272374be2232e917ee2a51ecdba4aca02bff529482",
+    "license_sha256": "12f7222de745bab3710ba88b59f33484ca423aa5e1deac9e56ed946706d5abab",
+    "patch_sha256": "7541542dffb7de2d971726373a0520628c8ccac50951f264ce05bddd0068a8a3"
+  },
+  "file_picker": {
+    "version": "13.4.1",
+    "source": "https://pub.dev/packages/file_picker/versions/13.4.1",
+    "archive_sha256": "5b99250437a4d34ee2cdc0686924452103540eaa1c248094b63f07f9d7216f6c",
+    "license_sha256": "6278994817bd65fa32404e53c3a62a09d824d3f9a71f7fadcaca3e4f02641d66",
+    "patch_sha256": "44d5075e1978b36ea83dc6ca48bcd6502072a5d42d890baa7d50bb30cf65a74c"
+  },
+  "file_picker_darwin": {
+    "version": "2.5.2",
+    "source": "https://pub.dev/packages/file_picker_darwin/versions/2.5.2",
+    "archive_sha256": "34e3344225bccfa1d45a8af025da58702f13efecad67b763dc0eb2691f388afb",
+    "license_sha256": "12f7222de745bab3710ba88b59f33484ca423aa5e1deac9e56ed946706d5abab",
+    "patch_sha256": "313abf6c009b4e0c961bd4216d0e9ea74727c97b71d35ff2a14b3e6554fc1f2b"
+  },
+  "file_picker_linux": {
+    "version": "2.0.5",
+    "source": "https://pub.dev/packages/file_picker_linux/versions/2.0.5",
+    "archive_sha256": "cf3889644e8e54551f5c3a4f98b6b6ef5f0ef85c07d2a0c1a969538983be2f9b",
+    "license_sha256": "12f7222de745bab3710ba88b59f33484ca423aa5e1deac9e56ed946706d5abab",
+    "patch_sha256": "d0d168a63b7faa454bf5d91232b2bb1402fef74dda00c367afc4b48d4ad32fae"
+  },
+  "file_picker_platform_interface": {
+    "version": "4.3.0",
+    "source": "https://pub.dev/packages/file_picker_platform_interface/versions/4.3.0",
+    "archive_sha256": "a2ef71c4628f92a4471d424576e3bf7042b40a2683c9f9a0e3033a7fc7f7763c",
+    "license_sha256": "12f7222de745bab3710ba88b59f33484ca423aa5e1deac9e56ed946706d5abab",
+    "patch_sha256": "2f1d042e8632c4fdbcd1efa3fe36c13c85d6e83c8ed497de6eb8046b23b8d5ab"
+  },
+  "file_picker_web": {
+    "version": "4.2.2",
+    "source": "https://pub.dev/packages/file_picker_web/versions/4.2.2",
+    "archive_sha256": "97f7085e3c4f5724595bbd94e8f380f7a690e9066140a5fb711e97ac45a02008",
+    "license_sha256": "12f7222de745bab3710ba88b59f33484ca423aa5e1deac9e56ed946706d5abab",
+    "patch_sha256": "d3d33ef5b2f1d47315d94c63dae6efdc2af80f5ca14125b79311dfd113184b8c"
+  },
+  "share_plus": {
+    "version": "13.3.1",
+    "source": "https://pub.dev/packages/share_plus/versions/13.3.1",
+    "archive_sha256": "db40767f130189d53f3ae8a6393c217ff4a492da1baff718a9873679c0c00224",
+    "license_sha256": "eb9741a672906ebd01fd9b3bef38f6c82eff250e91149cf404539ee7981079fd",
+    "patch_sha256": "7c84784d65a8f11a8ee39cfec8edb7ca1dfd1ebdb3adddb6efcef9d2c96e4a2c"
+  },
+  "share_plus_platform_interface": {
+    "version": "7.2.0",
+    "source": "https://pub.dev/packages/share_plus_platform_interface/versions/7.2.0",
+    "archive_sha256": "365ef7379fc22507256adda3385152942ffce08935452bc972c2e52a0bebae41",
+    "license_sha256": "3b38d48befd0af70b892e13d10c9e34679416c24a9277f962629951c64d71f4c",
+    "patch_sha256": "bb838ccb568a0fc68e2b35b5390368152e5ec34608bad821dca44510d9bfb64e"
+  },
+  "windows_file_picker": {
+    "version": "2.0.2",
+    "source": "https://pub.dev/packages/windows_file_picker/versions/2.0.2",
+    "archive_sha256": "cd1be37ada0abcfaa55bddb7410e8515844e35cd77669c35d9a28a15722299d8",
+    "license_sha256": "12f7222de745bab3710ba88b59f33484ca423aa5e1deac9e56ed946706d5abab",
+    "patch_sha256": "09eb6ccaf0939a765df12091218136cdf1f9d3ae5ea3befb488af6e7ab8c0f02"
+  },
+  "cross_file_android": {
+    "version": "1.0.0",
+    "source": "https://pub.dev/packages/cross_file_android/versions/1.0.0",
+    "archive_sha256": "7143b2d4451b21aef10a20a651ba99e85b6f73c17c269a23a72fa4a8c2d543dd",
+    "license_sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "patch_sha256": "978c0d39841011fbbf4e4cf6ec377ec8e2814d0f09cdb661b81b2b021bafe075"
+  }
+}
