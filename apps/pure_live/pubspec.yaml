@@ -150,6 +150,7 @@ flutter:
     - assets/emo/images/douyu/
     - assets/emo/images/huya/
     - assets/emo/images/kuaishou/
+    - assets/emo/images/soop/
     # The emoji font's licence and origin (U.2k), shown on the licences page.
     - assets/fonts/emoji/OFL.txt
   fonts:

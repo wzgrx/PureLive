@@ -70,6 +70,13 @@ final class DanmakuEmoji {
           url: flexible.isNotEmpty ? flexible : text(json['sUrl']),
           localFile: text(json['local_file']),
         );
+      case SiteIds.soop:
+        return DanmakuEmoji(
+          primaryKey: fallbackKey,
+          text: fallbackKey,
+          url: text(json['url']),
+          localFile: text(json['local_file']),
+        );
       default:
         return const DanmakuEmoji(primaryKey: '', text: '', url: '', localFile: '');
     }
