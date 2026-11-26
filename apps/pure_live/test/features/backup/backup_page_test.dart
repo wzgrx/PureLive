@@ -20,6 +20,7 @@ import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/backup/backup_data.dart';
 import 'package:pure_live/shared/backup/backup_files.dart';
+import 'package:pure_live/shared/backup/sync_parts.dart';
 import 'package:pure_live/tv/settings/tv_settings_section_page.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
@@ -113,6 +114,67 @@ void main() {
       // A 3.x backup has no search words: they stay.
       await restoreBackup(service, store, _legacyBackup([_room('1')]), BackupScope.all);
       expect(jsonDecode((await store.meta.get(SearchHistory.key))!), ['lol', 'music']);
+    });
+
+    test('合并 keeps the parts the file lacks; 覆盖 clears them first', () async {
+      final store = services.store;
+      final service = BackupService(store);
+      await store.follows.add(_room('1'));
+      await store.history.record(_room('9'));
+      await store.settings.set(Settings.danmakuSpeed, 90);
+      await store.blockLists.replaceAll(BlockKind.keyword, ['spoiler']);
+      // A v4 file with the follows only: no history, no settings, no blocks.
+      final file = {
+        'backupVersion': 4,
+        'favorite': {
+          'favoriteRooms': [_room('2').toJson()],
+          'favoriteAreas': <Object?>[],
+        },
+      };
+
+      // The default: the follows are replaced, everything else stays.
+      await restoreBackup(service, store, file, BackupScope.all);
+      expect(await _followIds(store), ['2']);
+      expect((await store.history.all()).single.roomId, '9');
+      expect(store.settings.get(Settings.danmakuSpeed), 90);
+      expect(await store.blockLists.list(BlockKind.keyword), ['spoiler']);
+
+      // 覆盖: the parts being restored are emptied first, so what the file
+      // lacks stays empty.
+      await store.follows.add(_room('1'));
+      await restoreBackup(service, store, file, BackupScope.all, mode: RestoreMode.replace);
+      expect(await _followIds(store), ['2']);
+      expect(await store.history.all(), isEmpty);
+      expect(store.settings.get(Settings.danmakuSpeed), isNot(90));
+      expect(await store.blockLists.list(BlockKind.keyword), isEmpty);
+    });
+
+    test('覆盖 restores every part, so an unticked one is cleared too', () async {
+      final store = services.store;
+      final service = BackupService(store);
+      await store.follows.add(_room('1'));
+      await store.history.record(_room('9'));
+      await store.blockLists.replaceAll(BlockKind.keyword, ['spoiler']);
+      final file = {
+        'backupVersion': 4,
+        'favorite': {
+          'favoriteRooms': [_room('2').toJson()],
+          'favoriteAreas': <Object?>[],
+        },
+      };
+      // Every part is cleared, then the file's are written: the history and
+      // the block lists stay empty, as the backup was.
+      await restoreBackup(
+        service,
+        store,
+        file,
+        BackupScope.all,
+        parts: {SyncPart.follows},
+        mode: RestoreMode.replace,
+      );
+      expect(await _followIds(store), ['2']);
+      expect(await store.history.all(), isEmpty);
+      expect(await store.blockLists.list(BlockKind.keyword), isEmpty);
     });
 
     test('file names, the TV document and TV addresses', () async {
@@ -429,6 +491,46 @@ void main() {
       await tester.tap(find.text('取消'));
       await _settle(tester);
       expect(await tester.runAsync(() => _followIds(services.store)), ['1']);
+    });
+
+    testWidgets('恢复方式: 合并 by default; 覆盖 clears what the file lacks', (tester) async {
+      final services = await pump(tester);
+      await tester.runAsync(() async {
+        await services.store.follows.add(_room('1'));
+        await services.store.history.record(_room('9'));
+        await File(p(folder, 'purelive_2026-09-01T10_00_00.txt')).writeAsString(
+          jsonEncode({
+            'backupVersion': 4,
+            'favorite': {
+              'favoriteRooms': [_room('2').toJson()],
+              'favoriteAreas': <Object?>[],
+            },
+          }),
+        );
+      });
+      await refresh(tester);
+      await tester.tap(find.text('purelive_2026-09-01T10_00_00.txt'));
+      await _settle(tester);
+      // Default 合并: nothing is cleared, no warning.
+      expect(find.byKey(const ValueKey('backup-restore-mode')), findsOneWidget);
+      expect(find.text('合并（默认）'), findsOneWidget);
+      expect(find.text('覆盖'), findsOneWidget);
+      expect(find.byKey(const ValueKey('backup-restore-mode-warning')), findsNothing);
+      expect(find.text('只替换文件里有的部分，其余保持现在的样子'), findsOneWidget);
+
+      // 覆盖 says what it will do.
+      await tester.tap(find.text('覆盖'));
+      await _settle(tester);
+      expect(find.byKey(const ValueKey('backup-restore-mode-warning')), findsOneWidget);
+      expect(find.text('先清空现有数据再写入文件，文件没有的部分保持清空，分区全选'), findsOneWidget);
+      // 覆盖 restores every part: the boxes are ticked and cannot be
+      // unticked, and 全选 goes.
+      expect(find.byKey(const ValueKey('backup-part-all')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
+      await _settle(tester);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['2']);
+      expect(await tester.runAsync(services.store.history.all), isEmpty, reason: '覆盖 emptied it');
     });
 
     testWidgets("a file's ⋮, right click and long press open the same small menu; delete asks first", (tester) async {

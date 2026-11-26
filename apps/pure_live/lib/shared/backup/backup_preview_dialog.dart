@@ -33,19 +33,21 @@ String restorePartText(RestorePart part) {
 /// [syncPartsIn] of the file (empty for a flat 3.x file, which goes whole
 /// and gets no boxes). Null when the user cancelled, otherwise the parts to
 /// restore.
-Future<Set<SyncPart>?> confirmRestore(
+Future<({Set<SyncPart> parts, RestoreMode mode})?> confirmRestore(
   BuildContext context, {
   required String fileName,
   required RestorePreview preview,
   required List<SyncPart> partsInFile,
 }) async {
-  final chosen = await showAppDialog<Set<SyncPart>>(
+  final chosen = await showAppDialog<({Set<SyncPart> parts, RestoreMode mode})>(
     context: context,
     builder: (dialogContext) {
       final styles = dialogContext.textStyles;
       final colors = Theme.of(dialogContext).colorScheme;
       final follows = preview.scope == BackupScope.follows;
       final ticked = {...partsInFile};
+      // 合并 unless the user asks for 覆盖 (it clears the ticked parts first).
+      var mode = RestoreMode.merge;
       Widget line(String text, {Color? color, IconData icon = AppIcons.bullet, double iconSize = 6}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(
@@ -85,10 +87,12 @@ Future<Set<SyncPart>?> confirmRestore(
         builder: (dialogContext, setState) {
           final none = ticked.isEmpty;
           final all = ticked.length == partsInFile.length;
+          final locked = mode == RestoreMode.replace;
+          void toggle(SyncPart part) => setState(() => ticked.contains(part) ? ticked.remove(part) : ticked.add(part));
           Widget box(SyncPart part) => InkWell(
             key: ValueKey('backup-part-${part.name}'),
             borderRadius: BorderRadius.circular(8),
-            onTap: () => setState(() => ticked.contains(part) ? ticked.remove(part) : ticked.add(part)),
+            onTap: locked ? null : () => toggle(part),
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 32),
               child: Row(
@@ -102,7 +106,7 @@ Future<Set<SyncPart>?> confirmRestore(
                         value: ticked.contains(part),
                         visualDensity: VisualDensity.compact,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        onChanged: (_) => setState(() => ticked.contains(part) ? ticked.remove(part) : ticked.add(part)),
+                        onChanged: locked ? null : (_) => toggle(part),
                       ),
                     ),
                   ),
@@ -119,7 +123,7 @@ Future<Set<SyncPart>?> confirmRestore(
           );
           return AppDialog(
             title: i18n(follows ? 'recover_favorite_backup' : 'recover_backup'),
-            onEnter: none ? null : () => Navigator.pop(dialogContext, {...ticked}),
+            onEnter: none ? null : () => Navigator.pop(dialogContext, (parts: {...ticked}, mode: mode)),
             content: Column(
               key: const ValueKey('backup-preview'),
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,6 +137,44 @@ Future<Set<SyncPart>?> confirmRestore(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(i18n('backup_preview_follows_file'), style: styles.t13Primary),
                   ),
+                if (!preview.followsOnlyFile) ...[
+                  const SizedBox(height: 12),
+                  Text(i18n('backup_restore_mode'), style: styles.t13SemiBold),
+                  const SizedBox(height: 4),
+                  SegmentedButton<RestoreMode>(
+                    key: const ValueKey('backup-restore-mode'),
+                    segments: [
+                      for (final choice in RestoreMode.values)
+                        ButtonSegment(
+                          value: choice,
+                          label: Text(i18n(choice.labelKey)),
+                        ),
+                    ],
+                    selected: {mode},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (selection) => setState(() {
+                      mode = selection.single;
+                      // 覆盖 writes the whole file and empties what it lacks:
+                      // every part is restored, so every box is ticked.
+                      if (mode == RestoreMode.replace) ticked.addAll(partsInFile);
+                    }),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    i18n(mode.descriptionKey),
+                    key: const ValueKey('backup-restore-mode-desc'),
+                    style: styles.t12Muted,
+                  ),
+                  if (mode == RestoreMode.replace)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        i18n('backup_restore_mode_replace_warning'),
+                        key: const ValueKey('backup-restore-mode-warning'),
+                        style: styles.t12.copyWith(color: colors.error),
+                      ),
+                    ),
+                ],
                 const SizedBox(height: 12),
                 Text(i18n('backup_preview_title'), style: styles.t13SemiBold),
                 const SizedBox(height: 4),
@@ -150,7 +192,7 @@ Future<Set<SyncPart>?> confirmRestore(
                     icon: AppIcons.selected,
                     iconSize: 14,
                   ),
-                if (partsInFile.length > 1)
+                if (partsInFile.length > 1 && !locked)
                   InkWell(
                     key: const ValueKey('backup-part-all'),
                     borderRadius: BorderRadius.circular(8),
@@ -242,7 +284,7 @@ Future<Set<SyncPart>?> confirmRestore(
               DialogActionButton(
                 key: const ValueKey('backup-restore-confirm'),
                 label: i18n('backup_restore_now'),
-                onPressed: none ? null : () => Navigator.pop(dialogContext, {...ticked}),
+                onPressed: none ? null : () => Navigator.pop(dialogContext, (parts: {...ticked}, mode: mode)),
               ),
             ],
           );
@@ -291,16 +333,23 @@ Future<bool> restoreWithPreview(
     return false;
   }
   if (!context.mounted) return false;
-  final parts = await confirmRestore(
+  final choice = await confirmRestore(
     context,
     fileName: fileName,
     preview: preview,
     partsInFile: syncPartsIn(json),
   );
-  if (parts == null) return false;
+  if (choice == null) return false;
   final follows = preview.scope == BackupScope.follows;
   try {
-    await restoreBackup(service, store, onlySyncParts(json, parts), preview.scope);
+    await restoreBackup(
+      service,
+      store,
+      onlySyncParts(json, choice.parts),
+      preview.scope,
+      parts: choice.parts,
+      mode: choice.mode,
+    );
     // BackupService signals a restore already running with a StateError.
     // ignore: avoid_catching_errors
   } on StateError {

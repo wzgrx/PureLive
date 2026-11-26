@@ -8,6 +8,7 @@ import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/multiview/logic/multiview_session.dart';
 import 'package:pure_live/features/search/search_history.dart';
 import 'package:pure_live/shared/backup/backup_iptv.dart';
+import 'package:pure_live/shared/backup/sync_parts.dart';
 
 /// The one backup service of the pages (local files and WebDAV share it, so
 /// its "one restore at a time" lock covers both).
@@ -81,6 +82,30 @@ const String searchSection = 'search';
 /// F.5a): `{"multiview": {"session": {...}}}`, written when there is one.
 const String multiviewSection = 'multiview';
 
+/// How a restore treats the data the file does not have (J03.1, as
+/// Obtainium's import merges and its restore replaces):
+///
+/// * [merge] (the default) writes only the parts the file holds; everything
+///   else stays as it is now — nothing is deleted.
+/// * [replace] clears the parts being restored first (settings back to their
+///   defaults, the lists emptied), then writes the file's: what the file
+///   does not hold stays empty, so the device ends up as the backup was.
+enum RestoreMode {
+  /// Keep what the file does not carry.
+  merge('backup_restore_mode_merge', 'backup_restore_mode_merge_desc'),
+
+  /// Clear the parts restored first, then write the file's.
+  replace('backup_restore_mode_replace', 'backup_restore_mode_replace_desc');
+
+  new(this.labelKey, this.descriptionKey);
+
+  /// Translation key of the choice's name.
+  final String labelKey;
+
+  /// Translation key of the line under it.
+  final String descriptionKey;
+}
+
 /// The data of a new backup: [BackupService]'s file (3.x layout, no
 /// accounts, as 3.x) and, for a full backup, the search words, the IPTV
 /// playlists ([iptvLibrarySection]) and the multi-view's last arrangement.
@@ -117,13 +142,57 @@ Future<void> restoreBackup(
   Map<String, Object?> json,
   BackupScope scope, {
   IptvLibrary? iptv,
+  Set<SyncPart>? parts,
+  RestoreMode mode = RestoreMode.merge,
 }) async {
   if (scope == BackupScope.follows) return await service.restoreFollows(json);
+  // 覆盖 first, 合并 only writes: BackupService.restoreAll replaces the parts
+  // the file holds and leaves the others, so what has to be cleared is
+  // cleared here. 覆盖 empties every part (the preview ticks them all: the
+  // device ends up as the backup was); 合并 clears nothing.
+  if (mode == RestoreMode.replace) await clearRestoredParts(store, json: json, iptv: iptv);
   await service.restoreAll(json);
   final words = searchWordsIn(json);
   if (words != null) await store.meta.set(SearchHistory.key, jsonEncode(words));
   if (iptvBackupIn(json) case final library?) await restoreIptvLibrary(iptv ?? StoreIptvLibrary(store), library);
   if (multiviewSessionIn(json) case final session?) await writeMultiviewSession(store.meta, session);
+}
+
+/// Empties the parts a 覆盖 restore takes from [json] before it writes
+/// them: the preferences go back to their defaults, the lists are emptied,
+/// the sign-ins and the local history go, and the pieces the file does not
+/// carry (search words, the multi-view, the IPTV playlists) go too. [parts]
+/// is the preview's ticks (null: every part). The accounts' remembered
+/// roster is not wiped, only the current cookies: a file without the
+/// accounts signs this device out, it does not forget who was remembered.
+Future<void> clearRestoredParts(
+  LiveStore store, {
+  Set<SyncPart>? parts,
+  Map<String, Object?>? json,
+  IptvLibrary? iptv,
+}) async {
+  bool on(SyncPart part) => parts == null || parts.contains(part);
+  final file = json;
+  if (on(SyncPart.settings)) {
+    await store.settings.resetAll();
+    if (file == null || searchWordsIn(file) == null) await store.meta.set(SearchHistory.key, '[]');
+    if (file == null || multiviewSessionIn(file) == null) await store.meta.set(multiviewSessionKey, null);
+  }
+  if (on(SyncPart.follows)) await store.follows.replaceAll(const []);
+  if (on(SyncPart.areas)) await store.followAreas.replaceAll(const []);
+  if (on(SyncPart.history)) await store.history.replaceAll(const []);
+  if (on(SyncPart.tags)) await store.tags.replaceAll(const [], const {});
+  if (on(SyncPart.keywords)) await store.blockLists.replaceAll(BlockKind.keyword, const []);
+  if (on(SyncPart.users)) await store.blockLists.replaceAll(BlockKind.user, const []);
+  if (on(SyncPart.webdav)) await store.webdav.replaceAll(const []);
+  if (on(SyncPart.accounts)) await store.secrets.clearCookies();
+  if (on(SyncPart.localEvents)) await store.localEvents.clear();
+  if (on(SyncPart.settings) && (file == null || iptvBackupIn(file) == null)) {
+    final library = iptv ?? StoreIptvLibrary(store);
+    for (final playlist in await library.playlists()) {
+      if (!playlist.isHot) await library.deletePlaylist(playlist);
+    }
+  }
 }
 
 /// The multi-view arrangement of a backup, or null when the file has none.
