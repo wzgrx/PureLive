@@ -6,10 +6,17 @@ import 'package:pure_live/shared/backup/backup_data.dart';
 
 /// The name of a new backup file, 3.x's names (`purelive_<date>.txt`,
 /// `purelive_favorites_<date>.txt`) so 3.x's file picker still lists them.
-String backupFileName(BackupScope scope, DateTime now) {
+/// A data-only backup says so in its name (`purelive_data_<date>.txt`), the
+/// sensitive flag stays out of it: the file itself carries it.
+String backupFileName(BackupScope scope, DateTime now, {BackupContents contents = BackupContents.settings}) {
   String two(int value) => value.toString().padLeft(2, '0');
   final date = '${now.year}-${two(now.month)}-${two(now.day)}T${two(now.hour)}_${two(now.minute)}_${two(now.second)}';
-  return '${scope == BackupScope.follows ? 'purelive_favorites' : 'purelive'}_$date.txt';
+  final prefix = scope == BackupScope.follows
+      ? 'purelive_favorites'
+      : contents == BackupContents.data
+      ? 'purelive_data'
+      : 'purelive';
+  return '${prefix}_$date.txt';
 }
 
 /// The name of a scheduled WebDAV backup (J04.2): 3.x's prefixes stay, and
@@ -65,6 +72,17 @@ final class LocalBackupFile {
 
   /// Whether the name says it is a follows-only backup.
   bool get followsOnly => name.toLowerCase().startsWith('purelive_favorites');
+
+  /// Whether the name says it is a data-only backup (no settings).
+  bool get dataOnly => name.toLowerCase().startsWith('purelive_data');
+
+  /// Translation key of the kind shown under the name. The sensitive flag
+  /// is not in the name: only the file's `sensitiveDataIncluded` has it.
+  String get kindKey => followsOnly
+      ? 'backup_kind_follows'
+      : dataOnly
+      ? 'backup_kind_data'
+      : 'backup_kind_full';
 }
 
 /// The backups in [folder] (`purelive*.txt` / `.json`), newest first.

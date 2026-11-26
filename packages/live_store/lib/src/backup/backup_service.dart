@@ -33,15 +33,19 @@ final class BackupService {
   static const int version = 4;
 
   /// Everything as 3.x's full backup; [includeSensitiveData] adds cookies
-  /// and WebDAV passwords (3.x `exportAllSettings`).
-  Future<Map<String, Object?>> exportAll({bool includeSensitiveData = false}) async {
+  /// and WebDAV passwords (3.x `exportAllSettings`). [includeSettings] false
+  /// writes the app's data only, without any preference: the file's
+  /// `settingsIncluded` says which one it is.
+  Future<Map<String, Object?>> exportAll({bool includeSensitiveData = false, bool includeSettings = true}) async {
     final sections = <String, Map<String, Object?>>{};
-    for (final setting in Settings.all) {
-      if (setting.scope == SettingScope.internal) continue;
-      final value = _store.settings.get(setting);
-      sections.putIfAbsent(setting.section, () => {})[setting.backupKey] = setting == Settings.pageSizeOptions
-          ? [for (final part in (value as String).split(',')) ?int.tryParse(part.trim())]
-          : setting.encode(value);
+    if (includeSettings) {
+      for (final setting in Settings.all) {
+        if (setting.scope == SettingScope.internal) continue;
+        final value = _store.settings.get(setting);
+        sections.putIfAbsent(setting.section, () => {})[setting.backupKey] = setting == Settings.pageSizeOptions
+            ? [for (final part in (value as String).split(',')) ?int.tryParse(part.trim())]
+            : setting.encode(value);
+      }
     }
     sections.putIfAbsent('favorite', () => {}).addAll({
       'shieldList': await _store.blockLists.list(BlockKind.keyword),
@@ -84,7 +88,14 @@ final class BackupService {
           '$site${LegacySnapshot.accountsSuffix}': [for (final account in _store.accounts.of(site)) account.toJson()],
       };
     }
-    return {'backupVersion': version, 'sensitiveDataIncluded': includeSensitiveData, ...sections};
+    return {
+      'backupVersion': version,
+      'sensitiveDataIncluded': includeSensitiveData,
+      // 3.x ignores the key; a file without the `settings` sections is read
+      // as "settings unchanged" by the restore.
+      'settingsIncluded': includeSettings,
+      ...sections,
+    };
   }
 
   /// The follows-only file: followed rooms and areas, nothing else (3.x

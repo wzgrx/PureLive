@@ -24,6 +24,47 @@ enum BackupScope {
   follows,
 }
 
+/// What a new full backup carries (J03.1's three choices, as Obtainium's
+/// export asks "apps" or "apps and settings"): the app's data only, that
+/// plus the preferences, or that plus the sensitive entries.
+enum BackupContents {
+  /// The app's data only: follows, history, groups, block lists, search
+  /// words, the IPTV playlists and the multi-view arrangement. No setting
+  /// travels, so a restore leaves every preference as it is.
+  data('backup_contents_data', 'backup_contents_data_desc'),
+
+  /// The app's data and every preference, without the account cookies, the
+  /// WebDAV passwords and the remembered sign-ins.
+  settings('backup_contents_settings', 'backup_contents_settings_desc'),
+
+  /// The app's data, the preferences and the sensitive entries (the
+  /// default of 3.x's own backups when asked).
+  sensitive('backup_contents_sensitive', 'backup_contents_sensitive_desc');
+
+  new(this.labelKey, this.descriptionKey);
+
+  /// Translation key of the choice's name.
+  final String labelKey;
+
+  /// Translation key of the line under it.
+  final String descriptionKey;
+
+  /// Whether the preferences travel.
+  bool get includesSettings => this != BackupContents.data;
+
+  /// Whether the cookies, the passwords and the sign-ins travel.
+  bool get includesSensitiveData => this == BackupContents.sensitive;
+}
+
+/// The [BackupContents] a file states about itself: its `settingsIncluded`
+/// and `sensitiveDataIncluded` keys (a 3.x file has neither and carried
+/// settings without accounts).
+BackupContents contentsOf(Map<String, Object?> json) {
+  final sensitive = json['sensitiveDataIncluded'] == true;
+  if (sensitive) return BackupContents.sensitive;
+  return json['settingsIncluded'] == false ? BackupContents.data : BackupContents.settings;
+}
+
 /// The backup section the pages add for the search words (new in v4, see
 /// docs/J-设置和数据/J03-备份恢复/J03.1-备份与WebDAV/record.md): `{"search": {"history": [...]}}`. 3.x and
 /// `BackupService` ignore sections they do not know.
@@ -37,15 +78,21 @@ const String multiviewSection = 'multiview';
 /// accounts, as 3.x) and, for a full backup, the search words, the IPTV
 /// playlists ([iptvLibrarySection]) and the multi-view's last arrangement.
 /// [iptv] is the IPTV library; null reads the app's tables in [store].
+/// [contents] picks which of the three kinds of file is written.
 Future<Map<String, Object?>> exportBackup(
   BackupService service,
   LiveStore store,
   BackupScope scope, {
   IptvLibrary? iptv,
-  bool includeSensitiveData = false,
+  BackupContents contents = BackupContents.settings,
 }) async {
   if (scope == BackupScope.follows) return await service.exportFollows();
-  final data = {...await service.exportAll(includeSensitiveData: includeSensitiveData)};
+  final data = {
+    ...await service.exportAll(
+      includeSensitiveData: contents.includesSensitiveData,
+      includeSettings: contents.includesSettings,
+    ),
+  };
   data[searchSection] = {'history': await _storedSearchWords(store)};
   data[iptvLibrarySection] = await exportIptvLibrary(iptv ?? StoreIptvLibrary(store));
   if (await readMultiviewSession(store.meta) case final session?) data[multiviewSection] = {'session': session};
@@ -205,6 +252,7 @@ final class RestorePreview {
     required this.followsOnlyFile,
     required this.parts,
     required this.kept,
+    this.contents = BackupContents.settings,
     this.settingsInFile = 0,
     this.settingsChanged = 0,
     this.accounts = 0,
@@ -225,6 +273,9 @@ final class RestorePreview {
 
   /// The parts the file does not have (they stay as they are).
   final List<RestorePartKind> kept;
+
+  /// What the file says it holds ([contentsOf]).
+  final BackupContents contents;
 
   /// Settings in the file.
   final int settingsInFile;
@@ -284,6 +335,7 @@ Future<RestorePreview> previewRestore(
       followsOnlyFile: followsOnly,
       parts: parts,
       kept: const [],
+      contents: contentsOf(json),
       skipped: snapshot.skipped.length,
     );
   }
@@ -359,6 +411,7 @@ Future<RestorePreview> previewRestore(
     followsOnlyFile: false,
     parts: parts,
     kept: kept,
+    contents: contentsOf(json),
     settingsInFile: snapshot.settings.length,
     settingsChanged: changed,
     accounts: accounts,

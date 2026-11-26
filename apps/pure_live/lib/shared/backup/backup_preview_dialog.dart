@@ -79,6 +79,13 @@ Future<bool> confirmRestore(BuildContext context, {required String fileName, req
                   'backup_preview_settings',
                   args: {'count': '${preview.settingsInFile}', 'changed': '${preview.settingsChanged}'},
                 ),
+              )
+            else if (preview.contents == BackupContents.data)
+              line(
+                i18n('backup_preview_no_settings'),
+                color: colors.onSurfaceVariant,
+                icon: AppIcons.selected,
+                iconSize: 14,
               ),
             for (final part in preview.parts) line(restorePartText(part)),
             if (preview.accounts > 0) line(i18n('backup_preview_accounts', args: {'count': '${preview.accounts}'})),

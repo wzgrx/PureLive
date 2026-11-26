@@ -237,7 +237,7 @@ void main() {
         if (i > 0) expect(_top(tester, title), greaterThan(_top(tester, rows[i - 1].$1)), reason: title);
       }
       expect(find.text(withoutOrphan('备份到 WebDAV 服务器')), findsOneWidget);
-      expect(find.text(withoutOrphan('保存设置、关注、历史、分组、屏蔽词和搜索记录（不含账号 Cookie 和 WebDAV 密码）')), findsOneWidget);
+      expect(find.text(withoutOrphan('选择导出应用数据、设置，或连同账号与密码一起导出')), findsOneWidget);
       expect(find.text(withoutOrphan('改用 WebDAV 或设备同步；点这里看怎么迁移旧的云端配置')), findsOneWidget);
       // 3.x's Firebase row and log group are gone (c2, c9).
       expect(find.textContaining('Firebase'), findsNothing);
@@ -257,6 +257,11 @@ void main() {
 
       await tester.tap(find.text('创建备份'));
       await _settle(tester);
+      // J03.1: the three kinds of file first (Obtainium's "apps" and
+      // "apps and settings").
+      expect(find.text('新建备份'), findsOneWidget);
+      await tester.tap(find.text('应用与设置（不含敏感数据）'));
+      await _settle(tester);
       final file = File(p(folder, 'purelive_2026-10-01T20_00_00.txt'));
       expect(file.existsSync(), isTrue);
       final saved = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
@@ -265,6 +270,48 @@ void main() {
       expect(find.text('purelive_2026-10-01T20_00_00.txt'), findsOneWidget);
       expect(findWords('完整备份'), findsOneWidget);
       expect(find.text('目录中的备份 · 1'), findsOneWidget);
+    });
+
+    testWidgets('the three choices: app only, settings, settings with the accounts', (tester) async {
+      final services = await pump(tester);
+      await tester.runAsync(() => services.store.follows.add(_room('1')));
+      await tester.tap(find.text('创建备份'));
+      await _settle(tester);
+      for (final label in ['仅应用', '应用与设置（不含敏感数据）', '应用与设置（含敏感数据）']) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      expect(
+        find.text('只导出关注、历史、分组、屏蔽词、搜索记录和网络电视列表，不含任何设置'),
+        findsOneWidget,
+      );
+
+      // App only: no settings section, the name says so, the row shows it.
+      await tester.tap(find.text('仅应用'));
+      await _settle(tester);
+      final data = File(p(folder, 'purelive_data_2026-10-01T20_00_00.txt'));
+      expect(data.existsSync(), isTrue);
+      final appOnly = jsonDecode(data.readAsStringSync()) as Map<String, Object?>;
+      expect(appOnly['settingsIncluded'], isFalse);
+      expect(appOnly.containsKey('app'), isFalse, reason: 'no preference travels');
+      expect(appOnly.containsKey('theme'), isFalse);
+      expect((appOnly['favorite']! as Map)['favoriteRooms'], hasLength(1));
+      expect(find.text('purelive_data_2026-10-01T20_00_00.txt'), findsOneWidget);
+      expect(findWords('仅应用数据'), findsOneWidget);
+
+      // Settings with the accounts: the sensitive flag and the cookies.
+      await tester.runAsync(() async {
+        await services.store.secrets.write(SecretRefs.cookie('douyu'), 'dy_auth=1');
+      });
+      await tester.tap(find.text('创建备份'));
+      await _settle(tester);
+      await tester.tap(find.text('应用与设置（含敏感数据）'));
+      await _settle(tester);
+      final full = File(p(folder, 'purelive_2026-10-01T20_00_00.txt'));
+      final withAccounts = jsonDecode(full.readAsStringSync()) as Map<String, Object?>;
+      expect(withAccounts['settingsIncluded'], isTrue);
+      expect(withAccounts['sensitiveDataIncluded'], isTrue);
+      expect((withAccounts['cookie']! as Map)['douyuCookie'], 'dy_auth=1');
+      expect(find.text('目录中的备份 · 2'), findsOneWidget);
     });
 
     testWidgets('restores a 3.x file from the folder after showing what changes; the others grey out meanwhile', (

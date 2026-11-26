@@ -108,7 +108,12 @@ final class WebDavAutoBackupService {
     try {
       final client = WebDavClient(_http, config);
       await client.ensureFolder(folder);
-      final data = await exportBackup(_backup, _store, scope, includeSensitiveData: includeAccounts);
+      final data = await exportBackup(
+        _backup,
+        _store,
+        scope,
+        contents: includeAccounts ? BackupContents.sensitive : BackupContents.settings,
+      );
       final name = autoBackupFileName(scope, now);
       await client.write([...folder, name], utf8.encode(jsonEncode(data)));
       await _store.meta.set(lastSuccessKey, utc.toIso8601String());

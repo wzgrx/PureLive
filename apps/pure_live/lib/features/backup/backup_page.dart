@@ -152,7 +152,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     }
   }
 
-  Future<void> _create(BackupScope scope) =>
+  Future<void> _create(BackupScope scope, {BackupContents contents = BackupContents.settings}) =>
       _run(scope == BackupScope.all ? _Action.create : _Action.createFollows, () async {
         final folder = _folder;
         if (folder == null) return;
@@ -160,8 +160,9 @@ class _BackupPageState extends ConsumerState<BackupPage> {
         try {
           final dir = Directory(folder);
           await dir.create(recursive: true);
-          final file = freeBackupFile(dir, backupFileName(scope, ref.read(backupClockProvider)()));
-          final data = await exportBackup(ref.read(backupServiceProvider), _store, scope);
+          final now = ref.read(backupClockProvider)();
+          final file = freeBackupFile(dir, backupFileName(scope, now, contents: contents));
+          final data = await exportBackup(ref.read(backupServiceProvider), _store, scope, contents: contents);
           await BackupService.writeFile(file, data);
           AppNavigator.toast(
             i18n(follows ? 'backup_created_follows' : 'backup_created', args: {'name': file.uri.pathSegments.last}),
@@ -175,6 +176,34 @@ class _BackupPageState extends ConsumerState<BackupPage> {
         }
         await _loadFiles();
       });
+
+  /// "创建备份": the three kinds of file first (J03.1, as Obtainium asks
+  /// "apps" or "apps and settings"), then the write.
+  Future<void> _createChoices() async {
+    if (_busy != null) return;
+    final contents = await showAppOptionDialog<BackupContents>(
+      context: context,
+      title: i18n('backup_contents_title'),
+      icon: AppIcons.backupCreate,
+      options: [
+        for (final contents in BackupContents.values)
+          AppDialogOption(
+            key: ValueKey('backup-contents-${contents.name}'),
+            value: contents,
+            label: i18n(contents.labelKey),
+            description: i18n(contents.descriptionKey),
+            descriptionMaxLines: 3,
+            leading: Icon(switch (contents) {
+              BackupContents.data => AppIcons.backupFollows,
+              BackupContents.settings => AppIcons.backupFile,
+              BackupContents.sensitive => AppIcons.password,
+            }, size: 20),
+          ),
+      ],
+    );
+    if (contents == null || !mounted) return;
+    await _create(BackupScope.all, contents: contents);
+  }
 
   Future<void> _restoreFile(LocalBackupFile entry, BackupScope scope, {_Action action = _Action.file}) =>
       _run(action, () async {
@@ -363,7 +392,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                   icon: AppIcons.backupCreate,
                   title: 'create_backup',
                   subtitle: 'backup_create_subtitle',
-                  onTap: () => unawaited(_create(BackupScope.all)),
+                  onTap: () => unawaited(_createChoices()),
                 ),
                 _action(
                   _Action.restore,
@@ -631,11 +660,7 @@ class _BackupFileRowState extends State<_BackupFileRow> {
     Widget row({Widget? trailing}) => SettingsRow(
       icon: entry.followsOnly ? AppIcons.backupFollows : AppIcons.backupFile,
       title: entry.name,
-      subtitle: [
-        formatFileTime(entry.modified),
-        formatFileSize(entry.size),
-        i18n(entry.followsOnly ? 'backup_kind_follows' : 'backup_kind_full'),
-      ].join(' · '),
+      subtitle: [formatFileTime(entry.modified), formatFileSize(entry.size), i18n(entry.kindKey)].join(' · '),
       tooltip: _pointer(context) ? i18n('backup_file_tooltip') : null,
       stackTrailing: false,
       enabled: widget.enabled,
