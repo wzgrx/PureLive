@@ -1,0 +1,53 @@
+--- a/lib/src/linux_platform_file.dart
++++ b/lib/src/linux_platform_file.dart
+@@ -26,7 +26,7 @@
+     return LinuxPlatformFile(
+       name: name,
+       uri: uri,
+-      xFile: XFile(path, name: name, bytes: bytes),
++      xFile: XFile.fileSystem(path: path),
+       bytesLength: bytes?.lengthInBytes,
+     );
+   }
+@@ -41,14 +41,11 @@
+   final int? _bytesLength;
+ 
+   @override
+-  XFile get xFile {
+-    final file = _xFile;
+-    if (file != null) return file;
+-    if (uri.scheme == 'file') {
+-      return XFile(uri.toFilePath(), name: name);
+-    }
+-    return XFile(uri.toString(), name: name);
+-  }
++  XFile get xFile =>
++      _xFile ??
++      (uri.scheme == 'file'
++          ? XFile.fileSystem(path: uri.toFilePath())
++          : XFile.scopedStorage(uri: uri.toString()));
+ 
+   /// Only known when this file was created with its bytes already in hand.
+   ///
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -10,8 +10,8 @@
+ resolution: workspace
+ 
+ environment:
+-  sdk: ">=3.10.0 <4.0.0"
+-  flutter: ">=3.38.0"
++  sdk: ">=3.11.0 <4.0.0"
++  flutter: ">=3.41.0"
+ 
+ flutter:
+   plugin:
+@@ -24,7 +24,7 @@
+   flutter:
+     sdk: flutter
+   file_picker_platform_interface: ^4.0.0
+-  cross_file: ^0.3.5+4
++  cross_file: ^0.4.0
+   dbus: ">=0.7.13 <0.9.0"
+   path: ^1.9.0
+ 

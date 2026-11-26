@@ -1,0 +1,41 @@
+--- a/lib/src/darwin_platform_file.dart
++++ b/lib/src/darwin_platform_file.dart
+@@ -44,7 +44,6 @@
+       name: name,
+       uri: uri,
+       assetIdentifier: data['assetIdentifier'] as String?,
+-      xFile: path.isNotEmpty ? XFile(path, name: name) : null,
+       bytesLength: data['size'] as int?,
+     );
+   }
+@@ -78,14 +77,11 @@
+   final int? _bytesLength;
+ 
+   @override
+-  XFile get xFile {
+-    final file = _xFile;
+-    if (file != null) return file;
+-    if (uri.scheme == 'file') {
+-      return XFile(uri.toFilePath(), name: name);
+-    }
+-    return XFile(uri.toString(), name: name);
+-  }
++  XFile get xFile =>
++      _xFile ??
++      (uri.scheme == 'file'
++          ? XFile.fileSystem(path: uri.toFilePath())
++          : XFile.scopedStorage(uri: uri.toString()));
+ 
+   /// The size iOS/macOS already reported for this file when it was picked.
+   @override
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -32,7 +32,7 @@
+   flutter:
+     sdk: flutter
+   file_picker_platform_interface: ^4.2.0
+-  cross_file: ^0.3.5+4
++  cross_file: ^0.4.0
+   path: ^1.9.0
+ 
+ dev_dependencies:

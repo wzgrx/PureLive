@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -26,7 +27,7 @@ import 'package:pure_live/shared/background/custom_background.dart';
 import 'package:pure_live/shared/in_app_web.dart';
 import 'package:pure_live/shared/qr_scan.dart';
 import 'package:pure_live/shared/rooms/share_code.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart' hide XFile;
 
 /// Hands the plugins to the places that wait for them (M12.3); `main` calls
 /// this once before the first frame.
@@ -71,7 +72,12 @@ List<Override> pluginOverrides() => [
 
 /// The system share sheet with [file] (share_plus).
 Future<bool> shareFile(File file) async {
-  await SharePlus.instance.share(ShareParams(files: [XFile(file.path)], sharePositionOrigin: sheetOrigin(null)));
+  await SharePlus.instance.share(
+    ShareParams(
+      files: [XFile.fileSystem(path: file.path)],
+      sharePositionOrigin: sheetOrigin(null),
+    ),
+  );
   return true;
 }
 

@@ -18,12 +18,11 @@ packages:
     source: hosted
     version: "14.7.0"
   android_file_picker:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: android_file_picker
-      sha256: b8462091dcdd075511a842272374be2232e917ee2a51ecdba4aca02bff529482
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/android_file_picker"
+      relative: true
+    source: path
     version: "2.2.1"
   android_intent_plus:
     dependency: transitive
@@ -186,13 +185,13 @@ packages:
     source: hosted
     version: "0.2.0"
   cli_util:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: cli_util
-      sha256: ff6785f7e9e3c38ac98b2fb035701789de90154024a75b6cb926445e83197d1c
+      sha256: da2a2b22f919995eb427edab07725e2be0b1281ef26770f6ce3a213355565262
       url: "https://pub.dev"
     source: hosted
-    version: "0.4.2"
+    version: "0.6.1"
   clock:
     dependency: transitive
     description:
@@ -253,18 +252,58 @@ packages:
     dependency: transitive
     description:
       name: coverage
-      sha256: "956a3de0725ca232ad353565a8290d3357592bf4250f6f298a185e2d949c5d3d"
+      sha256: "8877574b53777c6627f436538eaf4a0485eebb49e19a3cace38474af60584613"
       url: "https://pub.dev"
     source: hosted
-    version: "1.15.1"
+    version: "1.16.2"
   cross_file:
     dependency: transitive
     description:
       name: cross_file
-      sha256: f141ea4f277af142a0356955707f6556f37b03947d39d55585981a06ca437bd6
+      sha256: "3bde17bce71488fc4dc99216da1d990642a726472874dcce4db700eb103d3fa4"
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.5+5"
+    version: "0.4.0"
+  cross_file_android:
+    dependency: transitive
+    description:
+      name: cross_file_android
+      sha256: "7143b2d4451b21aef10a20a651ba99e85b6f73c17c269a23a72fa4a8c2d543dd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
+  cross_file_darwin:
+    dependency: transitive
+    description:
+      name: cross_file_darwin
+      sha256: "5ae2e0165199c4dd09bd2a21733817b6fda390692ad6bf3ffd69be2bb9c37330"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
+  cross_file_io:
+    dependency: transitive
+    description:
+      name: cross_file_io
+      sha256: b8d6af657ed47860d603130e2908f76c062c13b4764fd0ae3190243c55c396bc
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
+  cross_file_platform_interface:
+    dependency: transitive
+    description:
+      name: cross_file_platform_interface
+      sha256: "6f8fd6dc53835107ca38f7f2226985b7730c26bb8dedc313de19ed6a68feac84"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
+  cross_file_web:
+    dependency: transitive
+    description:
+      name: cross_file_web
+      sha256: "58d350daa6b9d39f1a005218a269a7b69eff0ef2e6c13567a9020934f5a935e4"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
   crypto:
     dependency: transitive
     description:
@@ -370,44 +409,39 @@ packages:
     source: hosted
     version: "7.0.1"
   file_picker:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: file_picker
-      sha256: "5b99250437a4d34ee2cdc0686924452103540eaa1c248094b63f07f9d7216f6c"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/file_picker"
+      relative: true
+    source: path
     version: "13.4.1"
   file_picker_darwin:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: file_picker_darwin
-      sha256: "34e3344225bccfa1d45a8af025da58702f13efecad67b763dc0eb2691f388afb"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/file_picker_darwin"
+      relative: true
+    source: path
     version: "2.5.2"
   file_picker_linux:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: file_picker_linux
-      sha256: cf3889644e8e54551f5c3a4f98b6b6ef5f0ef85c07d2a0c1a969538983be2f9b
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/file_picker_linux"
+      relative: true
+    source: path
     version: "2.0.5"
   file_picker_platform_interface:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: file_picker_platform_interface
-      sha256: a2ef71c4628f92a4471d424576e3bf7042b40a2683c9f9a0e3033a7fc7f7763c
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/file_picker_platform_interface"
+      relative: true
+    source: path
     version: "4.3.0"
   file_picker_web:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: file_picker_web
-      sha256: "97f7085e3c4f5724595bbd94e8f380f7a690e9066140a5fb711e97ac45a02008"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/file_picker_web"
+      relative: true
+    source: path
     version: "4.2.2"
   fixnum:
     dependency: transitive
@@ -531,10 +565,10 @@ packages:
     dependency: transitive
     description:
       name: flutter_svg
-      sha256: "4565a66f0a968f2e1ab4197854686990258aadab9572eb80a7655053a01dc302"
+      sha256: "5b0dd02de78d110e4acaca042e3be80c9b2ec04c1f41a83ca39a717497c7e2d2"
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.0"
+    version: "2.5.1"
   flutter_test:
     dependency: transitive
     description: flutter
@@ -779,13 +813,13 @@ packages:
     source: hosted
     version: "0.12.20"
   material_color_utilities:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: material_color_utilities
-      sha256: "9c337007e82b1889149c82ed242ed1cb24a66044e30979c44912381e9be4c48b"
+      sha256: cda64b65529b9737e5c9bf7ef386c907f2a58707039a3033788030da927133d0
       url: "https://pub.dev"
     source: hosted
-    version: "0.13.0"
+    version: "0.13.1"
   material_ui:
     dependency: transitive
     description:
@@ -897,13 +931,13 @@ packages:
     source: hosted
     version: "5.0.0"
   package_config:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: package_config
-      sha256: f096c55ebb7deb7e384101542bfba8c52696c1b56fca2eb62827989ef2353bbc
+      sha256: ffcf4cf3d6c0b74ac43708d9f56625506e8a68aa935abe9d267a7330f320eb5d
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.0"
+    version: "3.0.0"
   package_info_plus:
     dependency: transitive
     description:
@@ -1121,20 +1155,18 @@ packages:
     source: hosted
     version: "0.3.0"
   share_plus:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: share_plus
-      sha256: db40767f130189d53f3ae8a6393c217ff4a492da1baff718a9873679c0c00224
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/share_plus"
+      relative: true
+    source: path
     version: "13.3.1"
   share_plus_platform_interface:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: share_plus_platform_interface
-      sha256: "365ef7379fc22507256adda3385152942ffce08935452bc972c2e52a0bebae41"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/share_plus_platform_interface"
+      relative: true
+    source: path
     version: "7.2.0"
   shelf:
     dependency: transitive
@@ -1449,10 +1481,10 @@ packages:
     dependency: transitive
     description:
       name: vector_graphics_compiler
-      sha256: "4c9d2e7121eea8b4f160e6e435900a0ae7214cfc97c2d6cf84c25532b789b50d"
+      sha256: "4a3f1ed88eb49c0ce9de15832256a3681eb4ce03350375ba588b5918ea3ed60a"
       url: "https://pub.dev"
     source: hosted
-    version: "1.3.4"
+    version: "1.3.7"
   vector_math:
     dependency: transitive
     description:
@@ -1582,12 +1614,11 @@ packages:
     source: hosted
     version: "0.7.1"
   windows_file_picker:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: windows_file_picker
-      sha256: cd1be37ada0abcfaa55bddb7410e8515844e35cd77669c35d9a28a15722299d8
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/windows_file_picker"
+      relative: true
+    source: path
     version: "2.0.2"
   xdg_directories:
     dependency: transitive

@@ -1,0 +1,80 @@
+--- a/lib/src/file_picker_web.dart
++++ b/lib/src/file_picker_web.dart
+@@ -2,6 +2,8 @@
+ import 'dart:js_interop';
+ import 'dart:typed_data';
+ 
++import 'package:cross_file/cross_file.dart';
++import 'package:cross_file_web/cross_file_web.dart';
+ import 'package:file_picker_platform_interface/file_picker_platform_interface.dart';
+ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+ import 'package:path/path.dart' as p;
+@@ -224,9 +226,16 @@
+     Uint8List? bytes,
+     Stream<Uint8List>? readStream,
+   }) {
++    final xFile = ScopedStorageXFile.fromCreationParams(
++      WebScopedStorageXFileCreationParams.fromBlob(
++        file,
++        autoRevokeObjectUrl: false,
++      ),
++    );
+     return WebPlatformFile(
+       name: file.name,
+-      uri: Uri.parse(URL.createObjectURL(file)),
++      uri: Uri.parse(xFile.uri),
++      xFile: xFile,
+       bytesLength: bytes != null ? bytes.length : file.size,
+       bytes: bytes,
+       readStream: readStream,
+--- a/lib/src/web_platform_file.dart
++++ b/lib/src/web_platform_file.dart
+@@ -1,7 +1,10 @@
+ import 'dart:async';
++import 'dart:js_interop';
+ import 'dart:typed_data';
+ 
+ import 'package:cross_file/cross_file.dart';
++import 'package:cross_file_web/cross_file_web.dart';
++import 'package:web/web.dart' show Blob;
+ import 'package:file_picker_platform_interface/file_picker_platform_interface.dart';
+ 
+ import 'platform_file_web_fetch.dart';
+@@ -53,7 +56,13 @@
+   XFile get xFile {
+     final file = _xFile;
+     if (file != null) return file;
+-    return XFile(uri.toString(), name: name, bytes: _bytes);
++    final bytes = _bytes;
++    if (bytes != null) {
++      return ScopedStorageXFile.fromCreationParams(
++        WebScopedStorageXFileCreationParams.fromBlob(Blob([bytes.toJS].toJS)),
++      );
++    }
++    return XFile.scopedStorage(uri: uri.toString());
+   }
+ 
+   /// The browser's `File.size`, or the loaded bytes' length.
+--- a/pubspec.yaml
++++ b/pubspec.yaml
+@@ -10,8 +10,8 @@
+ resolution: workspace
+ 
+ environment:
+-  sdk: ">=3.10.0 <4.0.0"
+-  flutter: ">=3.38.0"
++  sdk: ">=3.11.0 <4.0.0"
++  flutter: ">=3.41.0"
+ 
+ flutter:
+   plugin:
+@@ -27,7 +27,8 @@
+   flutter_web_plugins:
+     sdk: flutter
+   file_picker_platform_interface: ^4.0.0
+-  cross_file: ^0.3.5+4
++  cross_file: ^0.4.0
++  cross_file_web: ^1.0.0
+   meta: ^1.17.0
+   path: ^1.9.1
+   web: ^1.1.1
