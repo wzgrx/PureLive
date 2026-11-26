@@ -36,6 +36,21 @@ String _jwt(Map<String, Object?> payload) =>
 DateTime _seconds(int value) => DateTime.fromMillisecondsSinceEpoch(value * 1000, isUtc: true);
 
 void main() {
+  test('issue253: official player_1 is HEVC even when its source filename is opaque', () {
+    const primary = 'https://video.example.test/original.flv?token=fixture';
+    const hevc = 'https://video.example.test/opaque-source.flv?token=fixture';
+    List<({LivePlayLine line, int? rate})> read(Map<String, dynamic> value) =>
+        DouyuApi.codecAnswers(value, roomId: '9999', cdn: 'hw-h5', cookie: '', issuedAt: DateTime.utc(2026, 11, 26));
+    final both = read({'rtmp_live': primary, 'player_1': hevc, 'rate': 0});
+    expect(both.map((a) => a.line.url), [primary, hevc]);
+    expect(both.last.line.codec, 'hevc');
+    final renewed = read({'player_1': hevc, 'rate': 0}).single;
+    expect(renewed.line.codec, 'hevc');
+    expect(renewed.line.lineId, both.last.line.lineId);
+    expect(read({'rtmp_live': primary, 'player_1': 'not a media URL', 'rate': 0}), hasLength(1));
+    expect(read({'rtmp_live': primary, 'player_1': '', 'rate': 0}), hasLength(1));
+  });
+
   test('issue253: an original primary without a bitrate suffix keeps its verified HEVC alternative', () {
     const primary = 'https://video.example.test/original-stream.flv?signature=a%2Fb';
     const hevc = 'https://video.example.test/original-stream_10000h.flv?signature=c%2Fd';
@@ -53,7 +68,7 @@ void main() {
     expect(answers.last.line.url, hevc);
     expect(answers.last.line.lineId, 'douyu:hw-h5:hevc');
     expect(answers.every((a) => a.rate == 0), isTrue);
-    expect(read('https://video.example.test/unknown.flv'), hasLength(1));
+    expect(read('not a media URL'), hasLength(1));
     expect(read(primary), hasLength(1));
   });
 
@@ -70,7 +85,7 @@ void main() {
     final renewed = read({'player_1': '$hevc&new=1', 'rate': 0}).single;
     expect(renewed.line.lineId, both.last.line.lineId);
     expect(renewed.line.codec, 'hevc');
-    expect(read({'rtmp_live': primary, 'player_1': 'https://video.example.test/unknown.flv'}), hasLength(1));
+    expect(read({'rtmp_live': primary, 'player_1': 'not a media URL'}), hasLength(1));
     expect(DouyuApi.resolution([both.last, both.first], requestedRate: 0).lines.map((line) => line.codec), [
       'avc',
       'hevc',

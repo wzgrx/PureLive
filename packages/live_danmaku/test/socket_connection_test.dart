@@ -88,10 +88,16 @@ typedef _Renew = FutureOr<Map<String, String>?> Function(DanmakuHandshakeFailure
 /// `joined` confirms the join, `fail` is a protocol failure, anything else is
 /// a chat line.
 final class _Platform extends DanmakuSocketConnection<DanmakuSocketTarget> {
-  new({required super.policy, required _Connector connector, this.readyOnOpen = true, this.joinTimeoutNotice})
-    : super(site: SiteIds.douyu, connector: connector.call);
+  new({
+    required super.policy,
+    required _Connector connector,
+    this.readyOnOpen = true,
+    this.slowDecode = false,
+    this.joinTimeoutNotice,
+  }) : super(site: SiteIds.douyu, connector: connector.call);
 
   final bool readyOnOpen;
+  final bool slowDecode;
   final DanmakuInterruption? joinTimeoutNotice;
   final List<DanmakuSocketSession> opens = [];
   int joinTimeouts = 0;
@@ -114,6 +120,16 @@ final class _Platform extends DanmakuSocketConnection<DanmakuSocketTarget> {
 
   @override
   void onData(DanmakuSocketSession session, Object? data) {
+    if (slowDecode && data is List<int>) {
+      session.decodeFrame(
+        data,
+        _slowFrameLength,
+        (length) => session.message(
+          LiveMessage(type: LiveMessageType.chat, userName: 'u', message: 'old:$length', color: LiveMessageColor.white),
+        ),
+      );
+      return;
+    }
     switch (data) {
       case 'joined':
         session.ready();
@@ -193,7 +209,36 @@ Future<void> _until(bool Function() condition) async {
   }
 }
 
+int _slowFrameLength(List<int> frame) {
+  sleep(const Duration(seconds: 1));
+  return frame.length;
+}
+
 void main() {
+  test('a late decoder from a failed socket never dispatches into its replacement handshake', () async {
+    final connector = _Connector();
+    final connection = _Platform(
+      policy: const DanmakuSocketPolicy(heartbeatInterval: Duration.zero),
+      connector: connector,
+      slowDecode: true,
+    );
+    addTearDown(connection.close);
+    final events = _record(connection);
+    await connection.connect(_target);
+    connector.channels.single.incoming
+      ..add(List<int>.filled(8192, 7))
+      ..add('fail');
+    final deadline = DateTime.now().add(const Duration(seconds: 10));
+    while (connector.channels.length < 2 || !connection.isConnected) {
+      if (DateTime.now().isAfter(deadline)) fail('replacement handshake did not complete');
+      await _wait(const Duration(seconds: 1));
+    }
+    connector.channels.last.incoming.add('fresh');
+    await _until(() => _texts(events).contains('fresh'));
+    await _wait(const Duration(seconds: 1));
+    expect(_texts(events), ['fresh']);
+  });
+
   test('opens the first endpoint, joins, reports ready and messages, sends heartbeats', () async {
     final connector = _Connector();
     final connection = _Platform(

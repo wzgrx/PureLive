@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:live_core/live_core.dart';
 import 'package:live_ui/live_ui.dart';
+import 'package:pure_live/shared/danmaku/chat_flush.dart';
 import 'package:pure_live/shared/danmaku/emotes.dart';
 import 'package:pure_live/shared/rooms/platform_texts.dart';
+
+export 'package:pure_live/shared/danmaku/chat_flush.dart' show scheduleChatFlushForNextFrame;
 
 /// What a line of the chat list is.
 enum ChatLineKind {
@@ -108,19 +110,6 @@ final class ChatLine {
 
 /// Hands [flush] to the time the feed's listeners hear of its changes.
 typedef ChatFlushScheduler = void Function(VoidCallback flush);
-
-/// The app's [ChatFlushScheduler]: at the start of the next frame, so the
-/// list builds the new lines in that frame. Without a binding (plain unit
-/// tests) at once.
-void scheduleChatFlushForNextFrame(VoidCallback flush) {
-  if (kDebugMode && BindingBase.debugBindingType() == null) {
-    flush();
-    return;
-  }
-  SchedulerBinding.instance
-    ..scheduleFrameCallback((_) => flush())
-    ..scheduleFrame();
-}
 
 /// The chat list: the last [capacity] lines (3.x kept 500), with the
 /// platform's retractions applied; at most [giftCapacity] of them gifts

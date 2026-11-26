@@ -218,6 +218,7 @@ final class LiveSocket {
 
   SocketChannel? _channel;
   StreamSubscription<Object?>? _subscription;
+  bool _readPaused = false;
   Timer? _heartbeat;
   Timer? _reconnectTimer;
   int _failures = 0;
@@ -307,6 +308,7 @@ final class LiveSocket {
       },
       cancelOnError: true,
     );
+    if (_readPaused) _subscription?.pause();
     onReady?.call();
     _startHeartbeat();
   }
@@ -317,7 +319,7 @@ final class LiveSocket {
     _heartbeat = Timer.periodic(heartbeatInterval, (_) {
       if (_status != SocketStatus.connected) return;
       final last = _lastMessageAt;
-      if (last != null && clock.now().difference(last) >= _silenceLimit) {
+      if (!_readPaused && last != null && clock.now().difference(last) >= _silenceLimit) {
         _scheduleReconnect('WebSocket heartbeat timed out');
         return;
       }
@@ -355,6 +357,19 @@ final class LiveSocket {
     });
   }
 
+  /// Applies backpressure to incoming data without stopping outgoing heartbeats.
+  /// Repeated requests are idempotent; teardown resets the next connection.
+  void setReadPaused(bool paused) {
+    if (paused == _readPaused) return;
+    _readPaused = paused;
+    if (paused) {
+      _subscription?.pause();
+    } else {
+      _lastMessageAt = clock.now();
+      _subscription?.resume();
+    }
+  }
+
   /// Sends [message] when connected; a send error starts a reconnect.
   void send(Object message) {
     if (_status != SocketStatus.connected) return;
@@ -378,6 +393,7 @@ final class LiveSocket {
       // Bounded teardown.
     }
     _subscription = null;
+    _readPaused = false;
     _heartbeat?.cancel();
     _heartbeat = null;
     final channel = _channel;

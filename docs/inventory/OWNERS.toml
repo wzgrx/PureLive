@@ -53,6 +53,7 @@ path = [
   # ---- apps/pure_live/lib/platform：原生通道的 Dart 一侧 ----
   { glob = "apps/pure_live/lib/platform/background_guide.dart", sub = "O01" },
   { glob = "apps/pure_live/lib/platform/display_mode.dart", sub = "O05" },
+  { glob = "apps/pure_live/lib/platform/playback_keyboard_scope.dart", sub = "A16", note = "仅播放非编辑焦点的Windows窗口IME关联，文本编辑恢复原上下文" },
   { glob = "apps/pure_live/lib/platform/device_controls.dart", sub = "O04", note = "媒体音量和应用亮度，普通直播与多画面共用" },
   { glob = "apps/pure_live/lib/platform/live_alert_channel.dart", sub = "O01" },
   { glob = "apps/pure_live/lib/platform/screen_orientation.dart", sub = "O05" },
@@ -332,6 +333,7 @@ channel = [
   { name = "pure_live/finder", sub = "Y02" },
   { name = "pure_live/key_commands", sub = "A18" },
   { name = "pure_live/display_mode", sub = "O05" },
+  { name = "pure_live/playback_keyboard", sub = "A16" },
   { name = "pure_live/window_startup", sub = "X01" },
   { name = "pure_live/multicast_lock", sub = "N02" },
   { name = "pure_live/native_http", sub = "Q03" },

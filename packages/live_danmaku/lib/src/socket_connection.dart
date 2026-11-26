@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:live_core/live_core.dart';
 import 'package:live_danmaku/src/connection.dart';
 import 'package:live_danmaku/src/connection_base.dart';
+import 'package:live_danmaku/src/frame_decode.dart';
 import 'package:live_net/live_net.dart';
 import 'package:meta/meta.dart';
 
@@ -230,6 +231,8 @@ final class DanmakuSocketSession {
 
   LiveSocket? _socket;
   Timer? _joinTimer;
+  FrameDecode? _frames;
+  int _frameEpoch = 0;
 
   /// The last socket failure (a close code and reason, an error), for
   /// diagnostics.
@@ -264,6 +267,25 @@ final class DanmakuSocketSession {
   /// Reports a message.
   void message(LiveMessage message) => run.message(message);
 
+  /// Reads a binary frame with the platform's pure [decode] and gives the
+  /// result to [dispatch] (D04.2 c1): a burst frame is read in another
+  /// isolate so the frames behind it, and the danmaku on screen, do not wait
+  /// on it, and [dispatch] — the platform's messages, its acknowledgement —
+  /// runs on this isolate, in the order the frames arrived, only while the
+  /// run is current.
+  void decodeFrame<T>(List<int> data, T Function(List<int> data) decode, void Function(T result) dispatch) {
+    final epoch = _frameEpoch;
+    _frames?.run(data, decode, (result) {
+      if (run.isActive && epoch == _frameEpoch) dispatch(result);
+    });
+  }
+
+  void _retireFrames() {
+    _frameEpoch++;
+    _frames?.close();
+    _frames = null;
+  }
+
   /// No longer joined, without a notice (a join being renegotiated).
   void markDisconnected() => run.markDisconnected();
 
@@ -282,6 +304,7 @@ final class DanmakuSocketSession {
     if (!run.isActive) return;
     cancelJoinTimeout();
     if (notice != null) run.reconnecting(notice, detail: detail);
+    _retireFrames();
     _socket?.reconnect();
   }
 
@@ -291,6 +314,7 @@ final class DanmakuSocketSession {
   Future<void> reopen(DanmakuSocketTarget target) async {
     if (!run.isActive) return;
     cancelJoinTimeout();
+    _retireFrames();
     final previous = _socket;
     _socket = null;
     await previous?.close();
@@ -379,6 +403,7 @@ final class DanmakuSocketSession {
       onFailure: (reason) {
         if (!current()) return;
         _lastFailure = reason;
+        _retireFrames();
         cancelJoinTimeout();
       },
       onReconnecting: () {
@@ -396,6 +421,14 @@ final class DanmakuSocketSession {
   }
 
   void _opened() {
+    _retireFrames();
+    final epoch = _frameEpoch;
+    _frames = FrameDecode(
+      onPressure: (paused) {
+        if (epoch == _frameEpoch) _socket?.setReadPaused(paused);
+      },
+      onOverflow: () => reconnect(notice: DanmakuInterruption.protocolError, detail: 'decode_backlog_limit'),
+    );
     cancelJoinTimeout();
     final timeout = _connection.policy.joinTimeout;
     if (timeout != null) {
@@ -408,6 +441,7 @@ final class DanmakuSocketSession {
   }
 
   Future<void> _close() async {
+    _retireFrames();
     cancelJoinTimeout();
     final socket = _socket;
     _socket = null;

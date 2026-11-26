@@ -6,7 +6,7 @@
 
 路径规则按 OWNERS.toml 里的顺序第一条匹配的生效，所以一条目录规则只管前面的规则没拿走的文件。本页只随归属表、设置、来源和通道变化，加删代码文件不用重新生成。
 
-路径规则 249 条；设置 308 个（分节默认 24 条、单独指定 120 个）；来源 35 个；通道 24 个。
+路径规则 250 条；设置 308 个（分节默认 24 条、单独指定 120 个）；来源 35 个；通道 25 个。
 
 | 子分类 | 路径规则 | 设置 | 播放 | 弹幕 | 通道 |
 |---|---:|---:|---:|---:|---:|
@@ -23,7 +23,7 @@
 | A12 账号和数据界面 | 6 |  |  |  |  |
 | A13 网络电视和多画面界面 | 2 | 1 |  |  |  |
 | A15 小页面 | 6 |  |  |  |  |
-| A16 桌面界面 | 1 | 13 |  |  |  |
+| A16 桌面界面 | 2 | 13 |  |  | 1 |
 | A17 电视界面 | 3 | 19 |  |  |  |
 | A18 苹果平台界面 | 3 | 1 |  |  | 1 |
 | C01 进房和房间逻辑 | 2 | 3 |  |  |  |
@@ -162,8 +162,9 @@
 
 ## A16 桌面界面
 
-- 代码：`apps/pure_live/lib/app/desktop/`
+- 代码：`apps/pure_live/lib/app/desktop/`、`apps/pure_live/lib/platform/playback_keyboard_scope.dart`（仅播放非编辑焦点的Windows窗口IME关联，文本编辑恢复原上下文）
 - 设置：`enableNewWindowPlay`、`rememberWindowGeometry`、`window_width`、`window_height`、`rememberPipPosition`、`windows_pip_display_id`、`windows_pip_width`、`windows_pip_height`、`windows_pip_x`、`windows_pip_y`、`dontAskExit`、`exitChoose`、`enableStartUp`
+- 通道：`pure_live/playback_keyboard`
 
 ## A17 电视界面
 

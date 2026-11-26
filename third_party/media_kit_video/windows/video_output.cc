@@ -297,36 +297,31 @@ void VideoOutput::CheckAndResize() {
     // No creation of new texture required.
     return;
   }
+  if (std::chrono::steady_clock::now() < next_resize_attempt_) return;
   Resize(required_width, required_height);
 }
 
 void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
   std::cout << required_width << " " << required_height << std::endl;
-  // Unregister previously registered texture & delete underlying objects.
+  // Flutter can still sample/import the old descriptor until asynchronous
+  // unregister completes. Do not resize its shared mailbox while it is live.
   if (texture_id_) {
+    const int64_t retiring_id = texture_id_;
+    auto completed = std::make_shared<std::promise<void>>();
+    auto retired = completed->get_future();
     registrar_->texture_registrar()->UnregisterTexture(
-        texture_id_, [&, id = texture_id_]() {
-          if (id) {
-            std::cout << "media_kit: VideoOutput: Free Texture: " << id
-                      << std::endl;
+        retiring_id, [this, retiring_id, completed]() {
+          {
             std::lock_guard<std::mutex> lock(textures_mutex_);
-            if (destroyed_) {
-              return;
-            }
-            if (texture_variants_.find(id) != texture_variants_.end()) {
-              texture_variants_.erase(id);
-            }
-            // H/W
-            if (textures_.find(id) != textures_.end()) {
-              textures_.erase(id);
-            }
-            // S/W
-            if (pixel_buffer_textures_.find(id) !=
-                pixel_buffer_textures_.end()) {
-              pixel_buffer_textures_.erase(id);
-            }
+            texture_variants_.erase(retiring_id);
+            textures_.erase(retiring_id);
+            pixel_buffer_textures_.erase(retiring_id);
           }
+          // Always complete, including when destruction has begun. The
+          // destructor drains this render worker before releasing the owner.
+          completed->set_value();
         });
+    retired.get();
     texture_id_ = 0;
   }
   // H/W
@@ -334,6 +329,12 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
     // Resize the D3D11 texture.
     d3d11_renderer_->SetSize(static_cast<int32_t>(required_width),
                             static_cast<int32_t>(required_height));
+    if (d3d11_renderer_->width() != required_width ||
+        d3d11_renderer_->height() != required_height) {
+      next_resize_attempt_ = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+    } else {
+      next_resize_attempt_ = {};
+    }
     
     auto texture = std::make_unique<FlutterDesktopGpuSurfaceDescriptor>();
     texture->struct_size = sizeof(FlutterDesktopGpuSurfaceDescriptor);
@@ -371,7 +372,7 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
     texture_variants_.emplace(
         std::make_pair(texture_id_, std::move(texture_variant)));
     // Notify public texture update callback.
-    texture_update_callback_(texture_id_, required_width, required_height);
+    texture_update_callback_(texture_id_, d3d11_renderer_->width(), d3d11_renderer_->height());
   }
   // S/W
   if (pixel_buffer_ != nullptr) {

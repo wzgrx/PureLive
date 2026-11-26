@@ -125,3 +125,12 @@ ProducerCommit result as the presented-frame signal. Failed native renders must
 not increment frameRevision. Existing Surface, disposal, audio mode and viewport
 patches remain. The native bundle must export the matching render API.
 Linux prefers upstream's GLES3 context and keeps its GLES2 fallback.
+
+
+## 2026-11-26：纹理退休与失败分配保留
+
+Windows的Resize现在等待Flutter异步UnregisterTexture回调完成后，才调整旧共享mailbox并替换其句柄。该回调不再因destroyed标志提前跳过完成信号；析构的render-worker栅栏因而也涵盖先前resize的退休操作。契约来源为Flutter3.50.1官方texture_registrar.h和flutter_windows_texture_registrar.cc。
+
+mailbox先完整分配替换槽再提交；失败保留旧槽、fence和尺寸，避免下一帧解引用空资源。Renderer仅在成功后更新尺寸，输出回调报告实际尺寸；失败重试在CheckAndResize中限为每秒一次，期间继续使用有效旧资源。
+
+原生回归windows/tests/mailbox_resize_test.cc：在VS x64开发环境，以该目录为-I，编译测试和mailbox_swap_chain.cc，链接d3d11.lib/dxgi.lib；D3D11 WARP拒绝非法纹理尺寸后必须保留有效mailbox，并能再次正常resize及ProducerCommit。旧实现返回10，新实现返回0。此回归验证分配失败的处理，不冒充原用户显卡或原闪退转储已复现；同源成品的多播放器压力/长播另行记录。

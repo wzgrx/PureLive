@@ -934,10 +934,12 @@ abstract final class DouyuApi {
       return _hevcPath.hasMatch(path) ? 'hevc' : (_avcPath.hasMatch(path) ? 'avc' : null);
     }
 
-    final primaryCodec = codec(primary);
+    // The current official web player selects player_1 as H.265 explicitly;
+    // source filenames are opaque and need not carry a bitrate or codec suffix.
+    final primaryCodec = primary == alternate ? 'hevc' : codec(primary);
     return [
       _lineAnswer(primary, data, roomId, cdn, cookie, issuedAt, forceRenewal, codec: primaryCodec),
-      if (primaryCodec != 'hevc' && alternate != primary && _playable(alternate) && codec(alternate) == 'hevc')
+      if (primaryCodec != 'hevc' && alternate != primary && _playable(alternate))
         _lineAnswer(alternate, data, roomId, cdn, cookie, issuedAt, forceRenewal, codec: 'hevc'),
     ];
   }
