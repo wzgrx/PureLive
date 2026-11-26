@@ -98,3 +98,4 @@ export 'src/sites/youtube/youtube_site.dart';
 export 'src/sites/yy/yy_api.dart';
 export 'src/sites/yy/yy_site.dart';
 export 'src/tars.dart';
+export 'src/video_codecs.dart';

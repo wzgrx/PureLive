@@ -8,6 +8,7 @@ import 'package:live_core/src/live_room.dart';
 import 'package:live_core/src/live_site.dart';
 import 'package:live_core/src/site_error.dart';
 import 'package:live_core/src/sites/twitch/twitch_api.dart';
+import 'package:live_core/src/video_codecs.dart';
 import 'package:live_net/live_net.dart';
 
 const _site = 'twitch';
@@ -131,7 +132,8 @@ final class TwitchSite extends LiveSite
   ///   default, keeps every language;
   /// - [preferH264] reads "优先 H.264" (on by default): on, usher is asked
   ///   for H.264 only; off, also for HEVC and AV1 (Enhanced Broadcasting),
-  ///   as far as [codecs] says the player decodes them;
+  ///   as far as [codecs] says the player decodes them; with
+  ///   [preferredCodec] that codec is asked for first (4.x's choice);
   /// - [codecs] reads the video codecs the player's engine decodes, named
   ///   as lines name them (`avc`, `hevc`, `av1`); null (the default) is not
   ///   known, and every codec is asked for (8-8).
@@ -145,12 +147,14 @@ final class TwitchSite extends LiveSite
     List<String> Function()? languages,
     bool Function()? preferH264,
     Set<String>? Function()? codecs,
+    String Function()? preferredCodec,
     Random? random,
     DateTime Function()? now,
   }) : gqlFallbacks = List.unmodifiable(gqlFallbacks),
        _languages = languages ?? _everyLanguage,
        _preferH264 = preferH264 ?? _on,
        _codecs = codecs ?? _unknownCodecs,
+       _preferredCodec = preferredCodec ?? _autoCodec,
        _random = random ?? Random.secure(),
        _now = now ?? DateTime.now;
 
@@ -164,10 +168,13 @@ final class TwitchSite extends LiveSite
   final List<String> Function() _languages;
   final bool Function() _preferH264;
   final Set<String>? Function() _codecs;
+  final String Function() _preferredCodec;
   final Random _random;
   final DateTime Function() _now;
 
   static List<String> _everyLanguage() => const [];
+
+  static String _autoCodec() => VideoCodecs.auto;
 
   static bool _on() => true;
 
@@ -549,7 +556,14 @@ final class TwitchSite extends LiveSite
     if (!TwitchApi.loginPattern.hasMatch(login)) throw NotFound(_site, 'not a channel login: ${detail.roomId}');
     try {
       final token = await _accessToken(login);
-      final url = TwitchApi.usherUrl(login, token, _random, preferH264: _preferH264(), codecs: _codecs());
+      final url = TwitchApi.usherUrl(
+      login,
+      token,
+      _random,
+      preferH264: _preferH264(),
+      codecs: _codecs(),
+      preferredCodec: _preferredCodec(),
+    );
       final response = await _send(
         LiveRequest(
           site: _site,

@@ -141,7 +141,7 @@ typedef _View = ({
   String? quality,
   bool? danmaku,
   String defaultQuality,
-  bool preferH264,
+  String codec,
   String? output,
 });
 
@@ -226,7 +226,7 @@ class _RecordPanelBodyState extends ConsumerState<RecordPanelBody> {
       quality: task?.qualityOverride ?? _quality,
       danmaku: task?.recordDanmakuOverride ?? _danmaku,
       defaultQuality: settings.defaultQuality,
-      preferH264: settings.preferH264,
+      codec: settings.codec,
       output: task?.lastOutputPath,
     );
   }
@@ -361,7 +361,7 @@ class _RecordPanelBodyState extends ConsumerState<RecordPanelBody> {
           _ThisRecording(
             view: view,
             choices: recordQualityChoices(_roomQualities),
-            fallback: recordDefaultQuality(_roomQualities, view.defaultQuality, preferH264: view.preferH264),
+            fallback: recordDefaultQuality(_roomQualities, view.defaultQuality, codec: view.codec),
             onQuality: _pickQuality,
             onDanmaku: _pickDanmaku,
           ),

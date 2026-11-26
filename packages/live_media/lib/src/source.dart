@@ -161,12 +161,19 @@ final class PlaybackPlan {
 
   /// The plan of [resolution] (live_core's answer for one quality).
   ///
-  /// With [preferH264] (the "优先 H.264" setting, default on; upgrade 22-3)
-  /// lines marked `hevc` move behind the others, keeping the platform's
-  /// order otherwise. [onDemand] marks a replay (Huya 3-1, Weibo 18-5,
-  /// Baidu 30-4: the room is `LiveStatus.replay`) whose end is not a
-  /// failure; [start] is where to begin (Bilibili's carousel `play_time`).
-  factory of(LivePlayUrlResolution resolution, {bool preferH264 = true, bool onDemand = false, Duration? start}) {
+  /// With [codec] (the "优先视频编码" setting) the lines of that codec come
+  /// first and the others keep the platform's order behind them; `auto`
+  /// keeps the platform's order. It defaults to H.264, which is what the
+  /// old boolean `preferH264` meant when untouched. [onDemand] marks a
+  /// replay (Huya 3-1, Weibo 18-5, Baidu 30-4: the room is
+  /// `LiveStatus.replay`) whose end is not a failure; [start] is where to
+  /// begin (Bilibili's carousel `play_time`).
+  factory of(
+    LivePlayUrlResolution resolution, {
+    String codec = VideoCodecs.h264,
+    bool onDemand = false,
+    Duration? start,
+  }) {
     final recipe = resolution.inputRecipe;
     if (recipe != null) {
       return PlaybackPlan(
@@ -177,9 +184,17 @@ final class PlaybackPlan {
       );
     }
     final lines = resolution.normalized().lines;
-    final ordered = preferH264
-        ? [...lines.where((line) => line.codec != 'hevc'), ...lines.where((line) => line.codec == 'hevc')]
-        : lines;
+    // The wanted codec first, then the lines whose codec is unknown (HLS
+    // may carry anything), then the lines known to be another codec — each
+    // group keeps the platform's order, so H.264 (the default) behaves
+    // exactly like the old "move HEVC behind".
+    final ordered = codec == VideoCodecs.auto
+        ? lines
+        : [
+            ...lines.where((line) => VideoCodecs.matches(line.codec, codec)),
+            ...lines.where((line) => VideoCodecs.normalize(line.codec) == null),
+            ...lines.where((line) => VideoCodecs.knownOther(line.codec, codec)),
+          ];
     return PlaybackPlan(
       sources: [for (final line in ordered) LineSource(line)],
       queryPolicies: resolution.sourceQueryPolicies,

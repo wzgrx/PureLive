@@ -296,7 +296,7 @@ const Map<String, Object> newInV4 = {
   'iptvPopularPlaylist': '', // V02.9 (issue #6): the built-in hot list, as 3.x
   'iptvHotRemoved': false, // V02.9: the built-in hot list is there until deleted
   'themeColorMigration': 0, // A11.2
-  'preferH264': true, // UPGRADES 22-3
+  'preferredVideoCodec': 'h264', // UPGRADES 22-3, and 4.x's choice
   'bilibiliPreferRaw': false,
   'autoPipOnLeave': false,
   'useSystemPip': false, // A07.25 c12

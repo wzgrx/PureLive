@@ -165,7 +165,10 @@ SiteRegistry buildSiteRegistry(PlatformDeps deps) {
   final http = deps.http;
   final cookies = deps.cookies;
   final settings = deps.store.settings;
-  bool preferH264() => settings.get(Settings.preferH264);
+  // The sites take a two-way switch (H.264 or HEVC): only a preference for
+  // H.265 turns it to HEVC; AV1, VP9, VP8 and 自动 keep H.264 as the base
+  // line, and the player reorders the codecs it was offered after that.
+  bool preferH264() => settings.get(Settings.preferredVideoCodec) != VideoCodecs.h265;
   return SiteRegistry({
     SiteIds.bilibili: () => BilibiliSite(
       http,
@@ -192,6 +195,7 @@ SiteRegistry buildSiteRegistry(PlatformDeps deps) {
       languages: () => settings.get(Settings.twitchLanguages),
       preferH264: preferH264,
       codecs: deps.videoCodecs,
+      preferredCodec: () => settings.get(Settings.preferredVideoCodec),
     ),
     SiteIds.soop: () => SoopSite(http, cookies: cookies),
     SiteIds.yy: () => YySite(http, cookies: cookies, flvFirst: yyFlvFirst),
