@@ -34,8 +34,42 @@ Future<Map<String, Object?>> probeInterruptedRecording(Directory root) async {
   if (generationCode != 0 || !clip.existsSync() || clip.lengthSync() == 0) {
     throw StateError('Native fixture encoding failed');
   }
+  final bytes = await clip.readAsBytes();
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  server.listen((request) async {
+    final response = request.response;
+    try {
+      if (request.uri.path != '/generated.mp4') {
+        response.statusCode = HttpStatus.notFound;
+        return;
+      }
+      final range = request.headers.value(HttpHeaders.rangeHeader);
+      final match = range == null ? null : RegExp(r'^bytes=(\d+)-(\d*)$').firstMatch(range);
+      final start = match == null ? 0 : int.parse(match.group(1)!);
+      final end = match == null || match.group(2)!.isEmpty
+          ? bytes.length - 1
+          : int.parse(match.group(2)!).clamp(0, bytes.length - 1);
+      if (start > end || start >= bytes.length || range != null && match == null) {
+        response.statusCode = HttpStatus.requestedRangeNotSatisfiable;
+        return;
+      }
+      if (range != null) {
+        response.statusCode = HttpStatus.partialContent;
+        response.headers.set(HttpHeaders.contentRangeHeader, 'bytes $start-$end/${bytes.length}');
+      }
+      response
+        ..headers.contentType = ContentType('video', 'mp4')
+        ..headers.set(HttpHeaders.acceptRangesHeader, 'bytes')
+        ..contentLength = end - start + 1;
+      if (request.method != 'HEAD') response.add(bytes.sublist(start, end + 1));
+    } on SocketException {
+      // A manual cancellation closes only this generated input.
+    } finally {
+      await response.close().catchError((Object _) {});
+    }
+  });
   final injected = _UnflushedRunner(native, root);
-  final source = _FileSite(clip);
+  final source = _FileSite('http://127.0.0.1:${server.port}/generated.mp4');
   final recorder = Recorder(
     sites: (_) => source,
     ffmpeg: injected,
@@ -54,7 +88,11 @@ Future<Map<String, Object?>> probeInterruptedRecording(Directory root) async {
         }
       }
       if (bytes == 0) {
-        if (DateTime.now().isAfter(deadline)) throw StateError('Native capture produced no segment');
+        if (DateTime.now().isAfter(deadline)) {
+          throw StateError(
+            'Native capture produced no segment: ${task.status.name} ${task.lastErrorStage} ${task.lastError}',
+          );
+        }
         await Future<void>.delayed(const Duration(seconds: 1));
       }
     }
@@ -93,12 +131,13 @@ Future<Map<String, Object?>> probeInterruptedRecording(Directory root) async {
     };
   } finally {
     await recorder.dispose();
+    await server.close(force: true);
   }
 }
 
 final class _FileSite extends LiveSite {
-  new(this.clip);
-  final File clip;
+  new(this.url);
+  final String url;
   LiveRoom get room => LiveRoom(platform: id, roomId: '1', nick: 'Native fixture', liveStatus: LiveStatus.live);
   @override
   String get id => 'fixture';
@@ -111,9 +150,7 @@ final class _FileSite extends LiveSite {
     LivePlayQuality(quality: 'Native', id: 'original'),
   ];
   @override
-  Future<List<String>> getPlayUrls({required LiveRoom detail, required LivePlayQuality quality}) async => [
-    clip.uri.toString(),
-  ];
+  Future<List<String>> getPlayUrls({required LiveRoom detail, required LivePlayQuality quality}) async => [url];
 }
 
 final class _UnflushedRunner implements FfmpegRunner {
