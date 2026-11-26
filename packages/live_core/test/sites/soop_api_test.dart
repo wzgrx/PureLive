@@ -860,6 +860,85 @@ void main() {
     });
   });
 
+  group('signature emoticons', () {
+    /// A `signature_emoticon_api.php` answer: the top-level `img_path` base
+    /// and `data` (a flat list, `work=list`).
+    String listBody({required List<Map<String, Object?>> items, String imgPath = 'https://static.file.sooplive.com/signature_emoticon/qmffnqurwl/'}) =>
+        jsonEncode({'result': 1, 'img_path': imgPath, 'data': items});
+
+    /// The `v=tier` shape: `data` an object of tiers, each a list.
+    String tierBody(Map<String, List<Map<String, Object?>>> tiers, {String imgPath = 'https://static.file.sooplive.com/signature_emoticon/qmffnqurwl/'}) =>
+        jsonEncode({'result': 1, 'img_path': imgPath, 'data': tiers});
+
+    test('the flat list: keyword -> img_path + mobile_img, a base that every item shares', () {
+      final table = SoopApi.signatureEmoticons(listBody(items: [
+        {'title': '선글라스', 'mobile_img': '16016a16ca9fe1ddf.webp', 'pc_img': 'p1.webp'},
+        {'title': '굳', 'mobile_img': '9905698f4ab1b7db4.png', 'pc_img': '8954698f4aaedddef.png'},
+      ]));
+      expect(table, {
+        '선글라스': 'https://static.file.sooplive.com/signature_emoticon/qmffnqurwl/16016a16ca9fe1ddf.webp',
+        '굳': 'https://static.file.sooplive.com/signature_emoticon/qmffnqurwl/9905698f4ab1b7db4.png',
+      });
+    });
+
+    test('the v=tier shape: every tier in order, the keyword first wins', () {
+      final table = SoopApi.signatureEmoticons(tierBody({
+        'tier1': [
+          {'title': '굳', 'mobile_img': 'a1.png'},
+          {'title': '하하', 'mobile_img': 'a2.webp'},
+        ],
+        'tier2': [
+          {'title': '굳', 'mobile_img': 'b1.png'},
+          {'title': '흐어어엉', 'mobile_img': 'b2.webp'},
+        ],
+      }));
+      expect(table, {
+        '굳': 'https://static.file.sooplive.com/signature_emoticon/qmffnqurwl/a1.png',
+        '하하': 'https://static.file.sooplive.com/signature_emoticon/qmffnqurwl/a2.webp',
+        '흐어어엉': 'https://static.file.sooplive.com/signature_emoticon/qmffnqurwl/b2.webp',
+      });
+    });
+
+    test('items without a keyword or a file are left out; without a base the table is empty', () {
+      final table = SoopApi.signatureEmoticons(listBody(items: [
+        {'title': '', 'mobile_img': 'x.webp'},
+        {'title': 'ok', 'mobile_img': ''},
+        {'title': 'ok', 'mobile_img': 'y.webp'},
+        {'mobile_img': 'z.webp'},
+      ]));
+      expect(table, {'ok': 'https://static.file.sooplive.com/signature_emoticon/qmffnqurwl/y.webp'});
+      expect(SoopApi.signatureEmoticons(listBody(items: [
+        {'title': '선글라스', 'mobile_img': 'a.webp'},
+      ], imgPath: '')), isEmpty);
+      // No img_path at all: nothing to build addresses from.
+      expect(SoopApi.signatureEmoticons(jsonEncode({'result': 1, 'data': [
+        {'title': '선글라스', 'mobile_img': 'a.webp'},
+      ]})), isEmpty);
+    });
+
+    test('data missing or empty is an unknown streamer: empty', () {
+      expect(SoopApi.signatureEmoticons(jsonEncode({'result': 1})), isEmpty);
+      expect(SoopApi.signatureEmoticons(jsonEncode(<String, Object?>{'result': 1, 'img_path': 'https://x/', 'data': []})), isEmpty);
+      expect(SoopApi.signatureEmoticons(jsonEncode(<String, Object?>{'result': 1, 'img_path': 'https://x/', 'data': {}})), isEmpty);
+    });
+
+    test('a result other than 1 is ApiChanged', () {
+      expect(() => SoopApi.signatureEmoticons(jsonEncode({'result': 0, 'data': <Object?>[]})), throwsA(isA<ApiChanged>()));
+    });
+
+    test('roomDetail carries the given emotes into the danmaku arguments', () {
+      final emotes = {'선글라스': 'https://static.file.sooplive.com/signature_emoticon/qmffnqurwl/16016a16ca9fe1ddf.webp'};
+      final channel = SoopApi.channel(_sample('S05-live-live').body).channel;
+      final room = SoopApi.roomDetail(_channel(channel), requestedId: 'ab12', now: _now, withDanmaku: true, emotes: emotes);
+      expect((room.danmakuData! as SoopDanmakuArgs).emotes, emotes);
+      // Without withDanmaku the arguments are not built, so emotes stay out.
+      expect(SoopApi.roomDetail(_channel(channel), requestedId: 'ab12', now: _now, emotes: emotes).danmakuData, isNull);
+      // danmakuArgs threads emotes through on its own.
+      expect(SoopApi.danmakuArgs(channel, roomId: 'a', emotes: emotes)!.emotes, emotes);
+      expect(SoopApi.danmakuArgs(channel, roomId: 'a')!.emotes, isEmpty);
+    });
+  });
+
   group('app links (7-9)', () {
     test('the app link list entries carry (S02 `scheme`) names the streamer', () {
       final entry = _entries('S02-area-p1').first;

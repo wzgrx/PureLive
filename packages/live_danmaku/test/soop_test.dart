@@ -83,9 +83,9 @@ Map<String, Object?> _project(LiveMessage message) => {
   'userLevel': message.userLevel,
   'fansLevel': message.fansLevel,
   'fansName': message.fansName,
-  'isLocal': message.isLocal,
-  'data': message.data,
-};
+   'isLocal': message.isLocal,
+   'data': message.data,
+ };
 
 List<int> _hex(String text) => [
   for (var index = 0; index < text.length; index += 2) int.parse(text.substring(index, index + 2), radix: 16),
@@ -548,6 +548,30 @@ void main() {
       });
       expect(SoopDanmakuProtocol.chat(utf8.encode('\fonly\f\f\f\f\fsix')), isNotNull);
       expect(SoopDanmakuProtocol.chat(utf8.encode('\fonly\f\f\f\fsix')), isNull);
+    });
+
+    test('chat lines name the room signature emoticons (the keyword, in order, once each)', () {
+      const table = {'선글라스': 'https://static.file.sooplive.com/signature_emoticon/x/9905698f4ab1b7db4.png', '이모티콘': 'https://static.file.sooplive.com/signature_emoticon/x/749869ce94926b930.webp'};
+      // The line carries the signature pictures as emotes, keyword → URL.
+      final message = SoopDanmakuProtocol.chat(_chat('선글라스 봐서 이모티콘 선글라스'), emotes: table)!;
+      expect(
+        [for (final emote in message.emotes) (emote.code, emote.url)],
+        [
+          ('선글라스', table['선글라스']),
+          ('이모티콘', table['이모티콘']),
+        ],
+      );
+      // A keyword named twice is one emote; the text keeps its keywords as-is.
+      expect(message.message, '선글라스 봐서 이모티콘 선글라스');
+      // No table (or no keyword in the text): the line carries none.
+      expect(SoopDanmakuProtocol.chat(_chat('안녕'))?.emotes, isEmpty);
+      expect(SoopDanmakuProtocol.chat(_chat('안녕'), emotes: table)?.emotes, isEmpty);
+      // codeEmotes alone: each keyword named, once, in first-run order.
+      expect(
+        [for (final emote in SoopDanmakuProtocol.codeEmotes('이모티콘 선글라스 이모티콘', table)) emote.code],
+        ['이모티콘', '선글라스'],
+      );
+      expect(SoopDanmakuProtocol.codeEmotes('무관한 문장', table), isEmpty);
     });
   });
 

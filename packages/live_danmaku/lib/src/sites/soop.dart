@@ -219,11 +219,13 @@ abstract final class SoopDanmakuProtocol {
 
   /// The chat lines of one server [frame] (3.x `decodeMessage`), its
   /// balloons ([balloon]) and subscriptions ([subscription], D07.7); other
-  /// services (viewer lists, flags, …) are ignored.
-  static List<LiveMessage> decode(List<int> frame) => [
+  /// services (viewer lists, flags, …) are ignored. [emotes] (the room's
+  /// signature emoticons, keyword → picture, [SoopDanmakuArgs.emotes]) is
+  /// given to the chat lines; without it they carry none.
+  static List<LiveMessage> decode(List<int> frame, {Map<String, String> emotes = const {}}) => [
     for (final packet in packets(frame))
       ?switch (packet.service) {
-        chatService => chat(packet.body),
+        chatService => chat(packet.body, emotes: emotes),
         balloonService || relayedBalloonService || adBalloonService || videoBalloonService => balloon(packet),
         subscriptionService || subscriptionMonthsService => subscription(packet),
         _ => null,
@@ -237,8 +239,11 @@ abstract final class SoopDanmakuProtocol {
   /// 3.x also dropped the texts `1` and `-1` and every text holding `|`;
   /// the web player shows them (`SVC_CHATMESG` in LivePlayer.js takes the
   /// text field whole; `|` only separates the two flags of field 7), and so
-  /// does this since M5.F B-6.
-  static LiveMessage? chat(List<int> body) {
+  /// does this since M5.F B-6. [emotes] (the room's signature emoticons,
+  /// keyword → picture) is matched against the text: each keyword it names
+  /// becomes the line's [LiveMessage.emotes] ([codeEmotes]), as the web
+  /// player shows the signature picture; without it the line carries none.
+  static LiveMessage? chat(List<int> body, {Map<String, String> emotes = const {}}) {
     final fields = [for (final part in ListUtil.splitList(body, 0x0c)) utf8.decode(part, allowMalformed: true)];
     if (fields.length <= 6) return null;
     final text = fields[1].trim();
@@ -250,7 +255,25 @@ abstract final class SoopDanmakuProtocol {
       userId: userId(fields[2]),
       message: text,
       color: LiveMessageColor.white,
+      emotes: emotes.isEmpty ? const [] : codeEmotes(text, emotes),
     );
+  }
+
+  /// The signature-emoticon keywords of [text] that [table] has, each once,
+  /// in the order they are named: a keyword is a plain word (the room's
+  /// `title`, e.g. `선글라스`), so its first run in the text names it.
+  static List<LiveEmote> codeEmotes(String text, Map<String, String> table) {
+    final named = <String, String>{
+      for (final MapEntry(:key, :value) in table.entries)
+        if (key.isNotEmpty && value.isNotEmpty && text.contains(key)) key: value,
+    };
+    if (named.isEmpty) return const [];
+    final pattern = RegExp(named.keys.map(RegExp.escape).join('|'));
+    final seen = <String>{};
+    return [
+      for (final match in pattern.allMatches(text))
+        if (seen.add(match.group(0)!)) LiveEmote(code: match.group(0)!, url: named[match.group(0)!]!),
+    ];
   }
 
   /// The sender's id of a chat line's field 2, without the `(n)` a second
@@ -314,6 +337,7 @@ final class SoopDanmakuConnection extends DanmakuSocketConnection<SoopDanmakuArg
       );
 
   String _chatNo = '';
+  Map<String, String> _emotes = const {};
   int _opens = 0;
 
   /// Joins the room of [args]. Null arguments (a room whose details carry no
@@ -328,6 +352,7 @@ final class SoopDanmakuConnection extends DanmakuSocketConnection<SoopDanmakuArg
       throw const DanmakuStartFailure(DanmakuCloseReason.connectionFailed, detail: 'No chat server');
     }
     _chatNo = args.chatNo;
+    _emotes = args.emotes;
     return DanmakuSocketTarget(
       endpoints: SoopDanmakuProtocol.endpoints(args),
       headers: SoopDanmakuProtocol.handshakeHeaders(args.headers),
@@ -356,7 +381,7 @@ final class SoopDanmakuConnection extends DanmakuSocketConnection<SoopDanmakuArg
   void onData(DanmakuSocketSession session, Object? data) {
     // Chat comes in binary frames; 3.x only logged text frames.
     if (data is! List<int>) return;
-    SoopDanmakuProtocol.decode(data).forEach(session.message);
+    SoopDanmakuProtocol.decode(data, emotes: _emotes).forEach(session.message);
   }
 
   @override
