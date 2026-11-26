@@ -28,6 +28,8 @@ VideoOutput::VideoOutput(int64_t handle,
       configuration_(configuration),
       registrar_(registrar),
       thread_pool_ref_(thread_pool_ref) {
+  // Private acceptance candidate: isolate the CPU texture path from D3D interop.
+  configuration.enable_hardware_acceleration = false;
   // The constructor must be invoked through the thread pool.
   auto future = thread_pool_ref_->Post([&]() {
     mpv_set_option_string(handle_, "video-sync", "audio");
