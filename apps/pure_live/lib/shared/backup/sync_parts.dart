@@ -45,6 +45,21 @@ enum SyncPart {
   /// device's own unless asked for).
   bool get optIn => this == localEvents;
 
+  /// The restore preview's [RestorePartKind] of this part; null for the
+  /// parts that have no line of their own (settings are not a preview part,
+  /// accounts are counted on the preview itself).
+  RestorePartKind? get kind => switch (this) {
+    settings || accounts => null,
+    follows => RestorePartKind.follows,
+    areas => RestorePartKind.areas,
+    history => RestorePartKind.history,
+    tags => RestorePartKind.tags,
+    keywords => RestorePartKind.keywords,
+    users => RestorePartKind.users,
+    webdav => RestorePartKind.webdav,
+    localEvents => RestorePartKind.localEvents,
+  };
+
   /// The sync part of a restore preview's [kind]; null for the parts device
   /// sync does not carry (search words, IPTV playlists, multi-view).
   static SyncPart? of(RestorePartKind kind) => switch (kind) {

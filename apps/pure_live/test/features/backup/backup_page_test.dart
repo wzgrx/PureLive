@@ -386,6 +386,45 @@ void main() {
       expect(_toasts, ['恢复备份成功']);
     });
 
+    testWidgets('each part of a v4 file has a box: unticking one leaves that part as it is', (tester) async {
+      final services = await pump(tester);
+      await tester.runAsync(() async {
+        await services.store.follows.add(_room('1'));
+        await File(p(folder, 'purelive_2026-09-01T10_00_00.txt')).writeAsString(
+          jsonEncode({
+            ..._legacyBackup([_room('2')], history: [_room('9')]),
+            'backupVersion': 4,
+          }),
+        );
+      });
+      await refresh(tester);
+      await tester.tap(find.text('purelive_2026-09-01T10_00_00.txt'));
+      await _settle(tester);
+      // One ticked box per part (as Obtainium's import sheet), and 全选
+      // that empties them.
+      expect(find.byKey(const ValueKey('backup-part-follows')), findsOneWidget);
+      expect(find.byKey(const ValueKey('backup-part-history')), findsOneWidget);
+      expect(find.byKey(const ValueKey('backup-part-all')), findsOneWidget);
+
+      // Unticking the follows leaves them as they are, the history comes.
+      await tester.tap(find.byKey(const ValueKey('backup-part-follows')));
+      await _settle(tester);
+      await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
+      await _settle(tester);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['1']);
+      expect([for (final room in (await tester.runAsync(services.store.history.all))!) room.roomId], ['9']);
+
+      // Nothing ticked: nothing to restore, "恢复" does nothing.
+      await tester.tap(find.text('purelive_2026-09-01T10_00_00.txt'));
+      await _settle(tester);
+      await tester.tap(find.byKey(const ValueKey('backup-part-all')));
+      await _settle(tester);
+      expect(tester.widget<DialogActionButton>(find.byKey(const ValueKey('backup-restore-confirm'))).onPressed, isNull);
+      await tester.tap(find.text('取消'));
+      await _settle(tester);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['1']);
+    });
+
     testWidgets("a file's ⋮, right click and long press open the same small menu; delete asks first", (tester) async {
       await pump(tester);
       await tester.runAsync(writeBackups);
