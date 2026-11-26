@@ -177,8 +177,11 @@ void main() {
   });
 
   group('MediaOpener', () {
-    test('a direct line goes to the engine with its headers and the site proxy', () async {
-      final opener = MediaOpener(proxy: const FixedProxyPolicy(perSite: {'twitch': HttpProxyRoute('127.0.0.1', 7897)}));
+    test('an opted-out direct line goes to the engine with its headers and the site proxy', () async {
+      final opener = MediaOpener(
+        prefetchLiveHls: false,
+        proxy: const FixedProxyPolicy(perSite: {'twitch': HttpProxyRoute('127.0.0.1', 7897)}),
+      );
       const line = LivePlayLine('https://cdn.test/live.m3u8', headers: {'referer': 'https://twitch.tv/'});
       final input = await opener.open(const LineSource(line), site: 'twitch');
       expect(input.route, MediaRoute.direct);
