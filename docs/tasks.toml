@@ -8670,24 +8670,29 @@ note = "5.7.2缺陷版本十包交付；原设备及无样本问题保留复验�
 id = "V02.94"
 title = "Linux音频输出升级回归"
 type = "原生"
-status = "开发中"
+status = "待真机"
 size = "中"
 tier = 1
 from = "GitHub issue #266；维护者提交链接要求继续处理"
-branch = "ai/V02.94-linux-audio-266"
 stages = ["正式包对照与根因复现", "输出策略修复和音频回路验证"]
-done = 0
-next = "验证ALSA插件路径及Pulse回路，先取原生证据再修复"
+
+
+done = 2
+date = "2026-11-26"
+commit = "a18749e3483280771ba58d59dbe4f286fb260f79"
+note = "5.7.3同源十包和Linux实际音频交付；原用户物理音频设备保留复验。"
 
 [[task]]
 id = "Y01.50"
 title = "5.7.3音频修复全平台发布"
 type = "发布"
-status = "开发中"
+status = "完成"
 size = "大"
 tier = 1
 from = "维护者要求继续#266、门禁通过后合并分支PR并发布更新"
-branch = "ai/Y01.50-linux-audio-release"
 stages = ["冻结音频修复源码", "同源十包与音频成品验收", "发布和双更新源"]
-done = 0
-next = "完整门禁后构建，Linux实际音频回路验收"
+
+done = 3
+date = "2026-11-26"
+commit = "a18749e3483280771ba58d59dbe4f286fb260f79"
+note = "5.7.3同源十包和Linux实际音频交付；原用户物理音频设备保留复验。"
