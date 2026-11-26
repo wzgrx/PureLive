@@ -100,7 +100,15 @@ internal class XiaohongshuGuestChannel(private val activityProvider: () -> Activ
             val browser = WebView(activity)
             view = browser
             WebViewCompat.setProfile(browser, PROFILE)
-            browser.visibility = View.INVISIBLE
+            // INVISIBLE marks Chromium's page hidden and may suspend the
+            // requestAnimationFrame work needed for visitor bootstrap.
+            // Keep page visibility while drawing no pixels or taking input.
+            browser.visibility = View.VISIBLE
+            browser.alpha = 0f
+            browser.isFocusable = false
+            browser.isFocusableInTouchMode = false
+            browser.isClickable = false
+            browser.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
             activity.findViewById<ViewGroup>(android.R.id.content).addView(browser, 0, ViewGroup.LayoutParams(1280, 900))
             browser.settings.apply {
                 javaScriptEnabled = true

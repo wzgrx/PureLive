@@ -52,6 +52,8 @@ final class WebViewXiaohongshuGuest implements XiaohongshuGuest {
       return value;
     } on TransportFailure {
       rethrow;
+    } on SiteError {
+      rethrow;
     } on TimeoutException {
       throw const TransportFailure('xiaohongshu', TransportReason.timeout, 'Visitor initialization timed out');
     } on Object {
@@ -256,7 +258,7 @@ final class InAppXiaohongshuGuestBrowser implements XiaohongshuGuestBrowser {
     }
   }
 
-  static TransportFailure _visitorFailure(Uri page, PlatformException error) {
+  static Exception _visitorFailure(Uri page, PlatformException error) {
     final reason = switch (error.code) {
       'cancelled' => TransportReason.cancelled,
       'timeout' => TransportReason.timeout,
@@ -293,6 +295,13 @@ final class InAppXiaohongshuGuestBrowser implements XiaohongshuGuestBrowser {
       for (final key in const ['has_headers', 'has_identity', 'signer'])
         if (data[key] case final bool present) '$key=$present',
     ];
+    if (error.code == 'unsupported') {
+      return ApiChanged.withCode(
+        'xiaohongshu',
+        ApiFailureCode.xiaohongshuVisitorIsolationUnavailable,
+        '$label (${hints.join(', ')})',
+      );
+    }
     return TransportFailure('xiaohongshu', reason, '$label (${hints.join(', ')})');
   }
 

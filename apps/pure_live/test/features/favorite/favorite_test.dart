@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,6 +65,21 @@ final class PartialBatchSite extends FakeSite implements LiveSiteFollowBatchRefr
     'bilibili:1': room(id, '1', status: LiveStatus.live),
     'bilibili:2': room(id, '99', status: LiveStatus.offline),
   };
+}
+
+final class UidBatchSite extends FakeSite implements LiveSiteFollowBatchRefresher {
+  new()
+    : super('bilibili', {
+        for (final id in ['1', '2'])
+          id: LiveRoom(platform: 'bilibili', roomId: id, userId: '10$id', liveStatus: LiveStatus.live),
+      });
+  final batchUids = <List<String?>>[];
+  @override
+  Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async {
+    batchUids.add(rooms.map((room) => room.userId).toList());
+    if (rooms.any((room) => room.userId == null || room.userId!.isEmpty)) return {};
+    return {for (final room in rooms) room.identityKey: details[room.roomId]!};
+  }
 }
 
 LiveRoom room(
@@ -148,6 +164,31 @@ void main() {
   });
 
   group('refresh', () {
+    test('issue221: old follows acquire UIDs once and the reopened SQLite store uses the next batch', () async {
+      final directory = await Directory.systemTemp.createTemp('purelive-uid-refresh-');
+      var store = await LiveStore.open(directory, cipher: FakeCipher());
+      addTearDown(() async {
+        await store.close();
+        await directory.delete(recursive: true);
+      });
+      for (final id in ['1', '2']) {
+        await store.follows.add(LiveRoom(platform: 'bilibili', roomId: id));
+      }
+      final site = UidBatchSite();
+      final refresher = FollowRefresher(sites: SiteRegistry({'bilibili': () => site}));
+      final first = await refresher.refresh(await store.follows.all(), concurrency: 2);
+      expect(first.failed, 0);
+      expect(site.requested, unorderedEquals(['1', '2']));
+      await store.follows.update(first.rooms);
+      await store.close();
+      store = await LiveStore.open(directory, cipher: FakeCipher());
+      expect((await store.follows.all()).map((room) => room.userId), ['101', '102']);
+      final second = await refresher.refresh(await store.follows.all(), concurrency: 2);
+      expect(second.failed, 0);
+      expect(site.batchUids.last, ['101', '102']);
+      expect(site.requested, unorderedEquals(['1', '2']), reason: 'no second per-room detail requests');
+    });
+
     test('batch confirmation skips only the matching room, leaving detail fallback and progress intact', () async {
       final site = PartialBatchSite('bilibili', {'2': room('bilibili', '2', status: LiveStatus.live)});
       final refresher = FollowRefresher(sites: SiteRegistry({'bilibili': () => site}));

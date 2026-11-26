@@ -754,6 +754,30 @@ void main() {
   });
 
   group('M4.D2: headline boards (C-9) and the stream end (C-10)', () {
+    test('issue207: an explicit expired countdown never inherits a one-hour total duration', () {
+      final now = DateTime.utc(2026, 11, 26);
+      for (final countdown in [0, -1]) {
+        final decoded = HuyaDanmakuProtocol.decode(
+          _single(
+            HuyaDanmakuProtocol.superChatUri,
+            _panel([(id: 1, nick: 'Viewer', text: 'Expired', cost: 30, total: 3600, countdown: countdown)]),
+          ),
+          now: now,
+        );
+        expect(decoded.messages, isEmpty);
+      }
+      final message =
+          HuyaDanmakuProtocol.decode(
+                _single(
+                  HuyaDanmakuProtocol.superChatUri,
+                  _panel([(id: 1, nick: 'Viewer', text: 'Active', cost: 30, total: 3600, countdown: 6)]),
+                ),
+                now: now,
+              ).messages.single.data!
+              as LiveSuperChatMessage;
+      expect(message.endTime, now.add(const Duration(seconds: 6)));
+    });
+
     final now = DateTime.utc(2026, 10, 1, 0, 20);
 
     test('C-9: a notice carrying a board gives its entries; an empty board nothing; no panel asks a fetch', () {

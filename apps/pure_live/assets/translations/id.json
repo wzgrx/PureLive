@@ -3755,6 +3755,7 @@
     "xiaohongshu_directory_scope": "Perangkat ini belum dapat memuat daftar dan obrolan Xiaohongshu. Cari nomor ruang atau tempel tautan siaran langsung untuk menonton; mengikuti hanya menyimpan siaran tersebut.",
     "xiaohongshu_display_viewers": "Xiaohongshu menampilkan {value} tayangan (total yang dibulatkan, bukan orang yang menonton sekarang)",
     "xiaohongshu_guest_directory_scope": "Jelajahi siaran publik menurut kategori, cari nomor ruang atau tempel tautan siaran langsung. Mengikuti hanya menyimpan siaran ini; impor tautan baru saat penyiar memulai siaran berikutnya.",
+    "xiaohongshu_guest_isolation_unavailable": "WebView ini tidak mendukung sesi tamu terpisah. Kategori dan obrolan Xiaohongshu tidak tersedia; tautan yang dibagikan tetap dapat diputar.",
     "xiaohongshu_restricted": "Siaran ini memiliki syarat menonton (berbayar, hanya sebagian penonton, atau wilayah tertentu), jadi tidak bisa diputar di sini.",
     "xiaohongshu_room_scope": "Setiap siaran Xiaohongshu mendapat nomor ruang baru; ini mengikuti siaran ini. Saat streamer siaran lagi, impor tautan bagikan yang baru.",
     "xiaohongshu_unknown_access": "Belum diketahui apakah siaran ini publik; mungkin tidak bisa diputar di sini.",

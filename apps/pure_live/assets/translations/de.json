@@ -3755,6 +3755,7 @@
     "xiaohongshu_directory_scope": "Dieses Gerät kann das Xiaohongshu-Verzeichnis und den Chat noch nicht laden. Zum Ansehen eine Raumnummer suchen oder einen Live-Link einfügen; Folgen speichert nur diese Sendung.",
     "xiaohongshu_display_viewers": "Xiaohongshu zeigt {value} Aufrufe (eine gerundete Summe, nicht die aktuellen Zuschauer)",
     "xiaohongshu_guest_directory_scope": "Öffentliche Streams nach Kategorie durchsuchen, eine Raumnummer suchen oder einen Live-Link einfügen. Folgen speichert diese Sendung; für die nächste einen neuen Link importieren.",
+    "xiaohongshu_guest_isolation_unavailable": "Dieses WebView unterstützt keine getrennte Gastsitzung. Kategorien und Chat von Xiaohongshu sind nicht verfügbar; geteilte Links können weiterhin abgespielt werden.",
     "xiaohongshu_restricted": "Diese Sendung hat Zuschaubedingungen (kostenpflichtig, nur manche Zuschauer oder bestimmte Regionen) und kann hier nicht abgespielt werden.",
     "xiaohongshu_room_scope": "Jede Xiaohongshu-Sendung bekommt eine neue Raumnummer; dies folgt dieser. Wenn der Streamer wieder live geht, importiere den neuen Teilen-Link.",
     "xiaohongshu_unknown_access": "Noch unklar, ob diese Sendung öffentlich ist; sie lässt sich hier eventuell nicht abspielen.",

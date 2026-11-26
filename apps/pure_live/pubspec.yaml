@@ -121,6 +121,8 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  # Existing pinned fork; used only by native stability fixtures.
+  media_kit: ^1.1.11
   path_provider_platform_interface: ^2.1.2
   share_plus_platform_interface: ^7.2.0
   very_good_analysis: ^11.0.0

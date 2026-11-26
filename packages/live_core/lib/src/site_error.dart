@@ -137,6 +137,9 @@ enum ApiFailureCode {
 
   /// The metadata response explicitly reported no pushed stream.
   douyuStreamNotPushed,
+
+  /// The WebView cannot safely isolate a temporary visitor from account data.
+  xiaohongshuVisitorIsolationUnavailable,
 }
 
 /// The response does not match the platform spec.

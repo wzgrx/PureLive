@@ -3755,6 +3755,7 @@
     "xiaohongshu_directory_scope": "此裝置暫時無法載入小紅書直播列表與彈幕。可搜尋直播房間號或貼上直播分享連結觀看；追蹤僅保留這一場直播。",
     "xiaohongshu_display_viewers": "小紅書顯示 {value} 人看過（累計的約數，不是線上人數）",
     "xiaohongshu_guest_directory_scope": "可依分類瀏覽公開直播，也可搜尋房間號或貼上直播分享連結。追蹤僅保留這一場直播，主播下次開播需要重新匯入。",
+    "xiaohongshu_guest_isolation_unavailable": "目前的 WebView 不支援獨立訪客環境，小紅書分類與彈幕暫時無法使用；仍可透過分享連結觀看。",
     "xiaohongshu_restricted": "這場直播設定了觀看條件（付費、僅限部分觀眾或限定地區），這裡無法播放。",
     "xiaohongshu_room_scope": "小紅書每場直播都有新的房間號，這裡關注的是這一場。主播下次開播時，請重新匯入新的分享連結。",
     "xiaohongshu_unknown_access": "暫時無法確認這場直播是否公開，這裡可能無法播放。",

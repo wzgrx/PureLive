@@ -170,6 +170,9 @@ String describeLoadError(Object? error) => switch (error) {
   RiskControl(cookieSuspect: true) => i18n('load_error_cookie'),
   RiskControl() => i18n('load_error_risk'),
   RegionBlocked() => i18n('load_error_region'),
+  ApiChanged(code: ApiFailureCode.xiaohongshuVisitorIsolationUnavailable) => i18n(
+    'xiaohongshu_guest_isolation_unavailable',
+  ),
   ApiChanged() => i18n('load_error_changed'),
   NetworkFailure() || TransportFailure() || HttpStatusFailure() => i18n('load_error_network'),
   _ => i18n('load_error_unknown'),
@@ -186,6 +189,9 @@ String failureText(Object? error) => switch (error) {
   RateLimited() || RiskControl() => i18n('live_play_error_rejected'),
   RegionBlocked() => i18n('live_play_error_region'),
   StreamUnavailable() => i18n('live_play_error_no_stream'),
+  ApiChanged(code: ApiFailureCode.xiaohongshuVisitorIsolationUnavailable) => i18n(
+    'xiaohongshu_guest_isolation_unavailable',
+  ),
   ApiChanged() => i18n('live_play_error_api_changed'),
   NetworkFailure() || TransportFailure() => i18n('live_play_error_network'),
   // G02.3: the session plays again by itself once the network answers.
