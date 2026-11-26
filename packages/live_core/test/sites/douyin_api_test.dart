@@ -1301,7 +1301,7 @@ void main() {
       );
     });
 
-    test('mergeHevc keeps h264 and adds h265: ids, labels, codecs, sort, size and lease', () {
+    test('mergeHevc folds H.265 into the same quality: one id, one label, both codecs', () {
       final h264 = avcStream();
       final merged = DouyinApi.mergeHevc(
         h264,
@@ -1315,33 +1315,28 @@ void main() {
       expect(DouyinApi.hasHevc(h264), isFalse);
       expect(DouyinApi.hasHevc(merged), isTrue);
       final qualities = DouyinApi.qualities(merged);
-      expect(qualities.map((quality) => quality.id).toSet(), {'hd', 'hd+h265', 'md', 'md+h265'});
-      expect(
-        {for (final quality in qualities) quality.id: quality.codec},
-        {'hd': 'avc', 'hd+h265': 'hevc', 'md': 'avc', 'md+h265': 'hevc'},
-      );
-      expect(
-        qualities.map((quality) => quality.id).toList().indexOf('hd'),
-        lessThan(qualities.indexWhere((q) => q.id == 'hd+h265')),
-        reason: 'the plain quality comes first',
-      );
-      expect(qualities.first.quality, '超清', reason: 'h264 keeps the plain label');
-      expect(qualities[1].quality, '超清（H.265）', reason: 'its HEVC twin says so');
+      expect(qualities.map((quality) => quality.id), ['hd', 'md'], reason: 'one entry per quality, no +h265 twins');
+      expect(qualities.map((quality) => quality.quality), ['超清', '流畅'], reason: 'no 「（H.265）」 suffixes');
+      expect(qualities.first.codec, 'avc', reason: '超清 is playable as H.264 too');
       expect(DouyinApi.qualities(h264).map((quality) => quality.id), ['hd', 'md'], reason: 'h264 is untouched');
 
-      final hevc = DouyinApi.resolution(
+      final lines = DouyinApi.resolution(
         merged,
-        quality: qualities[1],
+        quality: qualities.first,
         webRid: '531854687617',
         issuedAt: DateTime.now(),
       );
-      expect(hevc.lines.single.codec, 'hevc');
-      expect(hevc.lines.single.url, contains('_hiqhd5.flv'));
-      expect((hevc.lines.single.width, hevc.lines.single.height), (1280, 720));
-      expect(hevc.lines.single.lease, isNotNull, reason: 'wsSecret + keeptime is a lease');
+      expect(lines.lines.map((line) => line.codec), [
+        'hevc',
+        'avc',
+      ], reason: 'HEVC first; the codec preference reorders');
+      expect(lines.lines.first.url, contains('_hiqhd5.flv'));
+      expect((lines.lines.first.width, lines.lines.first.height), (1280, 720));
+      expect(lines.lines.first.lease, isNotNull, reason: 'wsSecret + keeptime is a lease');
+      expect(lines.lines.last.url, contains('_hd.flv?auth_key=1'));
     });
 
-    test('dedupe is scoped by codec: the same URLs on H.265 stay another quality', () {
+    test('a repeat of the H.264 rendition in the HEVC set is not a second yethevc line', () {
       final merged = DouyinApi.mergeHevc(
         avcStream(),
         DouyinApi.roomPageHevcData(
@@ -1352,8 +1347,15 @@ void main() {
         ),
       );
       final qualities = DouyinApi.qualities(merged);
-      expect(qualities.map((quality) => quality.id).toSet(), {'hd', 'hd+h265', 'md', 'md+h265'});
-      expect(qualities.where((quality) => '${quality.data}'.contains('_md.flv')).length, 2, reason: 'one per codec');
+      expect(qualities.map((quality) => quality.id), ['hd', 'md']);
+      expect(qualities.last.codec, 'avc', reason: 'md is `_md.flv` in both sets');
+      final md = DouyinApi.resolution(
+        merged,
+        quality: qualities.last,
+        webRid: '531757997661',
+        issuedAt: DateTime.now(),
+      );
+      expect(md.lines.map((line) => line.codec), ['avc'], reason: 'one line: the H.264 original');
     });
 
     test('sdk_params as a string with unescaped quotes still gives its codec, bitrate and size', () {

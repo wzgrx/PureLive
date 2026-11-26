@@ -1228,7 +1228,7 @@ void main() {
       return '<html><script>self.__pace_f.push([1,${jsonEncode('0:$text\n')}])</script></html>';
     }
 
-    test('preferH264 false: one page request, the HEVC twin appears; true: nothing extra', () async {
+    test('preferH264 false: one page request, uhd plays H.265 as well as H.264; true: nothing extra', () async {
       final hevc = _replay([
         'S01-home',
         'S04-enter-live',
@@ -1237,8 +1237,14 @@ void main() {
       ], preferH264: () => false);
       final detail = await hevc.site.getRoomDetail(roomId: _webRid);
       final qualities = await hevc.site.getPlayQualities(detail: detail);
-      expect(qualities.map((quality) => quality.id), contains('uhd+h265'));
-      expect(qualities.firstWhere((quality) => quality.id == 'uhd+h265').codec, 'hevc');
+      expect(qualities.map((quality) => quality.quality), contains('蓝光'), reason: 'no 「（H.265）」 twin');
+      final uhd = qualities.firstWhere((quality) => quality.id == 'uhd');
+      final lines = await hevc.site.resolvePlayUrls(detail: detail, quality: uhd);
+      expect(
+        lines.lines.map((line) => line.codec),
+        contains('hevc'),
+        reason: "the page's HEVC line is in the same quality",
+      );
       expect(_paths(hevc.http), [_home, _enter, 'GET live.douyin.com/$_webRid', _reflow]);
 
       final avc = _replay(['S01-home', 'S04-enter-live', 'S05-reflow-live'], preferH264: () => true);
@@ -1247,6 +1253,11 @@ void main() {
         (await avc.site.getPlayQualities(detail: plain)).map((quality) => quality.id),
         isNot(contains('uhd+h265')),
       );
+      final plainLines = await avc.site.resolvePlayUrls(
+        detail: plain,
+        quality: (await avc.site.getPlayQualities(detail: plain)).first,
+      );
+      expect(plainLines.lines.map((line) => line.codec), isNot(contains('hevc')));
       expect(_paths(avc.http), [_home, _enter, _reflow], reason: 'no extra request when H.264 is preferred');
     });
 

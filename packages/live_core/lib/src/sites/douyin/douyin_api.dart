@@ -619,7 +619,9 @@ abstract final class DouyinApi {
     String? cookie,
   }) {
     final variant = _variantFor(_variants(streamUrl), quality.id);
-    final lines = variant?.lines ?? [for (final url in _urls(quality.data)) (url: url, format: _formatOf(url))];
+    final lines =
+        variant?.lines ??
+        <_Line>[for (final url in _urls(quality.data)) (url: url, format: _formatOf(url), codec: quality.codec)];
     final headers = mediaHeaders(webRid, cookie: cookie);
     final used = <StreamFormat, int>{};
     final result = <LivePlayLine>[];
@@ -630,7 +632,7 @@ abstract final class DouyinApi {
           line.url.toString(),
           headers: headers,
           format: line.format,
-          codec: variant?.codec,
+          codec: line.codec ?? variant?.codec,
           lineId: index == 1 ? line.format.name : '${line.format.name}-$index',
           lease: lease(line.url, issuedAt),
           width: variant?.size?.width,
@@ -705,8 +707,10 @@ abstract final class DouyinApi {
     return query.containsKey('k') ? time(query['t']) : null;
   }
 
-  /// Every quality of `stream_url`, H.264 first (3.x's order), then the
-  /// HEVC set [mergeHevc] merged in under `键+h265` ids.
+  /// Every quality of `stream_url`, one entry per quality however many
+  /// codecs it has: the H.264 and HEVC sets (3.x's H.264 first) are merged
+  /// by key, and every line says its own codec, so "优先 H.264" decides at
+  /// playback which line to try first.
   static _Variants _variants(Map<String, dynamic>? streamUrl) {
     if (streamUrl == null) return (list: const [], aliases: const {});
     final pull = _map(_map(streamUrl['live_core_sdk_data'])?['pull_data']);
@@ -741,77 +745,69 @@ abstract final class DouyinApi {
       names: names,
       defaultKey: defaultKey,
       defaultQuality: defaultQuality,
-      suffix: '',
-      forcedCodec: null,
+      codec: null,
     );
-    // The HEVC set shares the H.264 keys, so it takes the same names; only
-    // the id carries the codec, and a key both codecs have gets the codec in
-    // its label too (otherwise the quality sheet shows two 超清).
-    final hevcDescriptors = <String, Map<String, dynamic>>{
-      for (final key in hevcData.keys)
-        if (key.trim().toLowerCase() case final text when text.isNotEmpty) text: const {},
-    };
-    // A room's HEVC set repeats its H.264 rendition for some keys (`md` is
-    // `_md.flv` in both): same URLs means the same stream, so it is not
-    // offered twice under another codec.
-    final avcIds = {for (final variant in avc) '${variant.quality.id}'};
-    final ranked =
-        <_Variant>[
-          ...avc,
-          for (final variant in _ranked(
-            data: hevcData,
-            flvMap: const {},
-            hlsMap: const {},
-            descriptors: hevcDescriptors,
-            names: names,
-            defaultKey: null,
-            defaultQuality: null,
-            suffix: _hevcSuffix,
-            forcedCodec: 'hevc',
-          ))
-            if (avcIds.contains(_hevcTwin('${variant.quality.id}')))
-              (
-                quality: LivePlayQuality(
-                  quality: '${variant.quality.quality}$_hevcLabel',
-                  id: variant.quality.id,
-                  sort: variant.quality.sort,
-                  data: variant.quality.data,
-                  codec: variant.codec,
-                ),
-                lines: variant.lines,
-                codec: variant.codec,
-                size: variant.size,
-              )
-            else
-              variant,
-        ]..sort((a, b) {
-          final bySort = b.quality.sort.compareTo(a.quality.sort);
-          if (bySort != 0) return bySort;
-          // The same tier: the plain id before its HEVC twin (`hd` before
-          // `hd+h265`), so the ids a stored preference carries do not move.
-          final byHevc = ('${a.quality.id}'.endsWith(_hevcSuffix) ? 1 : 0).compareTo(
-            '${b.quality.id}'.endsWith(_hevcSuffix) ? 1 : 0,
-          );
-          return byHevc != 0 ? byHevc : '${a.quality.id}'.compareTo('${b.quality.id}');
-        });
+    final hevc = _ranked(
+      data: hevcData,
+      flvMap: const {},
+      hlsMap: const {},
+      descriptors: <String, Map<String, dynamic>>{
+        for (final key in hevcData.keys)
+          if (key.trim().toLowerCase() case final text when text.isNotEmpty) text: const {},
+      },
+      names: names,
+      defaultKey: null,
+      defaultQuality: null,
+      codec: 'hevc',
+    );
+
+    // One entry per quality: its key's HEVC lines go in front of the H.264
+    // ones (playback reorders by the codec preference), but a line naming
+    // the same rendition (same host and path) is not added twice — some
+    // rooms repeat `_md.flv` in both sets.
+    final ranked = <_Variant>[...avc];
+    for (final variant in hevc) {
+      final index = ranked.indexWhere((candidate) => candidate.quality.id == variant.quality.id);
+      if (index < 0) {
+        ranked.add(variant);
+        continue;
+      }
+      final target = ranked[index];
+      final lines = [
+        for (final line in variant.lines)
+          if (!target.lines.any((other) => other.url.host == line.url.host && other.url.path == line.url.path)) line,
+        ...target.lines,
+      ];
+      final merged = _merged(target, lines);
+      if (merged != null) ranked[index] = merged;
+    }
+    ranked.sort((a, b) {
+      final bySort = b.quality.sort.compareTo(a.quality.sort);
+      return bySort != 0 ? bySort : '${a.quality.id}'.compareTo('${b.quality.id}');
+    });
 
     final kept = <_Variant>[];
     final aliases = <String, String>{};
     final bySet = <String, List<int>>{};
     for (final variant in ranked) {
-      final set = _urlSet(variant);
-      // Same URLs: the same stream unless the codec is another one known
-      // (md is `_md.flv` in both sets of some rooms, but it plays as H.264).
+      // Old keys (flv_pull_url without stream data) repeat a stream: the
+      // set of the lines that are not HEVC is what says so, because HEVC's
+      // leases differ and would never match.
+      final base = [
+        for (final line in variant.lines)
+          if (line.codec != 'hevc') line.url.toString(),
+      ];
+      final set =
+          (base.isEmpty ? [for (final line in variant.lines) line.url.toString()] : base
+                ..sort())
+              .join('\u0000');
       final candidates = bySet.putIfAbsent(set, () => <int>[]);
-      final survivor = candidates.where((index) {
-        final codec = kept[index].codec;
-        return codec == null || variant.codec == null || codec == variant.codec;
-      }).firstOrNull;
+      final survivor = candidates.isEmpty ? null : candidates.first;
       if (survivor != null) {
         final target = kept[survivor];
         aliases['${variant.quality.id}'] = '${target.quality.id}';
-        // Same stream: the survivor takes a codec or a size only the alias
-        // reports.
+        // The survivor keeps 3.x's URL list; only a codec or a size it lacks
+        // is taken from the alias.
         if ((target.codec == null && variant.codec != null) || (target.size == null && variant.size != null)) {
           kept[survivor] = (
             quality: target.quality,
@@ -828,20 +824,37 @@ abstract final class DouyinApi {
     return (list: kept, aliases: aliases);
   }
 
-  /// The id suffix of an HEVC quality (`hd+h265`).
-  static const String _hevcSuffix = '+h265';
-
-  /// How an HEVC quality's label differs when its H.264 twin exists.
-  static const String _hevcLabel = '（H.265）';
-
-  static String _urlSet(_Variant variant) =>
-      ([for (final line in variant.lines) line.url.toString()]..sort()).join(' ');
-
-  static String _hevcTwin(String id) => id.endsWith(_hevcSuffix) ? id.substring(0, id.length - _hevcSuffix.length) : id;
+  /// [target] with [lines] (union by host, path and codec), its H.264
+  /// quality id and label kept.
+  static _Variant? _merged(_Variant target, List<_Line> lines) {
+    final unique = <String, _Line>{};
+    for (final line in lines) {
+      unique.putIfAbsent('${line.codec ?? ''}|${line.url.host}${line.url.path}|${line.format.name}', () => line);
+    }
+    if (unique.isEmpty) return null;
+    final merged = unique.values.toList();
+    final codec = merged.any((line) => line.codec == 'avc')
+        ? 'avc'
+        : merged.any((line) => line.codec == 'hevc')
+        ? 'hevc'
+        : null;
+    return (
+      quality: LivePlayQuality(
+        quality: target.quality.quality,
+        id: target.quality.id,
+        sort: target.quality.sort,
+        data: List<String>.unmodifiable([for (final line in merged) line.url.toString()]),
+        codec: codec,
+      ),
+      lines: merged,
+      codec: codec,
+      size: target.size,
+    );
+  }
 
   /// The variants of one codec's `stream_data.data`: [descriptors] give the
   /// keys (and their platform names, bit rates and sizes), [flvMap] and
-  /// [hlsMap] the legacy URL maps; [suffix] goes on every id.
+  /// [hlsMap] the legacy URL maps; [codec] marks every line.
   static List<_Variant> _ranked({
     required Map<String, dynamic> data,
     required Map<String, dynamic> flvMap,
@@ -850,8 +863,9 @@ abstract final class DouyinApi {
     required Map<String, dynamic> names,
     required String? defaultKey,
     required Map<String, dynamic>? defaultQuality,
-    required String suffix,
-    required String? forcedCodec,
+
+    /// The codec of every line here (`null`: read it from the quality).
+    required String? codec,
   }) {
     final variants = <_Variant>[];
     for (final entry in descriptors.entries) {
@@ -859,11 +873,13 @@ abstract final class DouyinApi {
       final descriptor = _map(entry.value) ?? const <String, dynamic>{};
       final main = _map(_map(_lookup(data, key))?['main']);
       final lines = <_Line>[];
+      final sdk = _sdkParams(main?['sdk_params']);
+      final lineCodec = codec ?? _codec(sdk['VCodec']) ?? _codec(descriptor['v_codec']);
       void add(Object? value, StreamFormat format) {
         final uri = Uri.tryParse(_text(value) ?? '');
         if (uri == null || (!uri.isScheme('http') && !uri.isScheme('https')) || uri.host.isEmpty) return;
         if (lines.any((line) => line.url.toString() == uri.toString())) return;
-        lines.add((url: uri, format: format));
+        lines.add((url: uri, format: format, codec: lineCodec));
       }
 
       add(main?['flv'], StreamFormat.flv);
@@ -872,8 +888,7 @@ abstract final class DouyinApi {
       add(_lookup(hlsMap, key), StreamFormat.hls);
       if (lines.isEmpty || _audioOnly(key, lines)) continue;
 
-      final sdk = _sdkParams(main?['sdk_params']);
-      final id = '$key$suffix';
+      final id = key;
       final bitRate = jsonInt(descriptor['v_bit_rate']) ?? jsonInt(sdk['vbitrate']);
       final resolution = _text(descriptor['resolution']) ?? _text(sdk['resolution']);
       final level = jsonInt(descriptor['level']) ?? 0;
@@ -895,10 +910,10 @@ abstract final class DouyinApi {
           id: id,
           sort: sort,
           data: List<String>.unmodifiable([for (final line in lines) line.url.toString()]),
-          codec: forcedCodec ?? _codec(sdk['VCodec']) ?? _codec(descriptor['v_codec']),
+          codec: lineCodec,
         ),
         lines: lines,
-        codec: forcedCodec ?? _codec(sdk['VCodec']) ?? _codec(descriptor['v_codec']),
+        codec: lineCodec,
         size: pictureSize(
           main: main,
           descriptor: descriptor,
@@ -936,7 +951,7 @@ abstract final class DouyinApi {
   /// Whether `stream_url` already offers an HEVC quality (the page merged,
   /// or a platform answer that carries both).
   static bool hasHevc(Map<String, dynamic>? streamUrl) =>
-      _variants(streamUrl).list.any((variant) => variant.codec == 'hevc');
+      _variants(streamUrl).list.any((variant) => variant.lines.any((line) => line.codec == 'hevc'));
 
   /// [streamUrl] with [data] — an HEVC `stream_data.data` set — merged in as
   /// `pull_data.stream_data_h265`, where [_variants] reads it. Any other
@@ -1427,7 +1442,7 @@ abstract final class DouyinApi {
 }
 
 typedef _Row = ({bool text, String value});
-typedef _Line = ({Uri url, StreamFormat format});
+typedef _Line = ({Uri url, StreamFormat format, String? codec});
 typedef _Variant = ({LivePlayQuality quality, List<_Line> lines, String? codec, ({int width, int height})? size});
 typedef _Variants = ({List<_Variant> list, Map<String, String> aliases});
 
