@@ -14,6 +14,7 @@ import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
+import 'package:pure_live/shared/backup/backup_contents_dialog.dart';
 import 'package:pure_live/shared/backup/backup_data.dart';
 import 'package:pure_live/shared/backup/backup_files.dart';
 import 'package:pure_live/shared/backup/backup_preview_dialog.dart';
@@ -183,37 +184,8 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   /// dropdown keeps its value.
   Future<void> _createChoices() async {
     if (_busy != null) return;
-    final stored = storedBackupContents(_store.settings.get(Settings.backupContents));
-    final contents = await showAppOptionDialog<BackupContents>(
-      context: context,
-      title: i18n('backup_contents_title'),
-      icon: AppIcons.backupCreate,
-      selected: stored,
-      options: [
-        for (final contents in BackupContents.values)
-          AppDialogOption(
-            key: ValueKey('backup-contents-${contents.name}'),
-            value: contents,
-            label: i18n(contents.labelKey),
-            description: i18n(contents.descriptionKey),
-            descriptionMaxLines: 3,
-            leading: Icon(switch (contents) {
-              BackupContents.data => AppIcons.backupFollows,
-              BackupContents.settings => AppIcons.backupFile,
-              BackupContents.sensitive => AppIcons.password,
-            }, size: 20),
-          ),
-      ],
-    );
+    final contents = await chooseBackupContents(context, _store);
     if (contents == null || !mounted) return;
-    // A preference of this device: failing to store it must not stop the
-    // backup.
-    try {
-      await _store.settings.set(Settings.backupContents, contents.name);
-    } on Object catch (error, stack) {
-      log('Remembering the backup contents failed', name: 'Backup', error: error, stackTrace: stack);
-    }
-    if (!mounted) return;
     await _create(BackupScope.all, contents: contents);
   }
 

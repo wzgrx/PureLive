@@ -16,6 +16,7 @@ import 'package:pure_live/features/web_dav/web_dav_help.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/routes/app_navigator.dart';
 import 'package:pure_live/routes/route_args.dart';
+import 'package:pure_live/shared/backup/backup_contents_dialog.dart';
 import 'package:pure_live/shared/backup/backup_data.dart';
 import 'package:pure_live/shared/backup/backup_files.dart';
 import 'package:pure_live/shared/backup/backup_preview_dialog.dart';
@@ -252,18 +253,29 @@ class _WebDavPageState extends ConsumerState<WebDavPage> {
     }
   }
 
-  Future<void> _upload(BackupScope scope) => _fileAction('webdav_uploading', (client) async {
+  /// "备份到当前目录": the three kinds of file first (J03.1, as the backup
+  /// page asks), so a manual upload no longer always carries the settings
+  /// without the accounts; null when the user cancelled.
+  Future<void> _uploadChoices(BackupScope scope) async {
+    if (!_idle) return;
+    final contents = await chooseBackupContents(context, _store, icon: AppIcons.webDavUpload);
+    if (contents == null || !mounted) return;
+    await _upload(scope, contents: contents);
+  }
+
+  Future<void> _upload(BackupScope scope, {BackupContents contents = BackupContents.settings}) =>
+      _fileAction('webdav_uploading', (client) async {
     final dir = _dir;
     final taken = {for (final entry in _entries ?? const <WebDavEntry>[]) entry.name};
-    final name = _freeName(backupFileName(scope, ref.read(webDavClockProvider)()), taken);
+    final name = _freeName(backupFileName(scope, ref.read(webDavClockProvider)(), contents: contents), taken);
     try {
-      final data = await exportBackup(ref.read(backupServiceProvider), _store, scope);
+      final data = await exportBackup(ref.read(backupServiceProvider), _store, scope, contents: contents);
       await client.write([...dir, name], utf8.encode(jsonEncode(data)));
     } on Object catch (error, stack) {
       log('Uploading the backup failed', name: 'WebDav', error: error, stackTrace: stack);
       _failed(
         i18n('webdav_failed_with', args: {'action': i18n('webdav_upload_failed'), 'reason': webDavFailureText(error)}),
-        () => unawaited(_upload(scope)),
+        () => unawaited(_upload(scope, contents: contents)),
       );
       return;
     }
@@ -423,7 +435,7 @@ class _WebDavPageState extends ConsumerState<WebDavPage> {
               ),
             ],
             onSelected: (choice) => switch (choice) {
-              _Menu.uploadFollows => unawaited(_upload(BackupScope.follows)),
+              _Menu.uploadFollows => unawaited(_uploadChoices(BackupScope.follows)),
               _Menu.autoBackup => unawaited(showWebDavAutoBackupDialog(context, store: _store)),
               _Menu.help => _openHelp(),
             },
@@ -435,7 +447,7 @@ class _WebDavPageState extends ConsumerState<WebDavPage> {
           ? null
           : FloatingActionButton.extended(
               key: const ValueKey('webdav-upload'),
-              onPressed: canUpload ? () => unawaited(_upload(BackupScope.all)) : null,
+              onPressed: canUpload ? () => unawaited(_uploadChoices(BackupScope.all)) : null,
               icon: uploading
                   ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(AppIcons.webDavUpload),

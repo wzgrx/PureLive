@@ -248,6 +248,9 @@ void main() {
     expect(find.text('备份到当前目录'), findsOneWidget, reason: 'the button says what it does (c3)');
     await tester.tap(find.byKey(const ValueKey('webdav-upload')));
     await _settle(tester);
+    // The three kinds of file come first (J03.1), as on the backup page.
+    await tester.tap(find.byKey(const ValueKey('backup-contents-settings')));
+    await _settle(tester);
     final uploaded = jsonDecode(utf8.decode(dav.files['purelive_2026-10-01T20_00_00.txt']!)) as Map<String, Object?>;
     expect(((uploaded['favorite']! as Map)['favoriteRooms']! as List).single, containsPair('roomId', '1'));
     expect(_toasts, ['文件上传成功']);
@@ -475,6 +478,8 @@ void main() {
     final dav = _FailingPut();
     await _pump(tester, dav, server: _server);
     await tester.tap(find.byKey(const ValueKey('webdav-upload')));
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('backup-contents-settings')));
     await _settle(tester);
     expect(find.byType(SnackBar), findsOneWidget);
     expect(find.textContaining('文件上传失败'), findsOneWidget);
