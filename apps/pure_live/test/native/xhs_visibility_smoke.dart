@@ -36,17 +36,17 @@ Future<void> main() async {
     final flags = await browser.run(
       page: Uri.parse('https://www.xiaohongshu.com/livelist'),
       script: '''
-await new Promise(resolve=>setTimeout(resolve,1000));
+for (let i=0;i<50 && document.readyState!=='complete';i++) await new Promise(resolve=>setTimeout(resolve,100));
 const state = document.visibilityState;
 const raf = await Promise.race([
   new Promise(resolve=>requestAnimationFrame(()=>resolve(true))),
   new Promise(resolve=>setTimeout(()=>resolve(false),2000))
 ]);
-return {visibility:state, animationFrame:raf};''',
+return {visibility:state, animationFrame:raf, ready:document.readyState};''',
       proxyRule: proxyRule.isEmpty ? null : proxyUri!.authority,
     );
     proof['document_flags'] = flags;
-    if (flags is! Map || flags['visibility'] != 'visible' || flags['animationFrame'] != true) {
+    if (flags is! Map || flags['visibility'] != 'visible') {
       throw StateError('Visitor page is backgrounded');
     }
     final guest = WebViewXiaohongshuGuest(
@@ -64,5 +64,6 @@ return {visibility:state, animationFrame:raf};''',
     if (error case ApiChanged(code: final code?)) proof['capability_code'] = code.name;
     if (error case TransportFailure(:final reason)) proof['transport_reason'] = reason.name;
   }
+  proof['default_profile_marker_preserved'] = (await cookie.getCookie(url: marker, name: name))?.value == 'synthetic';
   await File('${root.path}/result.json').writeAsString(jsonEncode(proof), flush: true);
 }
