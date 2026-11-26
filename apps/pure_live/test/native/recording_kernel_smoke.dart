@@ -1,4 +1,4 @@
-// Cloud-only native check: local PCM input, no platform URLs or user data.
+// Native acceptance: generated local media only, no platform URLs or user data.
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -7,6 +7,8 @@ import 'package:cross_file/cross_file.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pure_live/platform/recording_platform.dart';
+
+import 'recording_interruption_probe.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -112,6 +114,8 @@ Future<void> main() async {
         await scoped.dispose();
       }
     }
+    final recovery = await probeInterruptedRecording(Directory('${root.path}/interruption'));
+    result['interrupted_recording'] = recovery;
     result.addAll({
       'exit_code': code,
       'bytes': bytes.length,
@@ -122,7 +126,7 @@ Future<void> main() async {
         'scoped_passed': scopedPassed,
         'scoped_uri_scheme': scopedUri == null ? null : Uri.parse(scopedUri).scheme,
       },
-      'passed': code == 0 && wave && localPassed && scopedPassed,
+      'passed': code == 0 && wave && localPassed && scopedPassed && recovery['passed'] == true,
     });
   } on Object catch (error, stack) {
     result.addAll({'passed': false, 'error': error.toString(), 'stack': stack.toString()});

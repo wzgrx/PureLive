@@ -101,6 +101,25 @@ void main() {
         ChatEmoteSegment(url: 'https://page/xk.png', alt: '[笑哭]', asset: 'assets/emo/images/kuaishou/笑哭.png'),
       ]);
     });
+
+    test('D04.2 c3: the codes a message names are matched with the pattern kept for them', () {
+      // Twenty different sets of codes, past the sixteen patterns kept: the
+      // sets that were dropped are compiled again, and none of them is ever
+      // matched with another set's pattern.
+      LiveMessage named(int i) => _chat('a$i[$i]b', [LiveEmote(code: '[$i]', url: 'https://example/$i.png')]);
+      List<ChatSegment> expected(int i) => [
+        ChatTextSegment('a$i'),
+        ChatEmoteSegment(url: 'https://example/$i.png', alt: '[$i]'),
+        const ChatTextSegment('b'),
+      ];
+
+      for (var i = 0; i < 20; i++) {
+        final once = chatSegments(named(i));
+        expect(once, expected(i), reason: 'the set of codes $i');
+        expect(chatSegments(named(20 - i)), expected(20 - i), reason: 'a different set, in between');
+        expect(chatSegments(named(i)), expected(i), reason: 'the set of codes $i again, from the cache or anew');
+      }
+    });
   });
 }
 

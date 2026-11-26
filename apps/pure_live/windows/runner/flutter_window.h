@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "win32_window.h"
+#include "playback_keyboard.h"
 
 // A window that does nothing but host a Flutter view.
 class FlutterWindow : public Win32Window {
@@ -67,6 +68,8 @@ class FlutterWindow : public Win32Window {
   bool flutter_controller_destroying_ = false;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       display_mode_channel_;
+  std::unique_ptr<PlaybackKeyboard> playback_keyboard_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> playback_keyboard_channel_;
   std::wstring last_display_device_;
   int last_display_width_ = 0;
   int last_display_height_ = 0;

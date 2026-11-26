@@ -125,3 +125,21 @@ ProducerCommit result as the presented-frame signal. Failed native renders must
 not increment frameRevision. Existing Surface, disposal, audio mode and viewport
 patches remain. The native bundle must export the matching render API.
 Linux prefers upstream's GLES3 context and keeps its GLES2 fallback.
+
+
+## 2026-11-26：纹理退休与失败分配保留
+
+Windows的Resize现在等待Flutter异步UnregisterTexture回调完成后，才调整旧共享mailbox并替换其句柄。该回调不再因destroyed标志提前跳过完成信号；析构的render-worker栅栏因而也涵盖先前resize的退休操作。契约来源为Flutter3.50.1官方texture_registrar.h和flutter_windows_texture_registrar.cc。
+
+mailbox先完整分配替换槽再提交；失败保留旧槽、fence和尺寸，避免下一帧解引用空资源。Renderer仅在成功后更新尺寸，输出回调报告实际尺寸；失败重试在CheckAndResize中限为每秒一次，期间继续使用有效旧资源。
+
+原生回归windows/tests/mailbox_resize_test.cc：在VS x64开发环境，以该目录为-I，编译测试和mailbox_swap_chain.cc，链接d3d11.lib/dxgi.lib；D3D11 WARP拒绝非法纹理尺寸后必须保留有效mailbox，并能再次正常resize及ProducerCommit。旧实现返回10，新实现返回0。此回归验证分配失败的处理，不冒充原用户显卡或原闪退转储已复现；同源成品的多播放器压力/长播另行记录。
+
+
+### 注册发布竞态
+
+独立生成数据压力场景的原生转储证明：GPU描述符回调在textures_.at(texture_id_)抛std::out_of_range，what为invalid unordered_map<K, T> key，跨Flutter引擎noexcept边界后进程fastfail。新ID此前在入表锁之前就已可见。现将RegisterTexture/ID发布/两张表入表一并加锁；硬件及软件回调显式find并拒绝destroyed状态，不让失效纹理异常穿过引擎边界。
+
+### 实际纹理尺寸与描述符一致
+
+失败分配保留要求先用请求width/height分配替换mailbox，成功后才提交renderer尺寸；不能用旧width_/height_分配却向Flutter报告新尺寸。windows/tests/renderer_dimensions_test.cc以D3D11 WARP读取真实texture GetDesc，覆盖成功resize、非法尺寸失败保留、再次resize。保留GPU输出及原硬件解码偏好；不含私有软件输出强制实验或直接纹理指针实验。Flutter GetGraphicsAdapter的自有引用由ComPtr::Attach接管并释放。

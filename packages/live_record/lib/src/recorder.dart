@@ -656,6 +656,7 @@ final class Recorder {
           shouldRetry: shouldRetry,
           fast: fast,
           damaged: ended.inputIntegrityError,
+          openTail: ended.openTail,
         );
     }
   }
@@ -715,10 +716,19 @@ final class Recorder {
     required bool shouldRetry,
     required bool fast,
     required bool damaged,
+    required bool openTail,
   }) {
     return _finalizing(
       _rt(task),
-      () => _doFinalize(task, manual: manual, failed: failed, shouldRetry: shouldRetry, fast: fast, damaged: damaged),
+      () => _doFinalize(
+        task,
+        manual: manual,
+        failed: failed,
+        shouldRetry: shouldRetry,
+        fast: fast,
+        damaged: damaged,
+        openTail: openTail,
+      ),
     );
   }
 
@@ -750,10 +760,11 @@ final class Recorder {
     required bool shouldRetry,
     required bool fast,
     required bool damaged,
+    required bool openTail,
   }) async {
     final rt = _rt(task);
     try {
-      await _queueCurrentAttempt(task, damaged: damaged);
+      await _queueCurrentAttempt(task, damaged: damaged, openTail: openTail);
       if (_closing) return;
       final stopped = manual || task.wasStoppedByUser;
       if (failed && shouldRetry && task.autoReconnect && !stopped) {
@@ -870,7 +881,12 @@ final class Recorder {
   /// Queues the attempt that just ended for joining; one that recorded
   /// nothing leaves no files instead (3.x's legacy segments of a
   /// recovery, [allowLegacy], are never touched).
-  Future<void> _queueCurrentAttempt(RecordTask task, {bool allowLegacy = false, bool damaged = false}) async {
+  Future<void> _queueCurrentAttempt(
+    RecordTask task, {
+    bool allowLegacy = false,
+    bool damaged = false,
+    bool openTail = false,
+  }) async {
     final directory = task.outputDir?.trim() ?? '';
     if (directory.isEmpty) return;
     final prefix = task.recordingFilePrefix;
@@ -878,7 +894,12 @@ final class Recorder {
       if (!allowLegacy) await _discardEmptyAttempt(directory, prefix);
       return;
     }
-    task.queuePendingAttempt(directoryPath: directory, filePrefix: prefix, inputIntegrityError: damaged);
+    task.queuePendingAttempt(
+      directoryPath: directory,
+      filePrefix: prefix,
+      inputIntegrityError: damaged,
+      openTail: openTail,
+    );
     _update(task);
   }
 
@@ -937,7 +958,7 @@ final class Recorder {
           allowLegacy: allowLegacy,
           // Recovery (allowLegacy) joins what a killed process left: the
           // segment being written has no journal row yet.
-          openTail: allowLegacy,
+          openTail: allowLegacy || attempt.openTail,
           damaged: attempt.inputIntegrityError,
           cancelled: () => _closing,
           onProgress: (progress) => onProgress(index, progress),

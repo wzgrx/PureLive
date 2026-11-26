@@ -3755,6 +3755,7 @@
     "xiaohongshu_directory_scope": "This device cannot load the Xiaohongshu directory or chat yet. Search a room number or paste a live share link to watch; a follow keeps only that broadcast.",
     "xiaohongshu_display_viewers": "Xiaohongshu shows {value} views (a rounded total, not people watching now)",
     "xiaohongshu_guest_directory_scope": "Browse public streams by category, search a room number or paste a live share link. Following keeps this broadcast; import a new link when the streamer starts another one.",
+    "xiaohongshu_guest_isolation_unavailable": "This WebView cannot isolate a visitor session. Xiaohongshu categories and chat are unavailable; shared links can still play.",
     "xiaohongshu_restricted": "This broadcast has viewing conditions (paid, some viewers only, or certain regions), so it can't be played here.",
     "xiaohongshu_room_scope": "Every Xiaohongshu broadcast gets a new room number; this follows this one. When the streamer goes live again, import the new share link.",
     "xiaohongshu_unknown_access": "Can't tell yet whether this broadcast is public; it may not play here.",

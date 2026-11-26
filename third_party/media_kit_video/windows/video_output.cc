@@ -1,4 +1,4 @@
-// This file is a part of media_kit
+﻿// This file is a part of media_kit
 // (https://github.com/media-kit/media-kit).
 //
 // Copyright © 2021 & onwards, Hitesh Kumar Saini <saini123hitesh@gmail.com>.
@@ -38,14 +38,15 @@ VideoOutput::VideoOutput(int64_t handle,
     
     if (configuration.enable_hardware_acceleration) {
       try {
-        IDXGIAdapter* flutter_adapter = nullptr;
+        Microsoft::WRL::ComPtr<IDXGIAdapter> flutter_adapter;
         if (auto* view = registrar_->GetView()) {
-          flutter_adapter = view->GetGraphicsAdapter();
+          // The Flutter view returns an owned reference.
+          flutter_adapter.Attach(view->GetGraphicsAdapter());
         }
         d3d11_renderer_ = std::make_unique<D3D11Renderer>(
             static_cast<int32_t>(width_.value_or(1)),
             static_cast<int32_t>(height_.value_or(1)),
-            flutter_adapter);
+            flutter_adapter.Get());
         
         // Initialize mpv with the D3D11 device. The render target is supplied
         // per frame through MPV_RENDER_PARAM_D3D11_FBO in Render().
@@ -297,36 +298,31 @@ void VideoOutput::CheckAndResize() {
     // No creation of new texture required.
     return;
   }
+  if (std::chrono::steady_clock::now() < next_resize_attempt_) return;
   Resize(required_width, required_height);
 }
 
 void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
   std::cout << required_width << " " << required_height << std::endl;
-  // Unregister previously registered texture & delete underlying objects.
+  // Flutter can still sample/import the old descriptor until asynchronous
+  // unregister completes. Do not resize its shared mailbox while it is live.
   if (texture_id_) {
+    const int64_t retiring_id = texture_id_;
+    auto completed = std::make_shared<std::promise<void>>();
+    auto retired = completed->get_future();
     registrar_->texture_registrar()->UnregisterTexture(
-        texture_id_, [&, id = texture_id_]() {
-          if (id) {
-            std::cout << "media_kit: VideoOutput: Free Texture: " << id
-                      << std::endl;
+        retiring_id, [this, retiring_id, completed]() {
+          {
             std::lock_guard<std::mutex> lock(textures_mutex_);
-            if (destroyed_) {
-              return;
-            }
-            if (texture_variants_.find(id) != texture_variants_.end()) {
-              texture_variants_.erase(id);
-            }
-            // H/W
-            if (textures_.find(id) != textures_.end()) {
-              textures_.erase(id);
-            }
-            // S/W
-            if (pixel_buffer_textures_.find(id) !=
-                pixel_buffer_textures_.end()) {
-              pixel_buffer_textures_.erase(id);
-            }
+            texture_variants_.erase(retiring_id);
+            textures_.erase(retiring_id);
+            pixel_buffer_textures_.erase(retiring_id);
           }
+          // Always complete, including when destruction has begun. The
+          // destructor drains this render worker before releasing the owner.
+          completed->set_value();
         });
+    retired.get();
     texture_id_ = 0;
   }
   // H/W
@@ -334,6 +330,12 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
     // Resize the D3D11 texture.
     d3d11_renderer_->SetSize(static_cast<int32_t>(required_width),
                             static_cast<int32_t>(required_height));
+    if (d3d11_renderer_->width() != required_width ||
+        d3d11_renderer_->height() != required_height) {
+      next_resize_attempt_ = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+    } else {
+      next_resize_attempt_ = {};
+    }
     
     auto texture = std::make_unique<FlutterDesktopGpuSurfaceDescriptor>();
     texture->struct_size = sizeof(FlutterDesktopGpuSurfaceDescriptor);
@@ -350,8 +352,9 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
         std::make_unique<flutter::TextureVariant>(flutter::GpuSurfaceTexture(
             kFlutterDesktopGpuSurfaceTypeDxgiSharedHandle, [&](auto, auto) {
               std::lock_guard<std::mutex> lock(textures_mutex_);
-              if (texture_id_) {
-                auto* desc = textures_.at(texture_id_).get();
+              const auto found = textures_.find(texture_id_);
+              if (!destroyed_ && texture_id_ && found != textures_.end()) {
+                auto* desc = found->second.get();
                 // ConsumerAcquire() is lock-free.  texture_id_ != 0 implies
                 // d3d11_renderer_ is valid: UnregisterTexture guarantees that
                 // Flutter stops invoking this callback before the destructor
@@ -361,17 +364,19 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
               }
               return (FlutterDesktopGpuSurfaceDescriptor*)nullptr;
             }));
-    // Register new texture.
+    // Register and publish the descriptor under the same lock used by the
+    // raster callback. Exposing the ID before map insertion let Flutter call
+    // textures_.at(new_id) in that gap and terminate on std::out_of_range.
+    std::lock_guard<std::mutex> lock(textures_mutex_);
     texture_id_ =
         registrar_->texture_registrar()->RegisterTexture(texture_variant.get());
     std::cout << "media_kit: VideoOutput: Create Texture: " << texture_id_
               << std::endl;
-    std::lock_guard<std::mutex> lock(textures_mutex_);
     textures_.emplace(std::make_pair(texture_id_, std::move(texture)));
     texture_variants_.emplace(
         std::make_pair(texture_id_, std::move(texture_variant)));
     // Notify public texture update callback.
-    texture_update_callback_(texture_id_, required_width, required_height);
+    texture_update_callback_(texture_id_, d3d11_renderer_->width(), d3d11_renderer_->height());
   }
   // S/W
   if (pixel_buffer_ != nullptr) {
@@ -384,18 +389,21 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
     auto texture_variant = std::make_unique<flutter::TextureVariant>(
         flutter::PixelBufferTexture([&](auto, auto) {
           std::lock_guard<std::mutex> lock(textures_mutex_);
-          if (texture_id_) {
-            return pixel_buffer_textures_.at(texture_id_).get();
+          const auto found = pixel_buffer_textures_.find(texture_id_);
+          if (!destroyed_ && texture_id_ && found != pixel_buffer_textures_.end()) {
+            return found->second.get();
           } else {
             return (FlutterDesktopPixelBuffer*)nullptr;
           }
         }));
-    // Register new texture.
+    // Register and publish the descriptor under the same lock used by the
+    // raster callback. Exposing the ID before map insertion let Flutter call
+    // textures_.at(new_id) in that gap and terminate on std::out_of_range.
+    std::lock_guard<std::mutex> lock(textures_mutex_);
     texture_id_ =
         registrar_->texture_registrar()->RegisterTexture(texture_variant.get());
     std::cout << "media_kit: VideoOutput: Create Texture: " << texture_id_
               << std::endl;
-    std::lock_guard<std::mutex> lock(textures_mutex_);
     pixel_buffer_textures_.emplace(
         std::make_pair(texture_id_, std::move(pixel_buffer_texture)));
     texture_variants_.emplace(

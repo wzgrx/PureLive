@@ -59,6 +59,7 @@ import 'package:pure_live/features/live_play/replay/room_replay_controls.dart';
 import 'package:pure_live/features/live_play/switch_room/room_switch_panel.dart';
 import 'package:pure_live/i18n/i18n.dart';
 import 'package:pure_live/platform/overlay_window.dart';
+import 'package:pure_live/platform/playback_keyboard_scope.dart';
 import 'package:pure_live/platform/screen_orientation.dart';
 import 'package:pure_live/platform/system_ui.dart';
 import 'package:pure_live/routes/app_navigator.dart';
@@ -182,6 +183,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   /// The record or danmaku settings panel (U.2f); one at a time, and not
   /// together with the details.
   final RoomPanelController _panels = RoomPanelController();
+  final FocusNode _roomKeys = FocusNode(debugLabel: 'room playback keys');
 
   /// Ticks when the IPTV guide should show the programme being watched
   /// (U.2g c16: the picture's guide button, the replay mark).
@@ -717,6 +719,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   @override
   void dispose() {
     _rotationLifecycle.dispose();
+    _roomKeys.dispose();
     _panels.removeListener(_syncAutoRoomSwitch);
     _rotation.dispose();
     if (_remoteTarget case final target?) _remote?.unregister(target);
@@ -1127,6 +1130,37 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
   }
 
   KeyEventResult _roomShortcut(FocusNode node, KeyEvent event) {
+    final controller = _controller;
+    final directionalReplay =
+        controller?.isArchive == true && MediaQuery.navigationModeOf(context) == NavigationMode.directional;
+    if (directionalReplay &&
+        ModalRoute.of(context)?.isCurrent == true &&
+        (event is KeyDownEvent || event is KeyRepeatEvent)) {
+      final key = event.logicalKey;
+      if (_panels.value != null) {
+        if (key == LogicalKeyboardKey.escape ||
+            key == LogicalKeyboardKey.goBack ||
+            key == LogicalKeyboardKey.contextMenu) {
+          _closeReplayPanel();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      }
+      if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.arrowRight) {
+        final archive = controller!.archive;
+        if (archive != null && !archive.busy) {
+          final delta = Duration(seconds: key == LogicalKeyboardKey.arrowRight ? 10 : -10);
+          unawaited(archive.seek(archive.position + delta));
+        }
+        return KeyEventResult.handled;
+      }
+      if (event is KeyDownEvent &&
+          {LogicalKeyboardKey.arrowUp, LogicalKeyboardKey.arrowDown, LogicalKeyboardKey.contextMenu}.contains(key)) {
+        _panels.open(RoomPanelKind.archiveCatalog);
+        return KeyEventResult.handled;
+      }
+    }
+
     if (event is KeyDownEvent &&
         _controller?.isArchive == true &&
         node.hasPrimaryFocus &&
@@ -1144,14 +1178,18 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
     if (focused?.widget is EditableText || focused?.findAncestorWidgetOfExactType<EditableText>() != null) {
       return KeyEventResult.ignored;
     }
-    final controller = _controller;
     if (controller == null) return KeyEventResult.ignored;
     unawaited(controller.toggleMute());
     return KeyEventResult.handled;
   }
 
+  void _closeReplayPanel() {
+    _panels.close();
+    _roomKeys.requestFocus();
+  }
+
   Widget _page(BuildContext context, LiveRoomController controller, _LayoutSettings settings) {
-    return PopScope(
+    final page = PopScope(
       canPop: _poppable,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
@@ -1174,10 +1212,12 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
           },
           const SingleActivator(LogicalKeyboardKey.space): () => unawaited(controller.togglePlayback()),
           // 3.x `VideoKeyboard`: arrows change the room's volume, R reloads.
-          const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
-              unawaited(controller.setVolume(controller.volume + 0.05, save: true)),
-          const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
-              unawaited(controller.setVolume(controller.volume - 0.05, save: true)),
+          if (!(controller.isArchive && MediaQuery.navigationModeOf(context) == NavigationMode.directional)) ...{
+            const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                unawaited(controller.setVolume(controller.volume + 0.05, save: true)),
+            const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                unawaited(controller.setVolume(controller.volume - 0.05, save: true)),
+          },
           const SingleActivator(LogicalKeyboardKey.keyR): () => unawaited(controller.load()),
           // F.1d: a keyboard's media keys (3.x `VideoKeyboard`).
           const SingleActivator(LogicalKeyboardKey.mediaPlay): () => unawaited(controller.session.resume()),
@@ -1185,6 +1225,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
           const SingleActivator(LogicalKeyboardKey.mediaPlayPause): () => unawaited(controller.togglePlayback()),
         },
         child: Focus(
+          focusNode: _roomKeys,
           autofocus: true,
           onKeyEvent: _roomShortcut,
           // iOS's back swipe is off while the room holds its back (A18.1 c3).
@@ -1200,6 +1241,7 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
         ),
       ),
     );
+    return PlaybackKeyboardScope(child: page);
   }
 
   /// One player element for every layout (normal, fullscreen,
@@ -1269,10 +1311,14 @@ class _LivePlayPageState extends ConsumerState<LivePlayPage> with SingleTickerPr
       ),
     ),
     RoomPanelKind.archiveCatalog => RoomSidePanel(
+      key: const ValueKey('archive-catalog-panel'),
       title: i18n('archive_scenes'),
-      onClose: _panels.close,
+      onClose: _closeReplayPanel,
       dragToClose: portrait,
-      child: RoomReplayLibrary(controller: controller, onClose: _panels.close),
+      child: FocusScope(
+        autofocus: true,
+        child: RoomReplayLibrary(controller: controller, onClose: _closeReplayPanel),
+      ),
     ),
     RoomPanelKind.record => RoomRecordPanel(
       key: const ValueKey('panel-record'),

@@ -4,6 +4,7 @@ import 'package:live_core/live_core.dart';
 import 'package:live_media/src/proxy.dart';
 import 'package:live_media/src/relay/flv_splicer.dart';
 import 'package:live_media/src/relay/hls_relay.dart';
+import 'package:live_media/src/relay/hls_window.dart';
 import 'package:live_media/src/relay/loopback_relay.dart';
 import 'package:live_media/src/source.dart';
 import 'package:live_net/live_net.dart';
@@ -83,6 +84,7 @@ final class MediaOpener {
   /// [close] stops it. [recipes] open the platforms' input recipes.
   new({
     this.proxy = const FixedProxyPolicy(),
+    this.prefetchLiveHls = true,
     this.engine = const EngineProfile(),
     this.recipes = const [],
     Future<LoopbackRelay> Function()? relay,
@@ -91,6 +93,19 @@ final class MediaOpener {
 
   /// Proxy routes, for the engine and the relay.
   final ProxyPolicy proxy;
+
+  /// Prefetch live SOOP, Twitch and YouTube HLS through the existing relay.
+  /// Recording supplies its own window and disables this playback policy.
+  final bool prefetchLiveHls;
+
+  static const _overseasLiveSites = {'soop', 'twitch', 'youtube'};
+  static const _livePrefetch = HlsPrefetchOptions(
+    maxSegments: 12,
+    maxBytes: 24 << 20,
+    maxSegmentBytes: 12 << 20,
+    concurrency: 3,
+    idlePolls: 3,
+  );
 
   /// What the engine can read.
   final EngineProfile engine;
@@ -139,13 +154,22 @@ final class MediaOpener {
           );
           return _RelayedInput(source, MediaRoute.hlsRelay, input, null, onDemand: true, start: start);
         }
-        final route = MediaRoute.of(
-          line,
-          engine: engine,
-          canRenew: renew != null,
-          queryPolicy: queryPolicy,
-          variantSelector: variantSelector,
-        );
+        final url = Uri.parse(line.url);
+        final parallelHls =
+            prefetchLiveHls &&
+            !onDemand &&
+            _overseasLiveSites.contains(site) &&
+            (url.scheme == 'http' || url.scheme == 'https') &&
+            (line.format == StreamFormat.hls || (line.format == null && url.path.toLowerCase().endsWith('.m3u8')));
+        final route = parallelHls
+            ? MediaRoute.hlsRelay
+            : MediaRoute.of(
+                line,
+                engine: engine,
+                canRenew: renew != null,
+                queryPolicy: queryPolicy,
+                variantSelector: variantSelector,
+              );
         switch (route) {
           case MediaRoute.direct || MediaRoute.owned:
             final url = Uri.parse(line.url);
@@ -169,6 +193,7 @@ final class MediaOpener {
             final input = relay.openHls(
               line,
               site: site,
+              prefetch: parallelHls ? _livePrefetch : null,
               recipe: HlsRelayRecipe(
                 queryPolicy: queryPolicy,
                 master: variantSelector == null

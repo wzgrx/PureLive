@@ -132,13 +132,26 @@ HANDLE MailboxSwapChain::ConsumerAcquire() {
 }
 
 HRESULT MailboxSwapChain::Resize(int32_t width, int32_t height) {
+  // Build all slots before retiring a valid mailbox. An allocation failure
+  // must not leave ProducerCommit with a null texture or fence.
+  MailboxSwapChain replacement;
+  replacement.device_ = device_;
+  replacement.context4_ = context4_;
+  replacement.width_ = (width > 0) ? width : 1;
+  replacement.height_ = (height > 0) ? height : 1;
+  const HRESULT hr = replacement.AllocateSlots();
+  if (FAILED(hr)) return hr;
+
   ReleaseSlots();
-  width_ = (width > 0) ? width : 1;
-  height_ = (height > 0) ? height : 1;
-  mailbox_state_.store(57u, std::memory_order_relaxed);
-  latest_completed_slot_.store(2, std::memory_order_relaxed);
+  for (int i = 0; i < 4; ++i) {
+    slots_[i] = std::move(replacement.slots_[i]);
+  }
+  width_ = replacement.width_;
+  height_ = replacement.height_;
+  mailbox_state_.store(57u, std::memory_order_release);
+  latest_completed_slot_.store(2, std::memory_order_release);
   write_slot_ = 0;
-  return AllocateSlots();
+  return S_OK;
 }
 
 HRESULT MailboxSwapChain::AllocateSlots() {

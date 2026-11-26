@@ -69,6 +69,33 @@ final Uri _primary = Uri.parse('wss://primary.example/ws');
 final Uri _backup = Uri.parse('wss://backup.example/ws');
 
 void main() {
+  test('decode backpressure preserves wire order and a reconnect resets the paused subscription', () async {
+    final connector = _Connector();
+    final received = <Object?>[];
+    final socket = LiveSocket(endpoints: [_primary], site: 'test', connector: connector.call, onMessage: received.add);
+    addTearDown(socket.close);
+    await socket.connect();
+    final first = connector.channels.single;
+    socket
+      ..setReadPaused(true)
+      ..setReadPaused(true);
+    first.incoming.add('held');
+    await Future<void>.delayed(const Duration(seconds: 1));
+    expect(received, isEmpty);
+    socket
+      ..setReadPaused(false)
+      ..setReadPaused(false);
+    await _eventually(() => received.isNotEmpty);
+    expect(received, ['held']);
+    socket
+      ..setReadPaused(true)
+      ..reconnect();
+    await _eventually(() => connector.channels.length == 2 && socket.status == SocketStatus.connected);
+    connector.channels.last.incoming.add('fresh');
+    await _eventually(() => received.length == 2);
+    expect(received, ['held', 'fresh']);
+  });
+
   test('a silent half-open socket is closed and reconnected on the next endpoint', () async {
     final connector = _Connector();
     final socket = LiveSocket(

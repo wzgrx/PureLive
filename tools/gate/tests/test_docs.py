@@ -57,7 +57,7 @@ class DocsTest(unittest.TestCase):
     def run_docs(self, *args):
         return subprocess.run(
             [sys.executable, str(self.root / 'tools' / 'docs' / 'docs.py'), *args],
-            cwd=self.root, capture_output=True, text=True, check=False)
+            cwd=self.root, capture_output=True, text=True, encoding='utf-8', check=False)
 
     def check(self):
         result = self.run_docs('--check')

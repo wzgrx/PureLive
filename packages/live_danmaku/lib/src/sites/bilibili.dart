@@ -206,17 +206,21 @@ final class BilibiliDanmakuConnection extends DanmakuSocketConnection<BilibiliDa
   void onData(DanmakuSocketSession session, Object? data) {
     if (data is! List<int>) return;
     final gifts = _of(session)?.gifts ?? BilibiliGiftCatalog.empty;
-    for (final item in BilibiliDanmakuProtocol.decode(data, gifts: gifts).items) {
-      if (!session.isActive) return;
-      switch (item) {
-        case BilibiliDanmakuMessage(:final message):
-          session.message(message);
-        case BilibiliDanmakuAck(:final packet):
-          session.send(packet);
-        case BilibiliDanmakuAuthReply(:final code):
-          _authReply(session, code);
+    // D04.2 c1: a burst frame (one brotli of up to 4096 packets) is read off
+    // this isolate; the answer and the messages keep the order they came in.
+    session.decodeFrame(data, (bytes) => BilibiliDanmakuProtocol.decode(bytes, gifts: gifts), (frame) {
+      for (final item in frame.items) {
+        if (!session.isActive) return;
+        switch (item) {
+          case BilibiliDanmakuMessage(:final message):
+            session.message(message);
+          case BilibiliDanmakuAck(:final packet):
+            session.send(packet);
+          case BilibiliDanmakuAuthReply(:final code):
+            _authReply(session, code);
+        }
       }
-    }
+    });
   }
 
   void _authReply(DanmakuSocketSession session, int code) {

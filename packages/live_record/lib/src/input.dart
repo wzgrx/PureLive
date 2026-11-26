@@ -44,7 +44,7 @@ final class RecordInputOpener {
 
   final Future<LoopbackRelay> Function()? _startRelay;
   Future<LoopbackRelay>? _relay;
-  late final MediaOpener _media = MediaOpener(proxy: proxy, recipes: recipes, relay: _relayNow);
+  late final MediaOpener _media = MediaOpener(proxy: proxy, recipes: recipes, relay: _relayNow, prefetchLiveHls: false);
 
   Future<LoopbackRelay> _relayNow() =>
       _relay ??= (_startRelay ?? () => LoopbackRelay.start(proxy: proxy, hlsPrefetch: hlsPrefetch)).call();

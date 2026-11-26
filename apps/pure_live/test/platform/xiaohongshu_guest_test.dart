@@ -3,9 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:live_core/live_core.dart';
 import 'package:live_net/live_net.dart';
 import 'package:pure_live/platform/twitch_webview_http.dart';
 import 'package:pure_live/platform/xiaohongshu_guest.dart';
+import 'package:pure_live/shared/rooms/room_texts.dart';
+
+import '../support.dart';
 
 final class _Browser implements XiaohongshuGuestBrowser {
   final calls = <({Uri page, String script, String? proxyRule, CancelToken? cancel})>[];
@@ -21,6 +25,46 @@ final class _Browser implements XiaohongshuGuestBrowser {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('issue177: capability errors survive the visitor wrapper and display an actionable safe message', () async {
+    const error = ApiChanged.withCode(
+      'xiaohongshu',
+      ApiFailureCode.xiaohongshuVisitorIsolationUnavailable,
+      'synthetic-private-detail',
+    );
+    final browser = _Browser()..answer = error;
+    final guest = WebViewXiaohongshuGuest(proxy: const FixedProxyPolicy(), browser: browser);
+    await expectLater(guest.categories(), throwsA(same(error)));
+    await loadStrings();
+    final text = describeLoadError(error);
+    expect(text, contains('WebView'));
+    expect(text, contains('分享链接'));
+    expect(text, isNot(contains('synthetic-private-detail')));
+    expect(failureText(error), text);
+  });
+
+  test('issue177: native visitor isolation failure is a capability error rather than a network failure', () async {
+    const channel = MethodChannel('pure_live/xiaohongshu_guest');
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      ..setMockMethodCallHandler(channel, (call) async {
+        if (call.method == 'cancel') return null;
+        throw PlatformException(
+          code: 'unsupported',
+          details: {
+            'missing': ['MULTI_PROFILE'],
+          },
+        );
+      });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    await expectLater(
+      InAppXiaohongshuGuestBrowser().androidRequest(
+        Uri.parse('https://www.xiaohongshu.com/livelist'),
+        'return 1;',
+        null,
+      ),
+      throwsA(isA<ApiChanged>()),
+    );
+  });
+
   test('only read-only public directory paths enter the browser', () async {
     final browser = _Browser();
     final guest = WebViewXiaohongshuGuest(proxy: const FixedProxyPolicy(), browser: browser);
@@ -203,8 +247,8 @@ void main() {
     await expectLater(
       browser.androidRequest(page, 'return 1;', null),
       throwsA(
-        isA<TransportFailure>()
-            .having((e) => e.reason, 'reason', TransportReason.protocol)
+        isA<ApiChanged>()
+            .having((e) => e.code, 'code', ApiFailureCode.xiaohongshuVisitorIsolationUnavailable)
             .having(
               (e) => e.detail,
               'safe detail',
@@ -235,7 +279,7 @@ void main() {
     await expectLater(
       browser.androidRequest(page, 'return 1;', null),
       throwsA(
-        isA<TransportFailure>().having(
+        isA<ApiChanged>().having(
           (e) => e.detail,
           'detail',
           'WebView visitor isolation unavailable (directory, missing=MULTI_PROFILE)',

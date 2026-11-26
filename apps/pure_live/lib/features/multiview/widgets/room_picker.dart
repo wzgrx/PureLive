@@ -257,13 +257,19 @@ class _MultiviewRoomPickerState extends ConsumerState<MultiviewRoomPicker> {
     // squeezing the list away.
     final least = MediaQuery.textScalerOf(context).scale(140) + 3 * _RoomTile.extent(context);
     return LayoutBuilder(
-      builder: (context, constraints) => !constraints.hasBoundedHeight || constraints.maxHeight >= least
-          ? picker
-          : SingleChildScrollView(
-              key: const ValueKey('multiview-picker-scroll'),
-              physics: const PureLiveScrollPhysics(),
-              child: SizedBox(height: least, child: picker),
-            ),
+      builder: (context, constraints) {
+        final height = constraints.hasBoundedHeight ? math.max(constraints.maxHeight, least) : least;
+        // Keep the editor at the same element path when the IME reduces the
+        // available height. Inserting this wrapper only when short disposed
+        // the focused editor, hiding the keyboard immediately (issue #255).
+        return SingleChildScrollView(
+          key: const ValueKey('multiview-picker-scroll'),
+          physics: height > constraints.maxHeight
+              ? const PureLiveScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          child: SizedBox(height: height, child: picker),
+        );
+      },
     );
   }
 }

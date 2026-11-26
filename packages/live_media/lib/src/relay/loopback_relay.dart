@@ -136,11 +136,13 @@ final class LoopbackRelay {
 
   /// Serves the HLS [line] through [recipe] ([HlsRoute]); [renew] renews a
   /// lease that cuts the connection. [site] selects the upstream proxy route.
+  /// [prefetch] overrides this input's retained-window limits only.
   RelayInput openHls(
     LivePlayLine line, {
     required String site,
     HlsRelayRecipe recipe = const HlsRelayRecipe(),
     HlsLineRenewer? renew,
+    HlsPrefetchOptions? prefetch,
     int maxEntries = 2048,
     int maxPlaylistBytes = 4 << 20,
   }) {
@@ -159,7 +161,7 @@ final class LoopbackRelay {
         upstream: _hlsUpstream(site),
         recipe: recipe,
         renew: renew,
-        prefetch: hlsPrefetch,
+        prefetch: prefetch ?? hlsPrefetch,
         maxEntries: maxEntries,
         maxPlaylistBytes: maxPlaylistBytes,
       ),

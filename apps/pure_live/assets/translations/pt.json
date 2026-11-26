@@ -3755,6 +3755,7 @@
     "xiaohongshu_directory_scope": "Este dispositivo ainda não pode carregar a lista e o chat do Xiaohongshu. Pesquise o número da sala ou cole um link da transmissão; seguir salva apenas essa transmissão.",
     "xiaohongshu_display_viewers": "O Xiaohongshu mostra {value} visualizações (um total arredondado, não as pessoas assistindo agora)",
     "xiaohongshu_guest_directory_scope": "Explore transmissões públicas por categoria, pesquise uma sala ou cole um link ao vivo. Seguir salva esta transmissão; importe outro link quando começar uma nova.",
+    "xiaohongshu_guest_isolation_unavailable": "Este WebView não permite isolar uma sessão de visitante. As categorias e o chat do Xiaohongshu estão indisponíveis; os links partilhados continuam a funcionar.",
     "xiaohongshu_restricted": "Esta transmissão tem condições de visualização (paga, só alguns espectadores ou certas regiões), então não pode ser reproduzida aqui.",
     "xiaohongshu_room_scope": "Cada transmissão do Xiaohongshu recebe um novo número de sala; isto segue esta. Quando o streamer voltar ao vivo, importe o novo link de compartilhamento.",
     "xiaohongshu_unknown_access": "Ainda não dá para saber se esta transmissão é pública; ela pode não tocar aqui.",

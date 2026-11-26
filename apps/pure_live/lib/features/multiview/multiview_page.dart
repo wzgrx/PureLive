@@ -24,6 +24,7 @@ import 'package:pure_live/features/multiview/widgets/room_picker.dart';
 import 'package:pure_live/features/multiview/widgets/toolbar.dart';
 import 'package:pure_live/features/multiview/widgets/wall.dart';
 import 'package:pure_live/i18n/i18n.dart';
+import 'package:pure_live/platform/playback_keyboard_scope.dart';
 import 'package:pure_live/platform/screen_orientation.dart';
 import 'package:pure_live/platform/system_ui.dart';
 import 'package:pure_live/routes/app_navigator.dart';
@@ -626,26 +627,29 @@ class _MultiviewPageState extends ConsumerState<MultiviewPage> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: _exiting,
-    onPopInvokedWithResult: (didPop, _) => _onBack(didPop),
-    child: EdgeSwipeBack(
-      // PopScope intentionally waits for the video textures to leave the tree.
-      // iOS does not dispatch its disabled pop gesture, so use that same safe
-      // exit path from the edge without bypassing panels or fullscreen.
-      enabled: defaultTargetPlatform == TargetPlatform.iOS && !_exiting,
-      onBack: () => _onBack(false),
-      child: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) => LayoutBuilder(
-          builder: (context, constraints) {
-            _arrangement = _arrangementOf(constraints.biggest);
-            return _mode == _DisplayMode.normal ? _normal(context) : _bare(context, constraints.biggest);
-          },
+  Widget build(BuildContext context) {
+    final page = PopScope(
+      canPop: _exiting,
+      onPopInvokedWithResult: (didPop, _) => _onBack(didPop),
+      child: EdgeSwipeBack(
+        // PopScope intentionally waits for the video textures to leave the tree.
+        // iOS does not dispatch its disabled pop gesture, so use that same safe
+        // exit path from the edge without bypassing panels or fullscreen.
+        enabled: defaultTargetPlatform == TargetPlatform.iOS && !_exiting,
+        onBack: () => _onBack(false),
+        child: ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) => LayoutBuilder(
+            builder: (context, constraints) {
+              _arrangement = _arrangementOf(constraints.biggest);
+              return _mode == _DisplayMode.normal ? _normal(context) : _bare(context, constraints.biggest);
+            },
+          ),
         ),
       ),
-    ),
-  );
+    );
+    return PlaybackKeyboardScope(child: page);
+  }
 
   Widget _normal(BuildContext context) {
     final landscape = _arrangement == _Arrangement.landscape;

@@ -36,14 +36,15 @@ D3D11Renderer::~D3D11Renderer() {
 
 void D3D11Renderer::SetSize(int32_t width, int32_t height) {
   if (width == width_ && height == height_) return;
-  width_ = width;
-  height_ = height;
   if (mailbox_swap_chain_) {
-    const HRESULT hr = mailbox_swap_chain_->Resize(width_, height_);
+    const HRESULT hr = mailbox_swap_chain_->Resize(width, height);
     if (FAILED(hr)) {
       std::cout << "media_kit: D3D11Renderer: Mailbox resize failed (hr=0x"
                 << std::hex << hr << std::dec << ")" << std::endl;
+      return;
     }
+    width_ = width;
+    height_ = height;
   }
 }
 

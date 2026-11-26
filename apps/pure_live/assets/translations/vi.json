@@ -3755,6 +3755,7 @@
     "xiaohongshu_directory_scope": "Thiết bị này chưa tải được danh sách và trò chuyện Xiaohongshu. Tìm số phòng hoặc dán liên kết chia sẻ để xem; theo dõi chỉ lưu buổi phát đó.",
     "xiaohongshu_display_viewers": "Xiaohongshu hiển thị {value} lượt xem (tổng làm tròn, không phải số người đang xem)",
     "xiaohongshu_guest_directory_scope": "Duyệt buổi phát công khai theo danh mục, tìm số phòng hoặc dán liên kết chia sẻ. Theo dõi chỉ lưu buổi phát này; hãy nhập liên kết mới khi bắt đầu buổi phát tiếp theo.",
+    "xiaohongshu_guest_isolation_unavailable": "WebView này không hỗ trợ môi trường khách riêng biệt. Danh mục và trò chuyện Xiaohongshu không khả dụng; vẫn có thể xem qua liên kết được chia sẻ.",
     "xiaohongshu_restricted": "Buổi phát này có điều kiện xem (trả phí, chỉ một số người xem hoặc một số khu vực) nên không xem được ở đây.",
     "xiaohongshu_room_scope": "Mỗi buổi phát Xiaohongshu có số phòng mới; mục theo dõi này chỉ theo buổi này. Khi streamer lên sóng lại, hãy nhập liên kết chia sẻ mới.",
     "xiaohongshu_unknown_access": "Chưa biết buổi phát này có công khai không; có thể không phát được ở đây.",

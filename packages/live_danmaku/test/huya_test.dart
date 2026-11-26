@@ -754,6 +754,30 @@ void main() {
   });
 
   group('M4.D2: headline boards (C-9) and the stream end (C-10)', () {
+    test('issue207: an explicit expired countdown never inherits a one-hour total duration', () {
+      final now = DateTime.utc(2026, 11, 26);
+      for (final countdown in [0, -1]) {
+        final decoded = HuyaDanmakuProtocol.decode(
+          _single(
+            HuyaDanmakuProtocol.superChatUri,
+            _panel([(id: 1, nick: 'Viewer', text: 'Expired', cost: 30, total: 3600, countdown: countdown)]),
+          ),
+          now: now,
+        );
+        expect(decoded.messages, isEmpty);
+      }
+      final message =
+          HuyaDanmakuProtocol.decode(
+                _single(
+                  HuyaDanmakuProtocol.superChatUri,
+                  _panel([(id: 1, nick: 'Viewer', text: 'Active', cost: 30, total: 3600, countdown: 6)]),
+                ),
+                now: now,
+              ).messages.single.data!
+              as LiveSuperChatMessage;
+      expect(message.endTime, now.add(const Duration(seconds: 6)));
+    });
+
     final now = DateTime.utc(2026, 10, 1, 0, 20);
 
     test('C-9: a notice carrying a board gives its entries; an empty board nothing; no panel asks a fetch', () {
@@ -1035,6 +1059,24 @@ void main() {
   });
 
   group('connection', () {
+    test('D04.2 c1: a burst frame is read off this isolate, and the frame behind it waits for it', () async {
+      final burst = _chat('a' * 9000);
+      expect(burst.length, greaterThan(8 * 1024));
+      final connector = _Connector();
+      final connection = HuyaDanmakuConnection(connector: connector.call);
+      final events = _record(connection);
+      await connection.connect(_args());
+      final channel = connector.channels.single;
+      channel.incoming
+        ..add(burst)
+        ..add(_chat('after the burst'));
+      await _until(() => _messages(events).length == 2);
+      final messages = _messages(events);
+      expect(messages.first.message, 'a' * 9000, reason: 'the same text, whatever isolate read the frame');
+      expect(messages.last.message, 'after the burst', reason: 'it waited for the burst before it');
+      await connection.close();
+    });
+
     test('opens the one endpoint without headers, is ready at once, registers and sends a heartbeat', () async {
       final connector = _Connector();
       final connection = HuyaDanmakuConnection(connector: connector.call);

@@ -65,6 +65,33 @@ bool FlutterWindow::OnCreate() {
 
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  playback_keyboard_ = std::make_unique<PlaybackKeyboard>(
+      flutter_controller_->view()->GetNativeWindow());
+  playback_keyboard_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(),
+          "pure_live/playback_keyboard", &flutter::StandardMethodCodec::GetInstance());
+  playback_keyboard_channel_->SetMethodCallHandler([this](const auto& call, auto result) {
+    if (call.method_name() == "setPlaybackKeyboardMode") {
+      const auto* enabled = call.arguments() ? std::get_if<bool>(call.arguments()) : nullptr;
+      if (!enabled || !playback_keyboard_) {
+        result->Error("invalid", "Expected a playback keyboard mode");
+        return;
+      }
+      playback_keyboard_->SetEnabled(*enabled);
+      result->Success();
+      return;
+    }
+    if (call.method_name() == "getPlaybackKeyboardState" && playback_keyboard_) {
+      result->Success(flutter::EncodableValue(flutter::EncodableMap{
+          {flutter::EncodableValue("enabled"), flutter::EncodableValue(playback_keyboard_->enabled())},
+          {flutter::EncodableValue("hasImeContext"), flutter::EncodableValue(playback_keyboard_->has_context())}}));
+      return;
+    }
+    result->NotImplemented();
+  });
+
+
   startup_channel_ =
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
           flutter_controller_->engine()->messenger(), "pure_live/window_startup",
@@ -112,6 +139,8 @@ void FlutterWindow::OnDestroy() {
   if (startup_callback_) startup_callback_->window = nullptr;
   startup_callback_.reset();
   startup_channel_.reset();
+  playback_keyboard_channel_.reset();
+  playback_keyboard_.reset();
   display_mode_channel_.reset();
   flutter_controller_.reset();
 

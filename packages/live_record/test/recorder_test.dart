@@ -212,6 +212,44 @@ void main() {
 
     LiveRoom room() => LiveRoom(roomId: '1', platform: 'fake', nick: '主播', liveStatus: LiveStatus.live);
 
+    test('issue239: a forced stop finalizes the current segment when the journal row was not flushed', () async {
+      ffmpeg.completeJournal = false;
+      final task = (await recorder.addTask(room()))!;
+      await until(() => ffmpeg.runs.isNotEmpty);
+      await recorder.stopTask(task);
+      expect(ffmpeg.executions.first.cancelled, isTrue);
+      expect(task.status, RecordStatus.stopped);
+      expect(task.pendingAttempts, isEmpty);
+      expect(task.lastOutputPath, isNotNull);
+      expect(File(task.lastOutputPath!).existsSync(), isTrue);
+      expect(ffmpeg.joinManifests, hasLength(1));
+      expect(ffmpeg.joinManifests.single, contains('.clock-v1.ts'));
+    });
+
+    test('issue239: forced-tail permission and damage evidence survive merge failure and task roundtrip', () async {
+      ffmpeg
+        ..completeJournal = false
+        ..joinFails = (_) => true;
+      final task = (await recorder.addTask(room()))!;
+      await until(() => ffmpeg.runs.isNotEmpty);
+      await recorder.stopTask(task);
+      expect(task.status, RecordStatus.failed);
+      final attempt = task.pendingAttempts.single;
+      expect(attempt.openTail, isTrue);
+      expect(File('${attempt.directoryPath}/${SegmentClock.segmentName(attempt.filePrefix, 0)}').existsSync(), isTrue);
+      final restored = RecordTask.fromJson(task.toJson());
+      expect(restored.pendingAttempts.single.openTail, isTrue);
+      restored
+        ..queuePendingAttempt(
+          directoryPath: attempt.directoryPath,
+          filePrefix: attempt.filePrefix,
+          inputIntegrityError: true,
+        )
+        ..queuePendingAttempt(directoryPath: attempt.directoryPath, filePrefix: attempt.filePrefix);
+      expect(restored.pendingAttempts.single.openTail, isTrue);
+      expect(restored.pendingAttempts.single.inputIntegrityError, isTrue);
+    });
+
     test('issue #42: an unwritable recording root stops without reconnecting', () async {
       await recorder.dispose();
       final blocker = File('${root.path}/not-a-directory')..writeAsStringSync('preserve');

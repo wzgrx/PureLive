@@ -100,6 +100,7 @@ class VideoOutput {
   mpv_handle* handle_ = nullptr;
   mpv_render_context* render_context_ = nullptr;
   int64_t texture_id_ = 0;
+  std::chrono::steady_clock::time_point next_resize_attempt_{};
   flutter::PluginRegistrarWindows* registrar_ = nullptr;
   ThreadPool* thread_pool_ref_ = nullptr;
   // For preventing any asynchronous operations (primarily texture objects

@@ -3755,6 +3755,7 @@
     "xiaohongshu_directory_scope": "Bu cihaz henüz Xiaohongshu listesini ve sohbetini yükleyemiyor. İzlemek için oda numarası arayın veya canlı yayın bağlantısı yapıştırın; takip yalnızca o yayını kaydeder.",
     "xiaohongshu_display_viewers": "Xiaohongshu {value} görüntülenme gösteriyor (yuvarlanmış toplam, şu anda izleyenler değil)",
     "xiaohongshu_guest_directory_scope": "Herkese açık yayınları kategoriye göre gezin, oda numarası arayın veya canlı yayın bağlantısı yapıştırın. Takip bu yayını kaydeder; sonraki yayın için yeni bir bağlantı içe aktarın.",
+    "xiaohongshu_guest_isolation_unavailable": "Bu WebView bağımsız bir misafir oturumunu desteklemiyor. Xiaohongshu kategorileri ve sohbeti kullanılamıyor; paylaşılan bağlantılar hâlâ oynatılabilir.",
     "xiaohongshu_restricted": "Bu yayının izleme koşulları var (ücretli, yalnızca bazı izleyiciler veya belirli bölgeler), bu yüzden burada oynatılamaz.",
     "xiaohongshu_room_scope": "Her Xiaohongshu yayını yeni bir oda numarası alır; bu takip yalnızca bu yayını izler. Yayıncı yeniden yayına başladığında yeni paylaşım bağlantısını içe aktarın.",
     "xiaohongshu_unknown_access": "Bu yayının herkese açık olup olmadığı henüz anlaşılamadı; burada oynatılamayabilir.",
