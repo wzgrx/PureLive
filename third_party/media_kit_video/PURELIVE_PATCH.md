@@ -134,3 +134,8 @@ Windows的Resize现在等待Flutter异步UnregisterTexture回调完成后，才�
 mailbox先完整分配替换槽再提交；失败保留旧槽、fence和尺寸，避免下一帧解引用空资源。Renderer仅在成功后更新尺寸，输出回调报告实际尺寸；失败重试在CheckAndResize中限为每秒一次，期间继续使用有效旧资源。
 
 原生回归windows/tests/mailbox_resize_test.cc：在VS x64开发环境，以该目录为-I，编译测试和mailbox_swap_chain.cc，链接d3d11.lib/dxgi.lib；D3D11 WARP拒绝非法纹理尺寸后必须保留有效mailbox，并能再次正常resize及ProducerCommit。旧实现返回10，新实现返回0。此回归验证分配失败的处理，不冒充原用户显卡或原闪退转储已复现；同源成品的多播放器压力/长播另行记录。
+
+
+### 注册发布竞态
+
+独立生成数据压力场景的原生转储证明：GPU描述符回调在textures_.at(texture_id_)抛std::out_of_range，what为invalid unordered_map<K, T> key，跨Flutter引擎noexcept边界后进程fastfail。新ID此前在入表锁之前就已可见。现将RegisterTexture/ID发布/两张表入表一并加锁；硬件及软件回调显式find并拒绝destroyed状态，不让失效纹理异常穿过引擎边界。

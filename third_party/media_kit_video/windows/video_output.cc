@@ -351,8 +351,9 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
         std::make_unique<flutter::TextureVariant>(flutter::GpuSurfaceTexture(
             kFlutterDesktopGpuSurfaceTypeDxgiSharedHandle, [&](auto, auto) {
               std::lock_guard<std::mutex> lock(textures_mutex_);
-              if (texture_id_) {
-                auto* desc = textures_.at(texture_id_).get();
+              const auto found = textures_.find(texture_id_);
+              if (!destroyed_ && texture_id_ && found != textures_.end()) {
+                auto* desc = found->second.get();
                 // ConsumerAcquire() is lock-free.  texture_id_ != 0 implies
                 // d3d11_renderer_ is valid: UnregisterTexture guarantees that
                 // Flutter stops invoking this callback before the destructor
@@ -362,12 +363,14 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
               }
               return (FlutterDesktopGpuSurfaceDescriptor*)nullptr;
             }));
-    // Register new texture.
+    // Register and publish the descriptor under the same lock used by the
+    // raster callback. Exposing the ID before map insertion let Flutter call
+    // textures_.at(new_id) in that gap and terminate on std::out_of_range.
+    std::lock_guard<std::mutex> lock(textures_mutex_);
     texture_id_ =
         registrar_->texture_registrar()->RegisterTexture(texture_variant.get());
     std::cout << "media_kit: VideoOutput: Create Texture: " << texture_id_
               << std::endl;
-    std::lock_guard<std::mutex> lock(textures_mutex_);
     textures_.emplace(std::make_pair(texture_id_, std::move(texture)));
     texture_variants_.emplace(
         std::make_pair(texture_id_, std::move(texture_variant)));
@@ -385,18 +388,21 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
     auto texture_variant = std::make_unique<flutter::TextureVariant>(
         flutter::PixelBufferTexture([&](auto, auto) {
           std::lock_guard<std::mutex> lock(textures_mutex_);
-          if (texture_id_) {
-            return pixel_buffer_textures_.at(texture_id_).get();
+          const auto found = pixel_buffer_textures_.find(texture_id_);
+          if (!destroyed_ && texture_id_ && found != pixel_buffer_textures_.end()) {
+            return found->second.get();
           } else {
             return (FlutterDesktopPixelBuffer*)nullptr;
           }
         }));
-    // Register new texture.
+    // Register and publish the descriptor under the same lock used by the
+    // raster callback. Exposing the ID before map insertion let Flutter call
+    // textures_.at(new_id) in that gap and terminate on std::out_of_range.
+    std::lock_guard<std::mutex> lock(textures_mutex_);
     texture_id_ =
         registrar_->texture_registrar()->RegisterTexture(texture_variant.get());
     std::cout << "media_kit: VideoOutput: Create Texture: " << texture_id_
               << std::endl;
-    std::lock_guard<std::mutex> lock(textures_mutex_);
     pixel_buffer_textures_.emplace(
         std::make_pair(texture_id_, std::move(pixel_buffer_texture)));
     texture_variants_.emplace(

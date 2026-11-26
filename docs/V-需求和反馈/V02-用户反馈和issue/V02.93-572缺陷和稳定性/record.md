@@ -39,3 +39,11 @@ Windows先前已有NotifyRender注销保护，不能重复宣称新修这个。�
 另加真实录制管线探针：原生生成视频，按实时输入录制，取消时仅对该生成fixture注入末行未落盘状态，再由正式Recorder/原生muxer转MP4并解码。它与波形/文件互操作一并校验；尚未实际运行，不计为通过。
 
 Windows原生预验R1/R2均未进入多播放器阶段，失败记录完整保留。R1未得到录制分段，样本改走同源loopback HTTP并补任务错误诊断。R2已实际捕获TS并注入缺末行，但合成未通过；用独立FFmpeg复核该生成MPEG4样本的TS，确实缺宽高元数据、不能解码。没有因此放宽产品合成校验；改为与直播一致的自生成H.264小样本，编码成仅测试入口引用的常量，不加入正式应用assets。再次原生预验尚待执行。
+
+## #237实际崩溃栈定位
+
+R3普通运行在43秒原生fastfail0xC0000409；首次调试运行134秒99轮/396次resize/24会话全部退休无崩溃，但未据此判定修复，因为调试会改变竞态时序。第二次已清理环境变量的同源独立测试又在55秒捕获，保存私有转储，不上传；只涉及生成数据，无正式安装或账号资料。
+
+匹配SDK flutter_windows.dll.pdb后，从原始C++异常记录恢复到渲染线程：VCRUNTIME140!CxxThrowException→msvcp140!std::_Xout_of_range→media_kit_video_plugin GPU描述符回调→flutter::ExternalTextureD3d::PopulateTexture。原始what为invalid unordered_map<K, T> key。检查video_output.cc发现RegisterTexture返回的新texture_id_在textures_mutex_加锁/入表之前就可见；光栅回调拿到新ID却找不到条目，异常跨入引擎noexcept边界导致terminate。
+
+修复为RegisterTexture、ID发布、描述符及variant入表使用与光栅回调同一锁，并将硬件/软件取表改为显式find+销毁检查，失效查询返回空。该修复尚待同一压力场景复验；不把之前资源分配单测或调试器一次通过冒充此根因已验收。
