@@ -139,3 +139,7 @@ mailbox先完整分配替换槽再提交；失败保留旧槽、fence和尺寸�
 ### 注册发布竞态
 
 独立生成数据压力场景的原生转储证明：GPU描述符回调在textures_.at(texture_id_)抛std::out_of_range，what为invalid unordered_map<K, T> key，跨Flutter引擎noexcept边界后进程fastfail。新ID此前在入表锁之前就已可见。现将RegisterTexture/ID发布/两张表入表一并加锁；硬件及软件回调显式find并拒绝destroyed状态，不让失效纹理异常穿过引擎边界。
+
+### 实际纹理尺寸与描述符一致
+
+失败分配保留要求先用请求width/height分配替换mailbox，成功后才提交renderer尺寸；不能用旧width_/height_分配却向Flutter报告新尺寸。windows/tests/renderer_dimensions_test.cc以D3D11 WARP读取真实texture GetDesc，覆盖成功resize、非法尺寸失败保留、再次resize。保留GPU输出及原硬件解码偏好；不含私有软件输出强制实验或直接纹理指针实验。Flutter GetGraphicsAdapter的自有引用由ComPtr::Attach接管并释放。

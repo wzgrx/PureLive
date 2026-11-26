@@ -47,3 +47,9 @@ R3普通运行在43秒原生fastfail0xC0000409；首次调试运行134秒99轮/3
 匹配SDK flutter_windows.dll.pdb后，从原始C++异常记录恢复到渲染线程：VCRUNTIME140!CxxThrowException→msvcp140!std::_Xout_of_range→media_kit_video_plugin GPU描述符回调→flutter::ExternalTextureD3d::PopulateTexture。原始what为invalid unordered_map<K, T> key。检查video_output.cc发现RegisterTexture返回的新texture_id_在textures_mutex_加锁/入表之前就可见；光栅回调拿到新ID却找不到条目，异常跨入引擎noexcept边界导致terminate。
 
 修复为RegisterTexture、ID发布、描述符及variant入表使用与光栅回调同一锁，并将硬件/软件取表改为显式find+销毁检查，失效查询返回空。该修复尚待同一压力场景复验；不把之前资源分配单测或调试器一次通过冒充此根因已验收。
+
+## Windows原生转储和候选复验
+
+自有生成媒体四画面在无调试器环境43秒内发生0xC0000409。对清理过环境变量的专用测试进程抓取转储，恢复原始C++异常上下文及本地PDB后确认textures_.at抛std::out_of_range。注册与入表现同锁发布，回调使用find拒绝失效对象。此证据指向代码竞态，不能归因用户硬件或网络；转储仅保留在本机，不上传。
+
+候选R4虽不再闪退但画面黑屏。R5直接D3D纹理指针没有解决且退休卡住，R6全局软件纹理能显示移动图样并干净退出；这些均为私有实验，不发布。进一步检查发现本轮分配失败保留修复把尺寸提交推迟后，仍向mailbox传入旧width_/height_，导致实际纹理尺寸与对外描述符不符。现改为传入请求width/height，仅成功后提交字段，并撤销直接指针与全局软件强制实验，保留Flutter adapter自有引用的RAII释放。真实D3D11 WARP回归检查实际texture GetDesc与报告尺寸、失败保留及后续成功resize。R7需重新实测硬件画面和干净退出，不沿用软件实验的通过结论。

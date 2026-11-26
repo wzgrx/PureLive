@@ -70,13 +70,6 @@ class MailboxSwapChain final {
   // no CAS, no fence poll, no flush, no stall, no KeyedMutex.
   HANDLE ConsumerAcquire();
 
-  // Flutter can import the same completed ID3D11Texture2D directly, without
-  // a legacy shared-HANDLE surface. It remains owned until unregister ends.
-  ID3D11Texture2D* ConsumerTexture() const {
-    return slots_[latest_completed_slot_.load(std::memory_order_acquire)].texture.Get();
-  }
-
-
   // Recreates all texture slots at the new dimensions.
   // Must only be called from the producer thread with no active consumer.
   HRESULT Resize(int32_t width, int32_t height);

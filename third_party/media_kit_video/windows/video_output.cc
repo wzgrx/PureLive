@@ -1,4 +1,4 @@
-// This file is a part of media_kit
+﻿// This file is a part of media_kit
 // (https://github.com/media-kit/media-kit).
 //
 // Copyright © 2021 & onwards, Hitesh Kumar Saini <saini123hitesh@gmail.com>.
@@ -28,8 +28,6 @@ VideoOutput::VideoOutput(int64_t handle,
       configuration_(configuration),
       registrar_(registrar),
       thread_pool_ref_(thread_pool_ref) {
-  // Private acceptance candidate: isolate the CPU texture path from D3D interop.
-  configuration.enable_hardware_acceleration = false;
   // The constructor must be invoked through the thread pool.
   auto future = thread_pool_ref_->Post([&]() {
     mpv_set_option_string(handle_, "video-sync", "audio");
@@ -343,7 +341,7 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
     texture->struct_size = sizeof(FlutterDesktopGpuSurfaceDescriptor);
     // Seed with the latest-completed-slot handle so Flutter has a valid
     // surface even before the first mpv frame is committed.
-    texture->handle = d3d11_renderer_->ConsumerTexture();
+    texture->handle = d3d11_renderer_->ReadHandleSnapshot();
     texture->width = texture->visible_width = d3d11_renderer_->width();
     texture->height = texture->visible_height = d3d11_renderer_->height();
     texture->release_context = nullptr;
@@ -352,7 +350,7 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
 
     auto texture_variant =
         std::make_unique<flutter::TextureVariant>(flutter::GpuSurfaceTexture(
-            kFlutterDesktopGpuSurfaceTypeD3d11Texture2D, [&](auto, auto) {
+            kFlutterDesktopGpuSurfaceTypeDxgiSharedHandle, [&](auto, auto) {
               std::lock_guard<std::mutex> lock(textures_mutex_);
               const auto found = textures_.find(texture_id_);
               if (!destroyed_ && texture_id_ && found != textures_.end()) {
@@ -361,7 +359,7 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
                 // d3d11_renderer_ is valid: UnregisterTexture guarantees that
                 // Flutter stops invoking this callback before the destructor
                 // resets d3d11_renderer_.
-                desc->handle = d3d11_renderer_->ConsumerTexture();
+                desc->handle = d3d11_renderer_->ConsumerAcquire();
                 return desc;
               }
               return (FlutterDesktopGpuSurfaceDescriptor*)nullptr;
