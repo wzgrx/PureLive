@@ -38,14 +38,15 @@ VideoOutput::VideoOutput(int64_t handle,
     
     if (configuration.enable_hardware_acceleration) {
       try {
-        IDXGIAdapter* flutter_adapter = nullptr;
+        Microsoft::WRL::ComPtr<IDXGIAdapter> flutter_adapter;
         if (auto* view = registrar_->GetView()) {
-          flutter_adapter = view->GetGraphicsAdapter();
+          // The Flutter view returns an owned reference.
+          flutter_adapter.Attach(view->GetGraphicsAdapter());
         }
         d3d11_renderer_ = std::make_unique<D3D11Renderer>(
             static_cast<int32_t>(width_.value_or(1)),
             static_cast<int32_t>(height_.value_or(1)),
-            flutter_adapter);
+            flutter_adapter.Get());
         
         // Initialize mpv with the D3D11 device. The render target is supplied
         // per frame through MPV_RENDER_PARAM_D3D11_FBO in Render().
@@ -340,7 +341,7 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
     texture->struct_size = sizeof(FlutterDesktopGpuSurfaceDescriptor);
     // Seed with the latest-completed-slot handle so Flutter has a valid
     // surface even before the first mpv frame is committed.
-    texture->handle = d3d11_renderer_->ReadHandleSnapshot();
+    texture->handle = d3d11_renderer_->ConsumerTexture();
     texture->width = texture->visible_width = d3d11_renderer_->width();
     texture->height = texture->visible_height = d3d11_renderer_->height();
     texture->release_context = nullptr;
@@ -349,7 +350,7 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
 
     auto texture_variant =
         std::make_unique<flutter::TextureVariant>(flutter::GpuSurfaceTexture(
-            kFlutterDesktopGpuSurfaceTypeDxgiSharedHandle, [&](auto, auto) {
+            kFlutterDesktopGpuSurfaceTypeD3d11Texture2D, [&](auto, auto) {
               std::lock_guard<std::mutex> lock(textures_mutex_);
               const auto found = textures_.find(texture_id_);
               if (!destroyed_ && texture_id_ && found != textures_.end()) {
@@ -358,7 +359,7 @@ void VideoOutput::Resize(int64_t required_width, int64_t required_height) {
                 // d3d11_renderer_ is valid: UnregisterTexture guarantees that
                 // Flutter stops invoking this callback before the destructor
                 // resets d3d11_renderer_.
-                desc->handle = d3d11_renderer_->ConsumerAcquire();
+                desc->handle = d3d11_renderer_->ConsumerTexture();
                 return desc;
               }
               return (FlutterDesktopGpuSurfaceDescriptor*)nullptr;

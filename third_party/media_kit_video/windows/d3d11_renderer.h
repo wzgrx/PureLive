@@ -76,6 +76,11 @@ class D3D11Renderer {
   // via a single atomic load — no fence poll, no flush, no stall.
   HANDLE ConsumerAcquire();
 
+  ID3D11Texture2D* ConsumerTexture() const {
+    return mailbox_swap_chain_ ? mailbox_swap_chain_->ConsumerTexture() : nullptr;
+  }
+
+
   // Returns the DXGI shared HANDLE for the current read slot without
   // advancing mailbox state.  Used once during texture registration before
   // the consumer thread starts.
