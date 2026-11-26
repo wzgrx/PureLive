@@ -165,10 +165,11 @@ SiteRegistry buildSiteRegistry(PlatformDeps deps) {
   final http = deps.http;
   final cookies = deps.cookies;
   final settings = deps.store.settings;
-  // The sites take a two-way switch (H.264 or HEVC): only a preference for
-  // H.265 turns it to HEVC; AV1, VP9, VP8 and 自动 keep H.264 as the base
-  // line, and the player reorders the codecs it was offered after that.
-  bool preferH264() => settings.get(Settings.preferredVideoCodec) != VideoCodecs.h265;
+  // The sites take a two-way switch (H.264 or HEVC): on exactly when the
+  // setting asks for H.264 itself. 自动, H.265, AV1, VP9 and VP8 turn it
+  // off, so Bilibili (`codec=0,1,2`) and Douyu (`hevc=1`) offer every codec
+  // and the player orders them.
+  bool preferH264() => settings.get(Settings.preferredVideoCodec) == VideoCodecs.h264;
   return SiteRegistry({
     SiteIds.bilibili: () => BilibiliSite(
       http,

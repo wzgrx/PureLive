@@ -36,7 +36,7 @@ void main() {
           'mobile_volume',
           'prefer_resolution',
           'prefer_resolution_cellular',
-          'prefer_h264',
+          'preferred_codec',
           'video_fit',
           'fullscreen_default',
           'screen_keep_on',
