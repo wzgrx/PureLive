@@ -319,6 +319,7 @@ class RoomReplayLibrary extends StatelessWidget {
           for (var i = 0; i < parts.length; i++)
             ListTile(
               key: ValueKey('archive-part-${parts[i].id}'),
+              autofocus: tv && parts[i].id == archive?.video?.id,
               selected: parts[i].id == archive?.video?.id,
               leading: Text('${i + 1}'.padLeft(2, '0'), style: context.textStyles.t14),
               title: Text(

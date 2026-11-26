@@ -424,10 +424,10 @@ final class DouyuSite extends LiveSite
           room.roomId: room,
     };
     if (requested.length < 2 || requested.length > 20) return const {};
-    final response = await http.postJson(
+    final response = await http.getJson(
       _site,
-      Uri.https('apiv2.douyucdn.cn', '/Livenc/UserRelation/getFollowRoomListByRid'),
-      form: {'rids': requested.keys.join(',')},
+      Uri.https(_www, '/wgapi/live/webbackends/hoverRoomInfo', {'rids': requested.keys.join(',')}),
+      headers: DouyuApi.apiHeaders(''),
       timeout: const Duration(seconds: 3),
     );
     return DouyuApi.followBatch(response, requested);

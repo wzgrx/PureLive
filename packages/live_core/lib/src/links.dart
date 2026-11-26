@@ -218,6 +218,19 @@ final class LinkParser {
     'www.weibo.com',
   };
 
+  static bool _literalDouyinRoom(String candidate) {
+    final uri = Uri.tryParse(candidate);
+    if (uri == null || uri.host.toLowerCase() != 'live.douyin.com') return false;
+    try {
+      final segments = uri.pathSegments;
+      if (segments.length != 1) return false;
+      final key = segments.single;
+      return RegExp(r'^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$').hasMatch(key) && RegExp('[A-Za-z_-]').hasMatch(key);
+    } on FormatException {
+      return false;
+    }
+  }
+
   /// The http(s) links in [text], adding HTTPS to bare hosts while keeping
   /// the remaining spelling (signed URLs must not be re-encoded).
   ///
@@ -239,7 +252,10 @@ final class LinkParser {
           candidate = candidate.replaceFirst(RegExp(r'\.+$'), '');
         }
       } else {
-        candidate = candidate.replaceFirst(RegExp(r'''[.,!?;:)\]}。！？、，；：）》」』”’"']+$'''), '');
+        candidate = candidate.replaceFirst(RegExp(r'''[,!?;:)\]}。！？、，；：）》」』”’"']+$'''), '');
+        // A named Douyin web_rid can end in a literal dot. Numeric room
+        // links and other platforms keep the established prose cleanup.
+        if (!_literalDouyinRoom(candidate)) candidate = candidate.replaceFirst(RegExp(r'\.+$'), '');
       }
       final uri = Uri.tryParse(candidate);
       if (uri == null ||

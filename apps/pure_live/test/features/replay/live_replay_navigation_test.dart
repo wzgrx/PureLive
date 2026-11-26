@@ -28,7 +28,12 @@ Future<void> settle(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
-Future<FakeEngine> page(WidgetTester tester, {bool landscape = false, bool returnReplay = false}) async {
+Future<FakeEngine> page(
+  WidgetTester tester, {
+  bool landscape = false,
+  bool returnReplay = false,
+  bool remote = false,
+}) async {
   debugDefaultTargetPlatformOverride = TargetPlatform.android;
   addTearDown(() => debugDefaultTargetPlatformOverride = null);
   tester.view
@@ -93,7 +98,15 @@ Future<FakeEngine> page(WidgetTester tester, {bool landscape = false, bool retur
         danmakuProvider.overrideWithValue(DanmakuRegistry({SiteIds.bilibili: FakeDanmaku.new})),
         playbackSessionFactoryProvider.overrideWithValue(({config}) => fakeSession(engine)),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        routerConfig: router,
+        builder: remote
+            ? (context, child) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(navigationMode: NavigationMode.directional),
+                child: child!,
+              )
+            : null,
+      ),
     ),
   );
   await settle(tester);
@@ -101,6 +114,54 @@ Future<FakeEngine> page(WidgetTester tester, {bool landscape = false, bool retur
 }
 
 void main() {
+  testWidgets('issue242: TV replay remote seeks, pauses and selects a segment on the same player', (tester) async {
+    final engine = await page(tester, returnReplay: true, remote: true);
+    final controller = tester.widget<ChatList>(find.byType(ChatList).first).controller;
+    final session = controller.session;
+    await tester.tap(find.byKey(const ValueKey('room-replay-entry')));
+    await settle(tester);
+    await tester.tap(find.text('回放目录测试页'));
+    await settle(tester);
+    final archive = controller.archive!;
+    await archive.seek(const Duration(seconds: 60));
+    tester.view.physicalSize = const Size(960, 540);
+    await settle(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await settle(tester);
+    expect(engine.seeks.last, const Duration(seconds: 70));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await settle(tester);
+    expect(engine.seeks.last, const Duration(seconds: 60));
+    final volume = session.state.volume;
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await settle(tester);
+    expect(find.byKey(const ValueKey('archive-catalog-panel')), findsOneWidget);
+    expect(session.state.volume, volume);
+    final last = archive.segments.last.id;
+    final part = find.byKey(ValueKey('archive-part-$last'));
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await settle(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await settle(tester);
+    expect(archive.video!.id, last);
+    expect(find.byKey(const ValueKey('archive-catalog-panel')), findsNothing);
+    expect(controller.session, same(session));
+    expect(tester.widget<ListTile>(part).selected, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.select);
+    await settle(tester);
+    expect(session.state.status, PlaybackStatus.paused);
+    await tester.sendKeyEvent(LogicalKeyboardKey.contextMenu);
+    await settle(tester);
+    expect(find.byKey(const ValueKey('archive-catalog-panel')), findsOneWidget);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await settle(tester);
+    expect(find.byKey(const ValueKey('archive-catalog-panel')), findsNothing);
+    expect(controller.isArchive, isTrue);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await settle(tester);
+  });
+
   testWidgets('catalog selection enters replay in place and returns to live on the original session', (tester) async {
     final engine = await page(tester, returnReplay: true);
     final controller = tester.widget<ChatList>(find.byType(ChatList).first).controller;

@@ -508,14 +508,13 @@ abstract final class DouyuApi {
     );
   }
 
-  /// Public follow snapshots contain no reliable loop discriminator for
-  /// on-air rows. A real carousel can have the same show_status and scheme
-  /// as a live broadcast. Confirm those rows through the ordinary detail.
+  /// Current anonymous hover snapshots. An on-air row without an explicit
+  /// loop discriminator remains unconfirmed and is refreshed individually.
+  /// No request error, missing row or duplicate identity means "offline".
   static Map<String, LiveRoom> followBatch(Object? body, Map<String, LiveRoom> requested) {
     final root = _object(body);
-    final data = _object(root?['data']);
-    final rows = data?['room_list'];
-    if (jsonInt(root?['error']) != 0 || rows is! List || rows.length > 20) {
+    final rows = root?['data'];
+    if (jsonInt(root?['code']) != 0 || rows is! List || rows.length > 20) {
       throw const ApiChanged(_site, 'Batch follow status');
     }
     final seen = <String>{};
@@ -523,32 +522,34 @@ abstract final class DouyuApi {
     for (final item in rows) {
       final row = _object(item);
       if (row == null) continue;
-      final rid = _roomId(row['room_id']);
+      final rid = _roomId(row['roomId']);
       final room = requested[rid];
       if (rid == null || room == null) continue;
       if (!seen.add(rid)) {
         updates.remove(room.identityKey);
         continue;
       }
-      final title = decodeHtmlEntities(jsonString(row['room_name']) ?? '').trim();
-      if (jsonInt(row['show_status']) != 2 ||
-          jsonInt(row['is_out_live']) != 0 ||
-          jsonInt(row['out_live_type']) != 0 ||
-          (row['videoLoop'] != null && jsonInt(row['videoLoop']) != 0) ||
-          title.startsWith('【回放】') ||
-          room.effectiveLiveStatus == LiveStatus.replay ||
-          room.effectiveLiveStatus == LiveStatus.carousel) {
+      if ((jsonInt(row['is_out_live']) ?? 0) != 0 || (jsonInt(row['out_live_type']) ?? 0) != 0) continue;
+      final show = jsonInt(row['showStatus']);
+      final loop = jsonInt(row['videoLoop']);
+      final LiveStatus? state;
+      if (show == 2 &&
+          (loop == null || loop == 0) &&
+          room.effectiveLiveStatus != LiveStatus.replay &&
+          room.effectiveLiveStatus != LiveStatus.carousel) {
+        state = LiveStatus.offline;
+      } else if (show == 1 && (loop == 0 || loop == 1)) {
+        state = loop == 1 ? LiveStatus.replay : LiveStatus.live;
+      } else {
         continue;
       }
-      updates[room.identityKey] = LiveRoom(
-        roomId: rid,
-        platform: _site,
-        title: title,
-        nick: decodeHtmlEntities(jsonString(row['nickname']) ?? ''),
-        avatar: normalizeImageUrl(row['avatar']),
-        cover: normalizeImageUrl(row['room_src']),
-        area: jsonString(row['cate2_name']),
-        liveStatus: LiveStatus.offline,
+      final hot = jsonString(row['hot']);
+      updates[room.identityKey] = room.copyWith(
+        cover: normalizeImageUrl(row['roomCover']),
+        watching: hot,
+        popularity: hot,
+        notice: decodeHtmlEntities(jsonString(row['showDetail']) ?? ''),
+        liveStatus: state,
       );
     }
     return updates;
@@ -936,7 +937,7 @@ abstract final class DouyuApi {
     final primaryCodec = codec(primary);
     return [
       _lineAnswer(primary, data, roomId, cdn, cookie, issuedAt, forceRenewal, codec: primaryCodec),
-      if (primaryCodec == 'avc' && alternate != primary && _playable(alternate) && codec(alternate) == 'hevc')
+      if (primaryCodec != 'hevc' && alternate != primary && _playable(alternate) && codec(alternate) == 'hevc')
         _lineAnswer(alternate, data, roomId, cdn, cookie, issuedAt, forceRenewal, codec: 'hevc'),
     ];
   }

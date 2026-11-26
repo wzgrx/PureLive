@@ -111,6 +111,21 @@ SiteRegistry _registry() =>
     SiteRegistry({'bilibili': _Bilibili.new, 'huya': _Huya.new, 'xiaohongshu': _Xiaohongshu.new, 'cc': _Plain.new});
 
 void main() {
+  test('issue246: literal Douyin room names keep terminal dots and signed spelling', () async {
+    final http = _FakeHttp((_) => throw StateError('Direct room must not access network'));
+    final parser = LinkParser(SiteRegistry({'douyin': () => DouyinSite(http)}), http);
+    for (final id in ['aiyiwen.', 'name..', 'name.with.dot', 'name_', 'name-']) {
+      final url = 'https://live.douyin.com/$id';
+      expect(LinkParser.sharedHttpUrls(url).single, url);
+      expect(await parser.parse(url), RoomLink('douyin', id));
+      expect(await parser.parse('分享 $url。打开直播'), RoomLink('douyin', id));
+    }
+    const signed = 'https://LIVE.DOUYIN.COM/aiyiwen.?signature=a%2Fb%3D';
+    expect(LinkParser.sharedHttpUrls(signed).single, signed);
+    expect(LinkParser.sharedHttpUrls('https://live.bilibili.com/123.').single, 'https://live.bilibili.com/123');
+    expect(http.requests, isEmpty);
+  });
+
   group('SiteIds', () {
     test('35 supported platforms in 3.x order (Kick back after CHZZK), IPTV last; retired ones are separate', () {
       expect(SiteIds.supported, hasLength(35));

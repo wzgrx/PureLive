@@ -36,6 +36,27 @@ String _jwt(Map<String, Object?> payload) =>
 DateTime _seconds(int value) => DateTime.fromMillisecondsSinceEpoch(value * 1000, isUtc: true);
 
 void main() {
+  test('issue253: an original primary without a bitrate suffix keeps its verified HEVC alternative', () {
+    const primary = 'https://video.example.test/original-stream.flv?signature=a%2Fb';
+    const hevc = 'https://video.example.test/original-stream_10000h.flv?signature=c%2Fd';
+    List<({LivePlayLine line, int? rate})> read(String alternate) => DouyuApi.codecAnswers(
+      {'rtmp_live': primary, 'player_1': alternate, 'rate': 0},
+      roomId: '9999',
+      cdn: 'hw-h5',
+      cookie: '',
+      issuedAt: DateTime.utc(2026, 11, 26),
+    );
+    final answers = read(hevc);
+    expect(answers, hasLength(2));
+    expect(answers.first.line.url, primary);
+    expect(answers.last.line.codec, 'hevc');
+    expect(answers.last.line.url, hevc);
+    expect(answers.last.line.lineId, 'douyu:hw-h5:hevc');
+    expect(answers.every((a) => a.rate == 0), isTrue);
+    expect(read('https://video.example.test/unknown.flv'), hasLength(1));
+    expect(read(primary), hasLength(1));
+  });
+
   test('opt-in HEVC identity is stable when the primary disappears at renewal', () {
     const primary = 'https://video.example.test/live_123.flv?expire=60';
     const hevc = 'https://video.example.test/live_123h.flv?expire=60';

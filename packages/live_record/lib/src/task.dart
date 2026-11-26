@@ -66,7 +66,12 @@ enum RecordStatus {
 @immutable
 final class PendingRecordingAttempt {
   /// Creates the attempt.
-  const new({required this.directoryPath, required this.filePrefix, this.inputIntegrityError = false});
+  const new({
+    required this.directoryPath,
+    required this.filePrefix,
+    this.inputIntegrityError = false,
+    this.openTail = false,
+  });
 
   /// Directory of the segments.
   final String directoryPath;
@@ -78,11 +83,15 @@ final class PendingRecordingAttempt {
   /// so the source survives (capture evidence, kept across restarts).
   final bool inputIntegrityError;
 
+  /// A forced native cancellation may leave exactly one unfinished journal tail.
+  final bool openTail;
+
   /// JSON of 3.x.
   Map<String, Object?> toJson() => {
     'directoryPath': directoryPath,
     'filePrefix': filePrefix,
     'inputIntegrityError': inputIntegrityError,
+    'openTail': openTail,
   };
 
   /// Reads 3.x JSON; null without a directory or prefix.
@@ -94,6 +103,7 @@ final class PendingRecordingAttempt {
       directoryPath: directoryPath,
       filePrefix: filePrefix,
       inputIntegrityError: _bool(json['inputIntegrityError']),
+      openTail: _bool(json['openTail']),
     );
   }
 }
@@ -450,6 +460,7 @@ final class RecordTask {
     required String directoryPath,
     required String filePrefix,
     bool inputIntegrityError = false,
+    bool openTail = false,
   }) {
     final directory = directoryPath.trim();
     final prefix = filePrefix.trim();
@@ -460,11 +471,12 @@ final class RecordTask {
     final attempt = PendingRecordingAttempt(
       directoryPath: directory,
       filePrefix: prefix,
-      inputIntegrityError: inputIntegrityError,
+      inputIntegrityError: inputIntegrityError || (index >= 0 && pendingAttempts[index].inputIntegrityError),
+      openTail: openTail || (index >= 0 && pendingAttempts[index].openTail),
     );
     if (index < 0) {
       pendingAttempts.add(attempt);
-    } else if (inputIntegrityError && !pendingAttempts[index].inputIntegrityError) {
+    } else {
       pendingAttempts[index] = attempt;
     }
   }
@@ -636,8 +648,14 @@ List<PendingRecordingAttempt> _pendingAttempts(Object? value) {
     if (duplicate == null) {
       seen[key] = attempts.length;
       attempts.add(attempt);
-    } else if (attempt.inputIntegrityError) {
-      attempts[duplicate] = attempt;
+    } else {
+      final previous = attempts[duplicate];
+      attempts[duplicate] = PendingRecordingAttempt(
+        directoryPath: attempt.directoryPath,
+        filePrefix: attempt.filePrefix,
+        inputIntegrityError: previous.inputIntegrityError || attempt.inputIntegrityError,
+        openTail: previous.openTail || attempt.openTail,
+      );
     }
   }
   return attempts;

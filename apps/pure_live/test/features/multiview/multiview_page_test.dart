@@ -172,6 +172,34 @@ void _expectLeftToRight(WidgetTester tester, List<String> keys) {
 }
 
 void main() {
+  testWidgets('issue255: tablet search retains the same editor when the keyboard shrinks the picker', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final (services, _) = await _pump(tester, const Size(1280, 800));
+    try {
+      final search = _key('multiview-picker-search');
+      await tester.tap(search);
+      await tester.enterText(search, '1');
+      await tester.pump();
+      final editor = find.descendant(of: search, matching: find.byType(EditableText));
+      final before = tester.state<EditableTextState>(editor);
+      expect(before.widget.focusNode.hasFocus, isTrue);
+      tester.view.viewInsets = const FakeViewPadding(bottom: 500);
+      await tester.pumpAndSettle();
+      expect(tester.state<EditableTextState>(editor), same(before));
+      expect(before.widget.focusNode.hasFocus, isTrue);
+      expect(before.widget.controller.text, '1');
+      expect(tester.testTextInput.isVisible, isTrue);
+      tester.view.viewInsets = FakeViewPadding.zero;
+      await tester.pumpAndSettle();
+      expect(tester.state<EditableTextState>(editor), same(before));
+      expect(before.widget.controller.text, '1');
+      expect(tester.takeException(), isNull);
+    } finally {
+      await _close(tester, services);
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
   testWidgets('issue214: remember projection display, primary tap toggles, secondary opens settings', (tester) async {
     final (services, _) = await _pump(
       tester,

@@ -69,10 +69,14 @@ final class CaptureEnded extends CaptureEvent {
     this.inputIntegrityError = false,
     this.inputTailDiscarded = false,
     this.diagnostic = '',
+    this.openTail = false,
   });
 
   /// A normal end (a user stop for a live capture).
   final bool complete;
+
+  /// Cancellation may prevent the final segment journal row from being flushed.
+  final bool openTail;
 
   /// FFmpeg's return code (-1 when it never ran).
   final int code;
@@ -163,6 +167,7 @@ final class RecordCapture {
   FfmpegExecution? _execution;
   Future<void>? _stopping;
   var _manualStop = false;
+  var _cancelledExecution = false;
   var _leaseRefresh = false;
   var _mediaStarted = false;
   var _packetError = false;
@@ -214,7 +219,10 @@ final class RecordCapture {
         // Not drained in time.
       }
     }
-    _execution?.cancel();
+    if (_execution case final execution?) {
+      _cancelledExecution = true;
+      execution.cancel();
+    }
     await _done.future.timeout(const Duration(seconds: 10), onTimeout: () {});
   }();
 
@@ -285,7 +293,10 @@ final class RecordCapture {
     try {
       final execution = await runner.start(arguments);
       _execution = execution;
-      if (_stopRequested) execution.cancel();
+      if (_stopRequested) {
+        _cancelledExecution = true;
+        execution.cancel();
+      }
       logs = execution.logs.listen(_log);
       statistics = execution.statistics.listen(_statistics);
       _emit(CaptureAcknowledged(session));
@@ -301,6 +312,7 @@ final class RecordCapture {
           complete: false,
           code: -1,
           manualStop: _manualStop,
+          openTail: _cancelledExecution,
           kind: failure.kind,
           retryable: failure.retryable,
           diagnostic: text,
@@ -348,6 +360,7 @@ final class RecordCapture {
         inputCoverageIncomplete: _coverageGap,
         inputIntegrityError: integrity,
         inputTailDiscarded: _tailDiscarded,
+        openTail: _cancelledExecution,
       );
     }
     final eof = code == 0 || code == ffmpegEndOfFile;
@@ -363,6 +376,7 @@ final class RecordCapture {
         inputCoverageIncomplete: _coverageGap,
         inputIntegrityError: integrity,
         inputTailDiscarded: _tailDiscarded,
+        openTail: _cancelledExecution,
         diagnostic: diagnostic,
       );
     }
@@ -377,6 +391,7 @@ final class RecordCapture {
       inputCoverageIncomplete: _coverageGap,
       inputIntegrityError: integrity,
       inputTailDiscarded: _tailDiscarded,
+      openTail: _cancelledExecution,
       diagnostic: diagnostic.length > 1600 ? diagnostic.substring(diagnostic.length - 1600) : diagnostic,
     );
   }
