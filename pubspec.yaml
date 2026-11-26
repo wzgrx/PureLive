@@ -25,6 +25,9 @@ workspace:
 
 # Overrides apply to the whole workspace and may only be declared here.
 dependency_overrides:
+  # Z01.5: fix content-provider readability and close native streams.
+  cross_file_android:
+    path: third_party/cross_file_android
   # Z01.5: stable file/share consumers migrated to official cross_file0.4.
   android_file_picker:
     path: third_party/android_file_picker

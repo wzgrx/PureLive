@@ -106,7 +106,7 @@
 
 5.7.0 升级 Flutter/Dart、构建工具链和播放/录制内核，适配新版界面组件与窗口管理，并修复 Android 静态 JNI 初始化和 Windows 冷启动内容刷新。整合房间列表与轮播、可选的画面长按切房、TV 双画面、前台预约、CHZZK 公开回放和直播缓存回看。新增选项保持默认关闭；缓存回看仅限当前连续内存范围，预约需应用运行并处于前台。原设备和账号未确认的问题继续跟踪。
 
-5.7.1 完成剩余六项依赖升级，为文件选择和分享插件移植 cross_file 0.4 兼容代码；保留文件和目录操作、备份格式及现有数据。受限文件分享改为流式复制，修正失败后的临时文件清理，并同步 AGP 9.5.3 和 flutter_svg 2.5.1。
+5.7.1 完成剩余六项依赖升级，为文件选择和分享插件移植 cross_file 0.4 兼容代码；保留文件和目录操作、备份格式及现有数据。受限文件分享改为流式复制，修正失败后的临时文件清理，并同步 AGP 9.5.3 和 flutter_svg 2.5.1。额外修复 Android 受限 URI 可读性误判及原生流未关闭造成的句柄泄漏。
 
 > 从 5.0.0 起项目搬到这个独立仓库 [wzgrx/PureLive](https://github.com/wzgrx/PureLive)。原来的 [wzgrx/pure_live](https://github.com/wzgrx/pure_live)（[liuchuancong/pure_live](https://github.com/liuchuancong/pure_live) 的分支）保留不删，装着 3.x、4.x 的设备会照常收到更新提示并下载到这里的新版本。
 

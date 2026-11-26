@@ -71,11 +71,43 @@ Future<void> main() async {
       try {
         final scopedBytes = await scoped.openRead().expand((chunk) => chunk).toList();
         final expectedName = Platform.isAndroid ? 'purelive-generated-file-probe.wav' : 'silence.wav';
+        final length = await scoped.length();
+        final name = await scoped.name();
+        final readable = await scoped.canRead();
+        final exists = await scoped.exists();
+        result['scoped_metadata'] = {'length': length, 'name': name, 'can_read': readable, 'exists': exists};
         scopedPassed =
-            _sameBytes(scopedBytes, bytes) &&
-            await scoped.length() == bytes.length &&
-            await scoped.name() == expectedName &&
-            await scoped.canRead();
+            _sameBytes(scopedBytes, bytes) && length == bytes.length && name == expectedName && readable && exists;
+        if (Platform.isAndroid) {
+          final before = await Directory('/proc/self/fd').list().length;
+          for (var i = 0; i < 20; i++) {
+            await scoped.openRead().drain<void>();
+          }
+          final range = await scoped.openRead(4, 12).expand((chunk) => chunk).toList();
+          await scoped.openRead().take(1).drain<void>();
+          final bulk = await scoped.readAsBytes();
+          final after = await Directory('/proc/self/fd').list().length;
+          final stable = after <= before + 2;
+          result['android_native_streams'] = {
+            'fd_before': before,
+            'fd_after': after,
+            'full_reads': 20,
+            'bounded_descriptors': stable,
+            'range_matches': _sameBytes(range, bytes.sublist(4, 12)),
+            'bulk_matches': _sameBytes(bulk, bytes),
+          };
+          scopedPassed = scopedPassed && stable && _sameBytes(range, bytes.sublist(4, 12)) && _sameBytes(bulk, bytes);
+          final missing = XFile.scopedStorage(
+            uri: scopedUri.replaceFirst('file-probe.wav', 'file-missing.wav'),
+          ) as ScopedStorageXFile;
+          try {
+            final denied = !await missing.canRead() && !await missing.exists();
+            result['missing_uri_rejected'] = denied;
+            scopedPassed = scopedPassed && denied;
+          } finally {
+            await missing.dispose();
+          }
+        }
       } finally {
         await scoped.dispose();
       }

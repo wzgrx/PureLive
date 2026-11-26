@@ -61,5 +61,12 @@
     "archive_sha256": "cd1be37ada0abcfaa55bddb7410e8515844e35cd77669c35d9a28a15722299d8",
     "license_sha256": "12f7222de745bab3710ba88b59f33484ca423aa5e1deac9e56ed946706d5abab",
     "patch_sha256": "09eb6ccaf0939a765df12091218136cdf1f9d3ae5ea3befb488af6e7ab8c0f02"
+  },
+  "cross_file_android": {
+    "version": "1.0.0",
+    "source": "https://pub.dev/packages/cross_file_android/versions/1.0.0",
+    "archive_sha256": "7143b2d4451b21aef10a20a651ba99e85b6f73c17c269a23a72fa4a8c2d543dd",
+    "license_sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "patch_sha256": "978c0d39841011fbbf4e4cf6ec377ec8e2814d0f09cdb661b81b2b021bafe075"
   }
 }
