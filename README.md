@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>下载 5.7.1</b></a>
-  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.7.1.md">更新说明</a>
+  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>下载 5.7.2</b></a>
+  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.7.2.md">更新说明</a>
   &nbsp;·&nbsp; <a href="#功能详解">功能</a>
   &nbsp;·&nbsp; <a href="#支持的平台">支持的平台</a>
   &nbsp;·&nbsp; <a href="#从源码构建">从源码构建</a>
@@ -107,6 +107,8 @@
 5.7.0 升级 Flutter/Dart、构建工具链和播放/录制内核，适配新版界面组件与窗口管理，并修复 Android 静态 JNI 初始化和 Windows 冷启动内容刷新。整合房间列表与轮播、可选的画面长按切房、TV 双画面、前台预约、CHZZK 公开回放和直播缓存回看。新增选项保持默认关闭；缓存回看仅限当前连续内存范围，预约需应用运行并处于前台。原设备和账号未确认的问题继续跟踪。
 
 5.7.1 完成剩余六项依赖升级，为文件选择和分享插件移植 cross_file 0.4 兼容代码；保留文件和目录操作、备份格式及现有数据。受限文件分享改为流式复制，修正失败后的临时文件清理，并同步 AGP 9.5.3 和 flutter_svg 2.5.1。额外修复 Android 受限 URI 可读性误判及原生流未关闭造成的句柄泄漏。
+
+5.7.2优先修复多画面崩溃与输入焦点、中文输入法快捷键、电视回放遥控、录制尾段恢复、斗鱼批量刷新与HEVC识别、抖音链接和弹幕高峰积压，并增强海外HLS分段预取与小红书独立游客初始化。新增需求本轮暂缓，缺少原账号、原设备或同房样本的问题保留复验。
 
 > 从 5.0.0 起项目搬到这个独立仓库 [wzgrx/PureLive](https://github.com/wzgrx/PureLive)。原来的 [wzgrx/pure_live](https://github.com/wzgrx/pure_live)（[liuchuancong/pure_live](https://github.com/liuchuancong/pure_live) 的分支）保留不删，装着 3.x、4.x 的设备会照常收到更新提示并下载到这里的新版本。
 
@@ -489,7 +491,7 @@ docs/                   开发计划、模块记录、界面设计和功能清�
 
 按 [D-092 / 维护方针](MAINTENANCE.md) 恢复功能需求与开发；下表列出已交付范围，后续需求按可行性和验证结果推进。
 
-| 客户端 | 5.7.1（现在） | 以后 |
+| 客户端 | 5.7.2（现在） | 以后 |
 |---|---|---|
 | **Android 手机和平板** | 正式版：液态玻璃底栏、阻尼和弹簧动效，八个平台的官方登录，15 种界面语言 | 持续修平台变化 |
 | **Android 电视** | 正式版：直播、视频（哔哩哔哩点播）、音乐三个模式，壁纸，电视样式的设置目录，扫码用手机输入 | 在更多电视真机上验证和调整 |

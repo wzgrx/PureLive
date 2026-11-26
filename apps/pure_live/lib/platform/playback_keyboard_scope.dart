@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:pure_live/routes/route_observer.dart';
@@ -24,6 +25,9 @@ class _PlaybackKeyboardScopeState extends State<PlaybackKeyboardScope> {
   static const _channel = MethodChannel('pure_live/playback_keyboard');
   static final Set<Object> _owners = {};
   static bool _requested = false;
+  ModalRoute<dynamic>? _route;
+  bool _active = true;
+  bool _syncScheduled = false;
   bool get _windows => !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
   @override
@@ -38,18 +42,54 @@ class _PlaybackKeyboardScopeState extends State<PlaybackKeyboardScope> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Focus notifications can run between deactivate and dispose. Cache the
+    // inherited route while ancestor lookup is safe, rather than in a listener.
+    _route = ModalRoute.of(context);
     _sync();
+  }
+
+  @override
+  void deactivate() {
+    _active = false;
+    _route = null;
+    _owners.remove(this);
+    _publish();
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _active = true;
+    // didChangeDependencies refreshes the cached route after reparenting.
   }
 
   void _routeChanged(RouteEvent _) => _sync();
 
   void _sync() {
-    if (!_windows || !mounted) return;
-    final focus = FocusManager.instance.primaryFocus?.context;
-    final editor = focus?.widget is EditableText
-        ? focus!.widget as EditableText
-        : focus?.findAncestorWidgetOfExactType<EditableText>();
-    final suppress = ModalRoute.of(context)?.isCurrent == true && (editor == null || editor.readOnly);
+    if (!_windows || !mounted || !_active) return;
+    if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      // A replacement room can mount while the old editor is deactivated
+      // but still primaryFocus. Finalize the frame before inspecting it.
+      if (!_syncScheduled) {
+        _syncScheduled = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _syncScheduled = false;
+          if (!mounted || !_active) return;
+          FocusManager.instance.applyFocusChangesIfNeeded();
+          _sync();
+        });
+      }
+      return;
+    }
+    var suppress = false;
+    if (_route?.isCurrent == true) {
+      final focus = FocusManager.instance.primaryFocus?.context;
+      final editor = focus?.widget is EditableText
+          ? focus!.widget as EditableText
+          : focus?.findAncestorWidgetOfExactType<EditableText>();
+      suppress = editor == null || editor.readOnly;
+    }
     if (suppress) {
       _owners.add(this);
     } else {

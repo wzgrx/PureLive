@@ -18,8 +18,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>Download 5.7.0</b></a>
-  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.7.0.md">Release notes (Chinese)</a>
+  <a href="https://github.com/wzgrx/PureLive/releases/latest"><b>Download 5.7.2</b></a>
+  &nbsp;·&nbsp; <a href="docs/Y-发布和运营/Y03-发布说明和README/releases/5.7.2.md">Release notes (Chinese)</a>
   &nbsp;·&nbsp; <a href="#features">Features</a>
   &nbsp;·&nbsp; <a href="#supported-platforms">Platforms</a>
   &nbsp;·&nbsp; <a href="#building-from-source">Build</a>
@@ -109,6 +109,8 @@ Pure Live (纯粹直播) is a third-party live-stream aggregator. It brings Chin
 5.7.0 upgrades Flutter/Dart, build tools and playback/recording kernels, adapts the split UI packages and window APIs, and fixes Android static-JNI initialization and Windows cold-start content refresh. It integrates saved room queues and rotation, optional long-press room switching, TV dual view, foreground appointments, public CHZZK VOD and live cache rewind. New optional controls remain off by default. Rewind covers the continuous range still held in memory; appointments require the app running in the foreground. Unverified original-device and account reports remain tracked.
 
 > Since 5.0.0 the project lives in this standalone repository, [wzgrx/PureLive](https://github.com/wzgrx/PureLive). The old [wzgrx/pure_live](https://github.com/wzgrx/pure_live) (a fork of [liuchuancong/pure_live](https://github.com/liuchuancong/pure_live)) is kept; devices running 3.x or 4.x still get update prompts and download new versions from here.
+
+5.7.2 prioritizes crash, input-focus, Windows IME, TV replay controls, interrupted recording recovery, Douyu batch/HEVC, Douyin URL and chat-backlog fixes. It reuses bounded HLS prefetch for overseas live playback and improves isolated visitor initialization. Feature requests are deferred for this release; original-device and account gaps remain explicit.
 
 ## Highlights
 
@@ -487,7 +489,7 @@ Plans and progress: [docs/PLAN.md](docs/PLAN.md); UI design: [docs/specs/UI.md](
 
 Feature requests and development are open under [D-092 / maintenance policy](MAINTENANCE.md). The table records shipped scope; further work depends on feasibility and validation.
 
-| Client | 5.7.0 (now) | Later |
+| Client | 5.7.2 (now) | Later |
 |---|---|---|
 | **Android phones and tablets** | Stable: liquid-glass bottom bar, damped and spring motion, official sign-in for eight platforms, 15 interface languages | Keep up with platform changes |
 | **Android TV** | Stable: Live, Video (Bilibili VOD) and Music modes, wallpapers, TV-style settings, type on your phone via QR code | Verify and tune on more TVs |

@@ -72,12 +72,7 @@ void main() {
   test('decode backpressure preserves wire order and a reconnect resets the paused subscription', () async {
     final connector = _Connector();
     final received = <Object?>[];
-    final socket = LiveSocket(
-      endpoints: [_primary],
-      site: 'test',
-      connector: connector.call,
-      onMessage: received.add,
-    );
+    final socket = LiveSocket(endpoints: [_primary], site: 'test', connector: connector.call, onMessage: received.add);
     addTearDown(socket.close);
     await socket.connect();
     final first = connector.channels.single;
