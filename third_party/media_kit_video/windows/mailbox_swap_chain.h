@@ -1,4 +1,4 @@
-﻿﻿// This file is a part of media_kit
+﻿// This file is a part of media_kit
 // (https://github.com/media-kit/media-kit).
 //
 // Copyright © 2026 Predidit.
