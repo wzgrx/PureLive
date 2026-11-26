@@ -324,6 +324,8 @@
     "backup_preview_warning": "Las partes listadas se reemplazan y no se puede deshacer; haz antes una copia de seguridad si hace falta.",
     "backup_read_failed": "No se puede leer el archivo de copia de seguridad",
     "backup_recover": "Copia de seguridad y restauración",
+    "backup_replace_confirm_message": "Los datos y ajustes actuales se borran y se reescriben como este respaldo. ¿Sobrescribir?",
+    "backup_replace_confirm_title": "¿Sobrescribir con el respaldo?",
     "backup_restore_busy": "Hay otra restauración en curso; inténtalo más tarde",
     "backup_restore_mode": "Modo de restauración",
     "backup_restore_mode_merge": "Combinar (predeterminado)",

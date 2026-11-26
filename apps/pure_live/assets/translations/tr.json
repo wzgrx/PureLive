@@ -324,6 +324,8 @@
     "backup_preview_warning": "Listelenen bölümler değiştirilir ve bu geri alınamaz; gerekirse önce bir yedek alın.",
     "backup_read_failed": "Yedek dosyası okunamıyor",
     "backup_recover": "Yedekleme ve Geri Yükleme",
+    "backup_replace_confirm_message": "Mevcut veriler ve ayarlar boşaltılıp bu yedeğin içeriğiyle yeniden yazılır. Üzerine yazılsın mı?",
+    "backup_replace_confirm_title": "Yedekle üzerine yazılsın mı?",
     "backup_restore_busy": "Başka bir geri yükleme sürüyor; daha sonra tekrar deneyin",
     "backup_restore_mode": "Geri yükleme biçimi",
     "backup_restore_mode_merge": "Birleştir (varsayılan)",

@@ -527,7 +527,24 @@ void main() {
       // unticked, and 全选 goes.
       expect(find.byKey(const ValueKey('backup-part-all')), findsNothing);
 
+      // 覆盖 asks once more, in red, before it clears anything.
       await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
+      await _settle(tester);
+      expect(find.text('覆盖恢复？'), findsOneWidget);
+      expect(find.textContaining('现有数据和设置会被清空后重写成这份备份的样子'), findsOneWidget);
+      // Cancelling the second question changes nothing.
+      await tester.tap(find.text('取消'));
+      await _settle(tester);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['1']);
+      expect((await tester.runAsync(services.store.history.all))!.single.roomId, '9');
+
+      await tester.tap(find.text('purelive_2026-09-01T10_00_00.txt'));
+      await _settle(tester);
+      await tester.tap(find.text('覆盖'));
+      await _settle(tester);
+      await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
+      await _settle(tester);
+      await tester.tap(find.byKey(const ValueKey('backup-replace-confirm')));
       await _settle(tester);
       expect(await tester.runAsync(() => _followIds(services.store)), ['2']);
       expect(await tester.runAsync(services.store.history.all), isEmpty, reason: '覆盖 emptied it');

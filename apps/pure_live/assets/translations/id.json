@@ -324,6 +324,8 @@
     "backup_preview_warning": "Bagian yang tercantum akan diganti dan tidak dapat dibatalkan; buat cadangan terlebih dahulu bila perlu.",
     "backup_read_failed": "File cadangan tidak dapat dibaca",
     "backup_recover": "Cadangkan & Pulihkan",
+    "backup_replace_confirm_message": "Data dan pengaturan saat ini dikosongkan lalu ditulis ulang menjadi seperti cadangan ini. Timpa?",
+    "backup_replace_confirm_title": "Timpa dengan cadangan?",
     "backup_restore_busy": "Pemulihan lain sedang berjalan; coba lagi nanti",
     "backup_restore_mode": "Mode pemulihan",
     "backup_restore_mode_merge": "Gabungkan (bawaan)",

@@ -324,6 +324,8 @@
     "backup_preview_warning": "恢復會替換上面列出的內容，無法撤銷；需要時先建立一份備份。",
     "backup_read_failed": "無法讀取備份檔案",
     "backup_recover": "備份與恢復",
+    "backup_replace_confirm_message": "現有資料和設定會被清空後重寫成這份備份的樣子。確定要覆蓋嗎？",
+    "backup_replace_confirm_title": "覆蓋恢復？",
     "backup_restore_busy": "另一個恢復正在進行，請稍後再試",
     "backup_restore_mode": "恢復方式",
     "backup_restore_mode_merge": "合併（預設）",

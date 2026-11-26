@@ -324,6 +324,8 @@
     "backup_preview_warning": "나열된 부분은 교체되며 되돌릴 수 없습니다. 필요하면 먼저 백업하세요.",
     "backup_read_failed": "백업 파일을 읽을 수 없습니다",
     "backup_recover": "백업 및 복원",
+    "backup_replace_confirm_message": "현재 데이터와 설정이 지워지고 이 백업의 내용으로 다시 쓰입니다. 덮어쓸까요?",
+    "backup_replace_confirm_title": "백업으로 덮어쓸까요?",
     "backup_restore_busy": "다른 복원이 진행 중입니다. 나중에 다시 시도하세요",
     "backup_restore_mode": "복원 방식",
     "backup_restore_mode_merge": "병합(기본)",

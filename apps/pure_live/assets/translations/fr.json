@@ -324,6 +324,8 @@
     "backup_preview_warning": "Les parties listées sont remplacées et c’est irréversible ; faites d’abord une sauvegarde si besoin.",
     "backup_read_failed": "Le fichier de sauvegarde ne peut pas être lu",
     "backup_recover": "Sauvegarde et restauration",
+    "backup_replace_confirm_message": "Les données et réglages actuels sont effacés puis réécrits à l’image de cette sauvegarde. Écraser ?",
+    "backup_replace_confirm_title": "Écraser avec la sauvegarde ?",
     "backup_restore_busy": "Une autre restauration est en cours ; réessayez plus tard",
     "backup_restore_mode": "Mode de restauration",
     "backup_restore_mode_merge": "Fusion (par défaut)",

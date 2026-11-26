@@ -339,7 +339,20 @@ Future<bool> restoreWithPreview(
     preview: preview,
     partsInFile: syncPartsIn(json),
   );
-  if (choice == null) return false;
+  if (choice == null || !context.mounted) return false;
+  if (choice.mode == RestoreMode.replace) {
+    // 覆盖 destroys what is there now: a second, red question before it.
+    final sure = await showAppConfirmDialog(
+      context: context,
+      title: i18n('backup_replace_confirm_title'),
+      message: i18n('backup_replace_confirm_message'),
+      confirmLabel: i18n('backup_restore_mode_replace'),
+      cancelLabel: i18n('cancel'),
+      danger: true,
+      confirmKey: const ValueKey('backup-replace-confirm'),
+    );
+    if (!sure || !context.mounted) return false;
+  }
   final follows = preview.scope == BackupScope.follows;
   try {
     await restoreBackup(

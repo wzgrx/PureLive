@@ -324,6 +324,8 @@
     "backup_preview_warning": "一覧の部分は置き換えられ、元に戻せません。必要なら先にバックアップしてください。",
     "backup_read_failed": "バックアップファイルを読み取れません",
     "backup_recover": "バックアップと復元",
+    "backup_replace_confirm_message": "現在のデータと設定は消去され、このバックアップの内容に書き直されます。上書きしますか？",
+    "backup_replace_confirm_title": "バックアップで上書きしますか？",
     "backup_restore_busy": "別の復元を実行中です。後でもう一度お試しください",
     "backup_restore_mode": "復元方法",
     "backup_restore_mode_merge": "統合（既定）",
