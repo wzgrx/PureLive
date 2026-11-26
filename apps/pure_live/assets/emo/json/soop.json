@@ -1,1576 +1,1261 @@
 {
   "/샤방/": {
-    "emoji": "/샤방/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/1.png",
     "local_file": "1.png"
   },
   "/윽/": {
-    "emoji": "/윽/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/2.png",
     "local_file": "2.png"
   },
   "/휘파람/": {
-    "emoji": "/휘파람/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/3.png",
     "local_file": "3.png"
   },
   "/짜증/": {
-    "emoji": "/짜증/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/4.png",
     "local_file": "4.png"
   },
   "/헉/": {
-    "emoji": "/헉/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/5.png",
     "local_file": "5.png"
   },
   "/하이/": {
-    "emoji": "/하이/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/6.png",
     "local_file": "6.png"
   },
   "/좋아/": {
-    "emoji": "/좋아/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/41.png",
     "local_file": "41.png"
   },
   "/하이_s/": {
-    "emoji": "/하이_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/200.png",
     "local_file": "200.png"
   },
   "/바이_s/": {
-    "emoji": "/바이_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/201.png",
     "local_file": "201.png"
   },
   "/어서와_s/": {
-    "emoji": "/어서와_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/202.png",
     "local_file": "202.png"
   },
   "/문열어_s/": {
-    "emoji": "/문열어_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/203.png",
     "local_file": "203.png"
   },
   "/그저빛_s/": {
-    "emoji": "/그저빛_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/204.png",
     "local_file": "204.png"
   },
   "/ㄱㅇㅇ_s/": {
-    "emoji": "/ㄱㅇㅇ_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/205.png",
     "local_file": "205.png"
   },
   "/ㅋㅋㅋ_s/": {
-    "emoji": "/ㅋㅋㅋ_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/206.png",
     "local_file": "206.png"
   },
   "/ㅋ_s/": {
-    "emoji": "/ㅋ_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/207.png",
     "local_file": "207.png"
   },
   "/풍_s/": {
-    "emoji": "/풍_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/208.png",
     "local_file": "208.png"
   },
   "/오뱅알_s/": {
-    "emoji": "/오뱅알_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/209.png",
     "local_file": "209.png"
   },
   "/졋잘싸_s/": {
-    "emoji": "/졋잘싸_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/210.png",
     "local_file": "210.png"
   },
   "/진짜_s/": {
-    "emoji": "/진짜_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/211.png",
     "local_file": "211.png"
   },
   "/wow_s/": {
-    "emoji": "/wow_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/212.png",
     "local_file": "212.png"
   },
   "/캬_s/": {
-    "emoji": "/캬_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/213.png",
     "local_file": "213.png"
   },
   "/주작/": {
-    "emoji": "/주작/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/14.png",
     "local_file": "14.png"
   },
   "/감사_s/": {
-    "emoji": "/감사_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/214.png",
     "local_file": "214.png"
   },
   "/zzz_s/": {
-    "emoji": "/zzz_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/215.png",
     "local_file": "215.png"
   },
   "/꿀잼/": {
-    "emoji": "/꿀잼/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/15.png",
     "local_file": "15.png"
   },
   "/인정/": {
-    "emoji": "/인정/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/22.png",
     "local_file": "22.png"
   },
   "/헉_s/": {
-    "emoji": "/헉_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/216.png",
     "local_file": "216.png"
   },
   "/ㄷㄱ_s/": {
-    "emoji": "/ㄷㄱ_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/217.webp",
     "local_file": "217.webp"
   },
   "/내일보자_s/": {
-    "emoji": "/내일보자_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/218.webp",
     "local_file": "218.webp"
   },
   "/ㅇㅇㄱ_s/": {
-    "emoji": "/ㅇㅇㄱ_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/219.webp",
     "local_file": "219.webp"
   },
   "/비상_s/": {
-    "emoji": "/비상_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/220.webp",
     "local_file": "220.webp"
   },
   "/레전드_s/": {
-    "emoji": "/레전드_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/221.webp",
     "local_file": "221.webp"
   },
   "/앜_s/": {
-    "emoji": "/앜_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/222.webp",
     "local_file": "222.webp"
   },
   "/와_s/": {
-    "emoji": "/와_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/223.webp",
     "local_file": "223.webp"
   },
   "/앵콜_s/": {
-    "emoji": "/앵콜_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/224.webp",
     "local_file": "224.webp"
   },
   "/응원1_s/": {
-    "emoji": "/응원1_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/225.webp",
     "local_file": "225.webp"
   },
   "/응원3_s/": {
-    "emoji": "/응원3_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/226.webp",
     "local_file": "226.webp"
   },
   "/응원5_s/": {
-    "emoji": "/응원5_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/227.webp",
     "local_file": "227.webp"
   },
   "/축하해_s/": {
-    "emoji": "/축하해_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/228.webp",
     "local_file": "228.webp"
   },
   "/응원4_s/": {
-    "emoji": "/응원4_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/229.webp",
     "local_file": "229.webp"
   },
   "/응원2_s/": {
-    "emoji": "/응원2_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/230.webp",
     "local_file": "230.webp"
   },
   "/현수막_s/": {
-    "emoji": "/현수막_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/231.webp",
     "local_file": "231.webp"
   },
   "/댄스_s/": {
-    "emoji": "/댄스_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/232.webp",
     "local_file": "232.webp"
   },
   "/댄스2_s/": {
-    "emoji": "/댄스2_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/233.webp",
     "local_file": "233.webp"
   },
   "/추천/": {
-    "emoji": "/추천/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/21.png",
     "local_file": "21.png"
   },
   "/매너챗/": {
-    "emoji": "/매너챗/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/26.png",
     "local_file": "26.png"
   },
   "/드루와/": {
-    "emoji": "/드루와/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/28.png",
     "local_file": "28.png"
   },
   "/사이다/": {
-    "emoji": "/사이다/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/23.png",
     "local_file": "23.png"
   },
   "/미션_s/": {
-    "emoji": "/미션_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/234.png",
     "local_file": "234.png"
   },
   "/묻/": {
-    "emoji": "/묻/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/18.png",
     "local_file": "18.png"
   },
   "/업/": {
-    "emoji": "/업/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/16.png",
     "local_file": "16.png"
   },
   "/화이팅/": {
-    "emoji": "/화이팅/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/102.png",
     "local_file": "102.png"
   },
   "/짱좋아/": {
-    "emoji": "/짱좋아/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/94.png",
     "local_file": "94.png"
   },
   "/하하/": {
-    "emoji": "/하하/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/99.png",
     "local_file": "99.png"
   },
   "/멘붕/": {
-    "emoji": "/멘붕/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/43.png",
     "local_file": "43.png"
   },
   "/피식/": {
-    "emoji": "/피식/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/95.png",
     "local_file": "95.png"
   },
   "/화나/": {
-    "emoji": "/화나/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/98.png",
     "local_file": "98.png"
   },
   "/감상중/": {
-    "emoji": "/감상중/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/97.png",
     "local_file": "97.png"
   },
   "/헐/": {
-    "emoji": "/헐/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/96.png",
     "local_file": "96.png"
   },
   "/심각/": {
-    "emoji": "/심각/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/47.png",
     "local_file": "47.png"
   },
   "/ㅠㅠ/": {
-    "emoji": "/ㅠㅠ/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/100.png",
     "local_file": "100.png"
   },
   "/개좋아/": {
-    "emoji": "/개좋아/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/7.png",
     "local_file": "7.png"
   },
   "/개번쩍/": {
-    "emoji": "/개번쩍/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/13.png",
     "local_file": "13.png"
   },
   "/잘자_s/": {
-    "emoji": "/잘자_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/235.png",
     "local_file": "235.png"
   },
   "/개감상/": {
-    "emoji": "/개감상/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/10.png",
     "local_file": "10.png"
   },
   "/개털림/": {
-    "emoji": "/개털림/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/9.png",
     "local_file": "9.png"
   },
   "/개도발/": {
-    "emoji": "/개도발/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/8.png",
     "local_file": "8.png"
   },
   "/쥘쥘/": {
-    "emoji": "/쥘쥘/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/48.png",
     "local_file": "48.png"
   },
   "/개화나/": {
-    "emoji": "/개화나/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/11.png",
     "local_file": "11.png"
   },
   "/개이득/": {
-    "emoji": "/개이득/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/12.png",
     "local_file": "12.png"
   },
   "/ㅋㅋ/": {
-    "emoji": "/ㅋㅋ/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/33.png",
     "local_file": "33.png"
   },
   "/졸려/": {
-    "emoji": "/졸려/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/34.png",
     "local_file": "34.png"
   },
   "/아잉/": {
-    "emoji": "/아잉/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/29.png",
     "local_file": "29.png"
   },
   "/선물_s/": {
-    "emoji": "/선물_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/236.png",
     "local_file": "236.png"
   },
   "/심쿵/": {
-    "emoji": "/심쿵/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/19.png",
     "local_file": "19.png"
   },
   "/기겁/": {
-    "emoji": "/기겁/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/30.png",
     "local_file": "30.png"
   },
   "/우울/": {
-    "emoji": "/우울/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/31.png",
     "local_file": "31.png"
   },
   "/쳇/": {
-    "emoji": "/쳇/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/32.png",
     "local_file": "32.png"
   },
   "/극혐/": {
-    "emoji": "/극혐/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/25.png",
     "local_file": "25.png"
   },
   "/버럭/": {
-    "emoji": "/버럭/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/44.png",
     "local_file": "44.png"
   },
   "/최고/": {
-    "emoji": "/최고/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/35.png",
     "local_file": "35.png"
   },
   "/제발/": {
-    "emoji": "/제발/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/39.png",
     "local_file": "39.png"
   },
   "/덜덜/": {
-    "emoji": "/덜덜/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/40.png",
     "local_file": "40.png"
   },
   "/우엑/": {
-    "emoji": "/우엑/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/45.png",
     "local_file": "45.png"
   },
   "/엉엉/": {
-    "emoji": "/엉엉/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/36.png",
     "local_file": "36.png"
   },
   "/고마워_s/": {
-    "emoji": "/고마워_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/237.png",
     "local_file": "237.png"
   },
   "/반함/": {
-    "emoji": "/반함/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/42.png",
     "local_file": "42.png"
   },
   "/번쩍_s/": {
-    "emoji": "/번쩍_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/238.png",
     "local_file": "238.png"
   },
   "/후훗/": {
-    "emoji": "/후훗/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/37.png",
     "local_file": "37.png"
   },
   "/부끄/": {
-    "emoji": "/부끄/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/38.png",
     "local_file": "38.png"
   },
   "/야광봉/": {
-    "emoji": "/야광봉/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/103.png",
     "local_file": "103.png"
   },
   "/꺄/": {
-    "emoji": "/꺄/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/54.png",
     "local_file": "54.png"
   },
   "/끄덕_s/": {
-    "emoji": "/끄덕_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/239.png",
     "local_file": "239.png"
   },
   "/굿/": {
-    "emoji": "/굿/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/55.png",
     "local_file": "55.png"
   },
   "/글썽/": {
-    "emoji": "/글썽/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/56.png",
     "local_file": "56.png"
   },
   "/황당/": {
-    "emoji": "/황당/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/57.png",
     "local_file": "57.png"
   },
   "/정색/": {
-    "emoji": "/정색/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/58.png",
     "local_file": "58.png"
   },
   "/사랑/": {
-    "emoji": "/사랑/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/60.png",
     "local_file": "60.png"
   },
   "/좌절/": {
-    "emoji": "/좌절/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/61.png",
     "local_file": "61.png"
   },
   "/피곤/": {
-    "emoji": "/피곤/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/59.png",
     "local_file": "59.png"
   },
   "/뽀뽀/": {
-    "emoji": "/뽀뽀/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/46.png",
     "local_file": "46.png"
   },
   "/훌쩍/": {
-    "emoji": "/훌쩍/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/49.png",
     "local_file": "49.png"
   },
   "/코피/": {
-    "emoji": "/코피/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/51.png",
     "local_file": "51.png"
   },
   "/섬뜩/": {
-    "emoji": "/섬뜩/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/53.png",
     "local_file": "53.png"
   },
   "/겁나좋군/": {
-    "emoji": "/겁나좋군/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/66.png",
     "local_file": "66.png"
   },
   "/힘들어_s/": {
-    "emoji": "/힘들어_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/240.png",
     "local_file": "240.png"
   },
   "/문열어2_s/": {
-    "emoji": "/문열어2_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/241.png",
     "local_file": "241.png"
   },
   "/철컹철컹/": {
-    "emoji": "/철컹철컹/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/52.png",
     "local_file": "52.png"
   },
   "/헤헤/": {
-    "emoji": "/헤헤/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/50.png",
     "local_file": "50.png"
   },
   "/사탕/": {
-    "emoji": "/사탕/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/62.png",
     "local_file": "62.png"
   },
   "/RIP/": {
-    "emoji": "/RIP/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/63.png",
     "local_file": "63.png"
   },
   "/8_s/": {
-    "emoji": "/8_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/242.png",
     "local_file": "242.png"
   },
   "/축구공_s/": {
-    "emoji": "/축구공_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/243.png",
     "local_file": "243.png"
   },
   "/사과/": {
-    "emoji": "/사과/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/65.png",
     "local_file": "65.png"
   },
   "/귤/": {
-    "emoji": "/귤/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/93.png",
     "local_file": "93.png"
   },
   "/더럽/": {
-    "emoji": "/더럽/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/24.png",
     "local_file": "24.png"
   },
   "/치킨_s/": {
-    "emoji": "/치킨_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/244.png",
     "local_file": "244.png"
   },
   "/근육남/": {
-    "emoji": "/근육남/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/67.png",
     "local_file": "67.png"
   },
   "/근육녀/": {
-    "emoji": "/근육녀/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/101.png",
     "local_file": "101.png"
   },
   "/박수/": {
-    "emoji": "/박수/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/68.png",
     "local_file": "68.png"
   },
   "/소주/": {
-    "emoji": "/소주/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/71.png",
     "local_file": "71.png"
   },
   "/짱/": {
-    "emoji": "/짱/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/72.png",
     "local_file": "72.png"
   },
   "/꽃/": {
-    "emoji": "/꽃/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/73.png",
     "local_file": "73.png"
   },
   "/왕/": {
-    "emoji": "/왕/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/74.png",
     "local_file": "74.png"
   },
   "/썰렁/": {
-    "emoji": "/썰렁/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/75.png",
     "local_file": "75.png"
   },
   "/무지개/": {
-    "emoji": "/무지개/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/76.png",
     "local_file": "76.png"
   },
   "/태극기/": {
-    "emoji": "/태극기/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/77.png",
     "local_file": "77.png"
   },
   "/절교/": {
-    "emoji": "/절교/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/78.png",
     "local_file": "78.png"
   },
   "/하트/": {
-    "emoji": "/하트/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/79.png",
     "local_file": "79.png"
   },
   "/불/": {
-    "emoji": "/불/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/80.png",
     "local_file": "80.png"
   },
   "/별/": {
-    "emoji": "/별/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/81.png",
     "local_file": "81.png"
   },
   "/폭탄/": {
-    "emoji": "/폭탄/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/82.png",
     "local_file": "82.png"
   },
   "/폭죽/": {
-    "emoji": "/폭죽/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/83.png",
     "local_file": "83.png"
   },
   "/보석/": {
-    "emoji": "/보석/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/84.png",
     "local_file": "84.png"
   },
   "/금/": {
-    "emoji": "/금/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/85.png",
     "local_file": "85.png"
   },
   "/돈/": {
-    "emoji": "/돈/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/86.png",
     "local_file": "86.png"
   },
   "/맥주/": {
-    "emoji": "/맥주/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/87.png",
     "local_file": "87.png"
   },
   "/입술/": {
-    "emoji": "/입술/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/88.png",
     "local_file": "88.png"
   },
   "/콜!/": {
-    "emoji": "/콜!/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/89.png",
     "local_file": "89.png"
   },
   "/번쩍/": {
-    "emoji": "/번쩍/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/90.png",
     "local_file": "90.png"
   },
   "/19/": {
-    "emoji": "/19/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/91.png",
     "local_file": "91.png"
   },
   "/즐거워/": {
-    "emoji": "/즐거워/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/92.png",
     "local_file": "92.png"
   },
   "/케이크/": {
-    "emoji": "/케이크/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/69.png",
     "local_file": "69.png"
   },
   "/약/": {
-    "emoji": "/약/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/70.png",
     "local_file": "70.png"
   },
   "/커피_s/": {
-    "emoji": "/커피_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/245.png",
     "local_file": "245.png"
   },
   "/불타는심장_s/": {
-    "emoji": "/불타는심장_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/246.png",
     "local_file": "246.png"
   },
   "/동공지진_s/": {
-    "emoji": "/동공지진_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/247.png",
     "local_file": "247.png"
   },
   "/강퇴/": {
-    "emoji": "/강퇴/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/27.png",
     "local_file": "27.png"
   },
   "/해골_s/": {
-    "emoji": "/해골_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/248.png",
     "local_file": "248.png"
   },
   "/구독_s/": {
-    "emoji": "/구독_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/249.png",
     "local_file": "249.png"
   },
   "/별풍선_s/": {
-    "emoji": "/별풍선_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/250.png",
     "local_file": "250.png"
   },
   "/애드벌룬_s/": {
-    "emoji": "/애드벌룬_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/251.png",
     "local_file": "251.png"
   },
   "/즐겨찾기_s/": {
-    "emoji": "/즐겨찾기_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/252.png",
     "local_file": "252.png"
   },
   "/돈주머니_s/": {
-    "emoji": "/돈주머니_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/253.png",
     "local_file": "253.png"
   },
   "/코인_s/": {
-    "emoji": "/코인_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/254.png",
     "local_file": "254.png"
   },
   "/트로피_s/": {
-    "emoji": "/트로피_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/255.png",
     "local_file": "255.png"
   },
   "/축하_s/": {
-    "emoji": "/축하_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/256.png",
     "local_file": "256.png"
   },
   "/DNS/": {
-    "emoji": "/DNS/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L1.png",
     "local_file": "lck/L1.png"
   },
   "/T1/": {
-    "emoji": "/T1/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L2.png",
     "local_file": "lck/L2.png"
   },
   "/KRX/": {
-    "emoji": "/KRX/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L4.png",
     "local_file": "lck/L4.png"
   },
   "/한화생명/": {
-    "emoji": "/한화생명/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L5.png",
     "local_file": "lck/L5.png"
   },
   "/젠지/": {
-    "emoji": "/젠지/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L6.png",
     "local_file": "lck/L6.png"
   },
   "/케이티/": {
-    "emoji": "/케이티/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L8.png",
     "local_file": "lck/L8.png"
   },
   "/디플기아/": {
-    "emoji": "/디플기아/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L9.png",
     "local_file": "lck/L9.png"
   },
   "/BFX/": {
-    "emoji": "/BFX/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L13.png",
     "local_file": "lck/L13.png"
   },
   "/브리온/": {
-    "emoji": "/브리온/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L11.png",
     "local_file": "lck/L11.png"
   },
   "/농심/": {
-    "emoji": "/농심/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/lck/L14.png",
     "local_file": "lck/L14.png"
   },
   "/DFM/": {
-    "emoji": "/DFM/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/ljl/ljl04.png",
     "local_file": "ljl/ljl04.png"
   },
   "/RRQ/": {
-    "emoji": "/RRQ/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vct/vct1.png",
     "local_file": "vct/vct1.png"
   },
   "/ZETA/": {
-    "emoji": "/ZETA/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vct/vct2.png",
     "local_file": "vct/vct2.png"
   },
   "/TS/": {
-    "emoji": "/TS/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vct/vct3.png",
     "local_file": "vct/vct3.png"
   },
   "/PRX/": {
-    "emoji": "/PRX/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vct/vct4.png",
     "local_file": "vct/vct4.png"
   },
   "/GES/": {
-    "emoji": "/GES/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vct/vct5.png",
     "local_file": "vct/vct5.png"
   },
   "/FS/": {
-    "emoji": "/FS/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vcl/vcl4.png",
     "local_file": "vcl/vcl4.png"
   },
   "/VL_s/": {
-    "emoji": "/VL_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vct/vct200.png",
     "local_file": "vct/vct200.png"
   },
   "/흑카데미_s/": {
-    "emoji": "/흑카데미_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star200.png",
     "local_file": "starcollege/star200.png"
   },
   "/JSA_s/": {
-    "emoji": "/JSA_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star201.png",
     "local_file": "starcollege/star201.png"
   },
   "/YB_s/": {
-    "emoji": "/YB_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star202.png",
     "local_file": "starcollege/star202.png"
   },
   "/늪지대_s/": {
-    "emoji": "/늪지대_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star203.png",
     "local_file": "starcollege/star203.png"
   },
   "/케이대_s/": {
-    "emoji": "/케이대_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star204.png",
     "local_file": "starcollege/star204.png"
   },
   "/씨나인_s/": {
-    "emoji": "/씨나인_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star205.png",
     "local_file": "starcollege/star205.png"
   },
   "/정선대_s/": {
-    "emoji": "/정선대_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star206.png",
     "local_file": "starcollege/star206.png"
   },
   "/이노대_s/": {
-    "emoji": "/이노대_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star207.png",
     "local_file": "starcollege/star207.png"
   },
   "/츠캄몬스타즈_s/": {
-    "emoji": "/츠캄몬스타즈_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star208.png",
     "local_file": "starcollege/star208.png"
   },
   "/엠비대_s/": {
-    "emoji": "/엠비대_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star209.png",
     "local_file": "starcollege/star209.png"
   },
   "/와플대_s/": {
-    "emoji": "/와플대_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star210.png",
     "local_file": "starcollege/star210.png"
   },
   "/수술대_s/": {
-    "emoji": "/수술대_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star211.png",
     "local_file": "starcollege/star211.png"
   },
   "/뉴캣슬_s/": {
-    "emoji": "/뉴캣슬_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star212.png",
     "local_file": "starcollege/star212.png"
   },
   "/BGM_s/": {
-    "emoji": "/BGM_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star213.png",
     "local_file": "starcollege/star213.png"
   },
   "/HM_s/": {
-    "emoji": "/HM_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/starcollege/star214.png",
     "local_file": "starcollege/star214.png"
   },
   "/GG_s/": {
-    "emoji": "/GG_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/esports/200.png",
     "local_file": "esports/200.png"
   },
   "/SSG/": {
-    "emoji": "/SSG/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/1.png",
     "local_file": "baseball/1.png"
   },
   "/두산/": {
-    "emoji": "/두산/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/2.png",
     "local_file": "baseball/2.png"
   },
   "/LG/": {
-    "emoji": "/LG/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/3.png",
     "local_file": "baseball/3.png"
   },
   "/롯데/": {
-    "emoji": "/롯데/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/4.png",
     "local_file": "baseball/4.png"
   },
   "/삼성/": {
-    "emoji": "/삼성/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/5.png",
     "local_file": "baseball/5.png"
   },
   "/한화/": {
-    "emoji": "/한화/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/6.png",
     "local_file": "baseball/6.png"
   },
   "/기아/": {
-    "emoji": "/기아/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/7.png",
     "local_file": "baseball/7.png"
   },
   "/키움/": {
-    "emoji": "/키움/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/8.png",
     "local_file": "baseball/8.png"
   },
   "/NC/": {
-    "emoji": "/NC/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/9.png",
     "local_file": "baseball/9.png"
   },
   "/KT/": {
-    "emoji": "/KT/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/10.png",
     "local_file": "baseball/10.png"
   },
   "/SSG마/": {
-    "emoji": "/SSG마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/11.png",
     "local_file": "baseball/11.png"
   },
   "/두산마/": {
-    "emoji": "/두산마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/12.png",
     "local_file": "baseball/12.png"
   },
   "/LG마/": {
-    "emoji": "/LG마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/13.png",
     "local_file": "baseball/13.png"
   },
   "/롯데마/": {
-    "emoji": "/롯데마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/14.png",
     "local_file": "baseball/14.png"
   },
   "/삼성마/": {
-    "emoji": "/삼성마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/15.png",
     "local_file": "baseball/15.png"
   },
   "/한화마/": {
-    "emoji": "/한화마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/16.png",
     "local_file": "baseball/16.png"
   },
   "/기아마/": {
-    "emoji": "/기아마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/17.png",
     "local_file": "baseball/17.png"
   },
   "/키움마/": {
-    "emoji": "/키움마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/18.png",
     "local_file": "baseball/18.png"
   },
   "/NC마/": {
-    "emoji": "/NC마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/19.png",
     "local_file": "baseball/19.png"
   },
   "/KT마/": {
-    "emoji": "/KT마/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/20.png",
     "local_file": "baseball/20.png"
   },
   "/메가폰/": {
-    "emoji": "/메가폰/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/21.png",
     "local_file": "baseball/21.png"
   },
   "/신문/": {
-    "emoji": "/신문/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/22.png",
     "local_file": "baseball/22.png"
   },
   "/봉투/": {
-    "emoji": "/봉투/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/baseball/23.png",
     "local_file": "baseball/23.png"
   },
   "/히트/": {
-    "emoji": "/히트/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/fishing/f1.png",
     "local_file": "fishing/f1.png"
   },
   "/쭈꾸미/": {
-    "emoji": "/쭈꾸미/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/fishing/f6.png",
     "local_file": "fishing/f6.png"
   },
   "/광어/": {
-    "emoji": "/광어/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/fishing/f7.png",
     "local_file": "fishing/f7.png"
   },
   "/대방어/": {
-    "emoji": "/대방어/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/fishing/f9.png",
     "local_file": "fishing/f9.png"
   },
   "/오징어/": {
-    "emoji": "/오징어/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/fishing/f13.png",
     "local_file": "fishing/f13.png"
   },
   "/울산/": {
-    "emoji": "/울산/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k1.png",
     "local_file": "klg/k1.png"
   },
   "/전북/": {
-    "emoji": "/전북/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k2.png",
     "local_file": "klg/k2.png"
   },
   "/김천/": {
-    "emoji": "/김천/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k3.png",
     "local_file": "klg/k3.png"
   },
   "/포항/": {
-    "emoji": "/포항/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k4.png",
     "local_file": "klg/k4.png"
   },
   "/대구/": {
-    "emoji": "/대구/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k5.png",
     "local_file": "klg/k5.png"
   },
   "/강원/": {
-    "emoji": "/강원/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k6.png",
     "local_file": "klg/k6.png"
   },
   "/부산/": {
-    "emoji": "/부산/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k7.png",
     "local_file": "klg/k7.png"
   },
   "/수원/": {
-    "emoji": "/수원/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k8.png",
     "local_file": "klg/k8.png"
   },
   "/광주/": {
-    "emoji": "/광주/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k9.png",
     "local_file": "klg/k9.png"
   },
   "/서울/": {
-    "emoji": "/서울/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k10.png",
     "local_file": "klg/k10.png"
   },
   "/성남/": {
-    "emoji": "/성남/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k11.png",
     "local_file": "klg/k11.png"
   },
   "/인천/": {
-    "emoji": "/인천/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k12.png",
     "local_file": "klg/k12.png"
   },
   "/수원FC/": {
-    "emoji": "/수원FC/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k13.png",
     "local_file": "klg/k13.png"
   },
   "/대전/": {
-    "emoji": "/대전/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k14.png",
     "local_file": "klg/k14.png"
   },
   "/제주/": {
-    "emoji": "/제주/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k15.png",
     "local_file": "klg/k15.png"
   },
   "/부천/": {
-    "emoji": "/부천/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k16.png",
     "local_file": "klg/k16.png"
   },
   "/서울E/": {
-    "emoji": "/서울E/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k17.png",
     "local_file": "klg/k17.png"
   },
   "/전남/": {
-    "emoji": "/전남/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k18.png",
     "local_file": "klg/k18.png"
   },
   "/경남/": {
-    "emoji": "/경남/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k19.png",
     "local_file": "klg/k19.png"
   },
   "/충남아산/": {
-    "emoji": "/충남아산/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k20.png",
     "local_file": "klg/k20.png"
   },
   "/안양/": {
-    "emoji": "/안양/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k21.png",
     "local_file": "klg/k21.png"
   },
   "/안산/": {
-    "emoji": "/안산/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k22.png",
     "local_file": "klg/k22.png"
   },
   "/김포/": {
-    "emoji": "/김포/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/klg/k23.png",
     "local_file": "klg/k23.png"
   },
   "/KB스타즈/": {
-    "emoji": "/KB스타즈/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/wkbl/wk1.png",
     "local_file": "wkbl/wk1.png"
   },
   "/삼성생명/": {
-    "emoji": "/삼성생명/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/wkbl/wk2.png",
     "local_file": "wkbl/wk2.png"
   },
   "/우리은행/": {
-    "emoji": "/우리은행/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/wkbl/wk3.png",
     "local_file": "wkbl/wk3.png"
   },
   "/신한은행/": {
-    "emoji": "/신한은행/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/wkbl/wk4.png",
     "local_file": "wkbl/wk4.png"
   },
   "/하나원큐/": {
-    "emoji": "/하나원큐/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/wkbl/wk5.png",
     "local_file": "wkbl/wk5.png"
   },
   "/BNK썸/": {
-    "emoji": "/BNK썸/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/wkbl/wk6.png",
     "local_file": "wkbl/wk6.png"
   },
   "/서울SK/": {
-    "emoji": "/서울SK/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl1.png",
     "local_file": "kbl/kbl1.png"
   },
   "/농구정관장/": {
-    "emoji": "/농구정관장/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl2.png",
     "local_file": "kbl/kbl2.png"
   },
   "/수원KT/": {
-    "emoji": "/수원KT/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl3.png",
     "local_file": "kbl/kbl3.png"
   },
   "/소노/": {
-    "emoji": "/소노/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl4.png",
     "local_file": "kbl/kbl4.png"
   },
   "/울산현대모비스/": {
-    "emoji": "/울산현대모비스/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl5.png",
     "local_file": "kbl/kbl5.png"
   },
   "/대구한국가스공사/": {
-    "emoji": "/대구한국가스공사/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl6.png",
     "local_file": "kbl/kbl6.png"
   },
   "/창원LG/": {
-    "emoji": "/창원LG/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl7.png",
     "local_file": "kbl/kbl7.png"
   },
   "/원주DB/": {
-    "emoji": "/원주DB/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl8.png",
     "local_file": "kbl/kbl8.png"
   },
   "/농구KCC/": {
-    "emoji": "/농구KCC/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl9.png",
     "local_file": "kbl/kbl9.png"
   },
   "/서울삼성/": {
-    "emoji": "/서울삼성/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/kbl/kbl10.png",
     "local_file": "kbl/kbl10.png"
   },
   "/숲수퍼스/": {
-    "emoji": "/숲수퍼스/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v0.png",
     "local_file": "vlg/v0.png"
   },
   "/우리카드/": {
-    "emoji": "/우리카드/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v1.png",
     "local_file": "vlg/v1.png"
   },
   "/대한항공/": {
-    "emoji": "/대한항공/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v2.png",
     "local_file": "vlg/v2.png"
   },
   "/현대캐피탈/": {
-    "emoji": "/현대캐피탈/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v3.png",
     "local_file": "vlg/v3.png"
   },
   "/OK금융그룹/": {
-    "emoji": "/OK금융그룹/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v4.png",
     "local_file": "vlg/v4.png"
   },
   "/삼성화재/": {
-    "emoji": "/삼성화재/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v5.png",
     "local_file": "vlg/v5.png"
   },
   "/KB손해보험/": {
-    "emoji": "/KB손해보험/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v6.png",
     "local_file": "vlg/v6.png"
   },
   "/한국전력/": {
-    "emoji": "/한국전력/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v7.png",
     "local_file": "vlg/v7.png"
   },
   "/현대건설/": {
-    "emoji": "/현대건설/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v8.png",
     "local_file": "vlg/v8.png"
   },
   "/흥국생명/": {
-    "emoji": "/흥국생명/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v9.png",
     "local_file": "vlg/v9.png"
   },
   "/GS칼텍스/": {
-    "emoji": "/GS칼텍스/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v10.png",
     "local_file": "vlg/v10.png"
   },
   "/배구정관장/": {
-    "emoji": "/배구정관장/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v11.png",
     "local_file": "vlg/v11.png"
   },
   "/IBK기업은행/": {
-    "emoji": "/IBK기업은행/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v12.png",
     "local_file": "vlg/v12.png"
   },
   "/도로공사/": {
-    "emoji": "/도로공사/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/vlg/v13.png",
     "local_file": "vlg/v13.png"
   },
   "/수퍼스타올1_s/": {
-    "emoji": "/수퍼스타올1_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s1.png",
     "local_file": "soopers/s1.png"
   },
   "/수퍼스타올2_s/": {
-    "emoji": "/수퍼스타올2_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s2.png",
     "local_file": "soopers/s2.png"
   },
   "/응원좌_s/": {
-    "emoji": "/응원좌_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s11.png",
     "local_file": "soopers/s11.png"
   },
   "/응원우_s/": {
-    "emoji": "/응원우_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s12.png",
     "local_file": "soopers/s12.png"
   },
   "/나이스플레이_s/": {
-    "emoji": "/나이스플레이_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s13.png",
     "local_file": "soopers/s13.png"
   },
   "/베드플레이_s/": {
-    "emoji": "/베드플레이_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s14.png",
     "local_file": "soopers/s14.png"
   },
   "/득점_s/": {
-    "emoji": "/득점_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s15.png",
     "local_file": "soopers/s15.png"
   },
   "/실점_s/": {
-    "emoji": "/실점_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s16.png",
     "local_file": "soopers/s16.png"
   },
   "/구구배구공_s/": {
-    "emoji": "/구구배구공_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s17.png",
     "local_file": "soopers/s17.png"
   },
   "/고고별풍선_s/": {
-    "emoji": "/고고별풍선_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s18.png",
     "local_file": "soopers/s18.png"
   },
   "/백어택_s/": {
-    "emoji": "/백어택_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s3.png",
     "local_file": "soopers/s3.png"
   },
   "/블로킹_s/": {
-    "emoji": "/블로킹_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s4.png",
     "local_file": "soopers/s4.png"
   },
   "/서브에이스_s/": {
-    "emoji": "/서브에이스_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s5.png",
     "local_file": "soopers/s5.png"
   },
   "/강스파이크_s/": {
-    "emoji": "/강스파이크_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s6.png",
     "local_file": "soopers/s6.png"
   },
   "/듀스_s/": {
-    "emoji": "/듀스_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s7.png",
     "local_file": "soopers/s7.png"
   },
   "/속공_s/": {
-    "emoji": "/속공_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s8.png",
     "local_file": "soopers/s8.png"
   },
   "/랠리_s/": {
-    "emoji": "/랠리_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s9.png",
     "local_file": "soopers/s9.png"
   },
   "/디그_s/": {
-    "emoji": "/디그_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s10.png",
     "local_file": "soopers/s10.png"
   },
   "/승리_S/": {
-    "emoji": "/승리_S/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s19.png",
     "local_file": "soopers/s19.png"
   },
   "/패배_S/": {
-    "emoji": "/패배_S/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s20.png",
     "local_file": "soopers/s20.png"
   },
   "/오오옷_s/": {
-    "emoji": "/오오옷_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s21.png",
     "local_file": "soopers/s21.png"
   },
   "/아아악_s/": {
-    "emoji": "/아아악_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s22.png",
     "local_file": "soopers/s22.png"
   },
   "/배구인_s/": {
-    "emoji": "/배구인_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s23.png",
     "local_file": "soopers/s23.png"
   },
   "/배구아웃_s/": {
-    "emoji": "/배구아웃_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s24.png",
     "local_file": "soopers/s24.png"
   },
   "/VAR_s/": {
-    "emoji": "/VAR_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s25.png",
     "local_file": "soopers/s25.png"
   },
   "/배구우승_s/": {
-    "emoji": "/배구우승_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s26.png",
     "local_file": "soopers/s26.png"
   },
   "/고예림_s/": {
-    "emoji": "/고예림_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s27.png",
     "local_file": "soopers/s27.png"
   },
   "/한다혜_s/": {
-    "emoji": "/한다혜_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s28.png",
     "local_file": "soopers/s28.png"
   },
   "/하혜진_s/": {
-    "emoji": "/하혜진_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s29.png",
     "local_file": "soopers/s29.png"
   },
   "/전새얀_s/": {
-    "emoji": "/전새얀_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s30.png",
     "local_file": "soopers/s30.png"
   },
   "/이원정_s/": {
-    "emoji": "/이원정_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s31.png",
     "local_file": "soopers/s31.png"
   },
   "/전하리_s/": {
-    "emoji": "/전하리_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s32.png",
     "local_file": "soopers/s32.png"
   },
   "/고의정_s/": {
-    "emoji": "/고의정_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s33.png",
     "local_file": "soopers/s33.png"
   },
   "/박은서_s/": {
-    "emoji": "/박은서_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s34.png",
     "local_file": "soopers/s34.png"
   },
   "/박연화_s/": {
-    "emoji": "/박연화_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s35.png",
     "local_file": "soopers/s35.png"
   },
   "/임주은_s/": {
-    "emoji": "/임주은_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s36.png",
     "local_file": "soopers/s36.png"
   },
   "/서지혜_s/": {
-    "emoji": "/서지혜_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s37.png",
     "local_file": "soopers/s37.png"
   },
   "/박수빈_s/": {
-    "emoji": "/박수빈_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s38.png",
     "local_file": "soopers/s38.png"
   },
   "/송은채_s/": {
-    "emoji": "/송은채_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s39.png",
     "local_file": "soopers/s39.png"
   },
   "/김서영_s/": {
-    "emoji": "/김서영_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s40.png",
     "local_file": "soopers/s40.png"
   },
   "/오드리아나_s/": {
-    "emoji": "/오드리아나_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s41.png",
     "local_file": "soopers/s41.png"
   },
   "/이즈위에_s/": {
-    "emoji": "/이즈위에_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s42.png",
     "local_file": "soopers/s42.png"
   },
   "/유가람_s/": {
-    "emoji": "/유가람_s/",
     "url": "https://res.sooplive.com/images/chat/emoticon/small/soopers/s43.png",
     "local_file": "soopers/s43.png"
   }
