@@ -8,6 +8,7 @@ import 'package:pure_live/app/services.dart';
 import 'package:pure_live/features/multiview/logic/multiview_session.dart';
 import 'package:pure_live/features/search/search_history.dart';
 import 'package:pure_live/shared/backup/backup_iptv.dart';
+import 'package:pure_live/shared/backup/restore_merge.dart';
 import 'package:pure_live/shared/backup/sync_parts.dart';
 
 /// The one backup service of the pages (local files and WebDAV share it, so
@@ -82,19 +83,22 @@ const String searchSection = 'search';
 /// F.5a): `{"multiview": {"session": {...}}}`, written when there is one.
 const String multiviewSection = 'multiview';
 
-/// How a restore treats the data the file does not have (J03.1, as
-/// Obtainium's import merges and its restore replaces):
+/// How a restore treats the data the device has (J03.1, as Obtainium's
+/// import merges and its restore replaces):
 ///
-/// * [merge] (the default) writes only the parts the file holds; everything
-///   else stays as it is now — nothing is deleted.
-/// * [replace] clears the parts being restored first (settings back to their
+/// * [merge] (the default) makes the lists a union: what is on the device
+///   stays and the file's new entries join it (72 follows + a 61-room file
+///   with 1 new room ends at 73), so nothing is deleted. The single values
+///   the file carries (a setting, the multi-view arrangement, the sign-ins)
+///   overwrite.
+/// * [replace] clears the ticked parts first (settings back to their
 ///   defaults, the lists emptied), then writes the file's: what the file
 ///   does not hold stays empty, so the device ends up as the backup was.
 enum RestoreMode {
-  /// Keep what the file does not carry.
+  /// Union the lists, overwrite the single values.
   merge('backup_restore_mode_merge', 'backup_restore_mode_merge_desc'),
 
-  /// Clear the parts restored first, then write the file's.
+  /// Clear the ticked parts first, then write the file's.
   replace('backup_restore_mode_replace', 'backup_restore_mode_replace_desc');
 
   new(this.labelKey, this.descriptionKey);
@@ -125,7 +129,7 @@ Future<Map<String, Object?>> exportBackup(
       includeSettings: contents.includesSettings,
     ),
   };
-  data[searchSection] = {'history': await _storedSearchWords(store)};
+  data[searchSection] = {'history': await storedSearchWords(store)};
   data[iptvLibrarySection] = await exportIptvLibrary(iptv ?? StoreIptvLibrary(store));
   if (await readMultiviewSession(store.meta) case final session?) data[multiviewSection] = {'session': session};
   return data;
@@ -145,17 +149,27 @@ Future<void> restoreBackup(
   Set<SyncPart>? parts,
   RestoreMode mode = RestoreMode.merge,
 }) async {
-  if (scope == BackupScope.follows) return await service.restoreFollows(json);
-  // 覆盖 first, 合并 only writes: BackupService.restoreAll replaces the parts
-  // the file holds and leaves the others, so what has to be cleared is
-  // cleared here. 覆盖 empties every part (the preview ticks them all: the
-  // device ends up as the backup was); 合并 clears nothing.
-  if (mode == RestoreMode.replace) await clearRestoredParts(store, json: json, iptv: iptv);
+  // 合并 is a union ([mergeBackup]): the file's lists join the device's, its
+  // single values overwrite. 覆盖 empties the ticked parts first, then
+  // writes the file's ([BackupService.restoreAll]), so what the file does
+  // not hold stays empty.
+  if (mode == RestoreMode.merge) {
+    await mergeBackup(service, store, json, scope, iptv: iptv);
+    return;
+  }
+  if (scope == BackupScope.follows) {
+    await service.restoreFollows(json);
+    return;
+  }
+  final settings = parts == null || parts.contains(SyncPart.settings);
+  await clearRestoredParts(store, parts: parts, json: json, iptv: iptv);
   await service.restoreAll(json);
-  final words = searchWordsIn(json);
-  if (words != null) await store.meta.set(SearchHistory.key, jsonEncode(words));
-  if (iptvBackupIn(json) case final library?) await restoreIptvLibrary(iptv ?? StoreIptvLibrary(store), library);
-  if (multiviewSessionIn(json) case final session?) await writeMultiviewSession(store.meta, session);
+  if (settings) {
+    final words = searchWordsIn(json);
+    if (words != null) await store.meta.set(SearchHistory.key, jsonEncode(words));
+    if (iptvBackupIn(json) case final library?) await restoreIptvLibrary(iptv ?? StoreIptvLibrary(store), library);
+    if (multiviewSessionIn(json) case final session?) await writeMultiviewSession(store.meta, session);
+  }
 }
 
 /// Empties the parts a 覆盖 restore takes from [json] before it writes
@@ -231,7 +245,9 @@ List<String> _cleanWords(Iterable<String> words) {
   return result;
 }
 
-Future<List<String>> _storedSearchWords(LiveStore store) async {
+/// The search words this device keeps, cleaned (what a backup writes and
+/// what a 合并 restore joins).
+Future<List<String>> storedSearchWords(LiveStore store) async {
   try {
     final decoded = jsonDecode(await store.meta.get(SearchHistory.key) ?? '[]');
     return decoded is List ? _cleanWords(decoded.whereType<String>()) : const [];
@@ -284,10 +300,25 @@ enum RestorePartKind {
 /// How one part changes: counts now and after, entries added and removed.
 final class RestorePart {
   /// Creates the change.
-  const new({required this.kind, required this.current, required this.incoming, this.added = 0, this.removed = 0});
+  const new({
+    required this.kind,
+    required this.current,
+    required this.incoming,
+    this.added = 0,
+    this.removed = 0,
+    this.union = true,
+  });
 
-  /// Compares the [current] entries with the [incoming] ones by [key].
-  static RestorePart compare<T>(RestorePartKind kind, List<T> current, List<T> incoming, String? Function(T) key) {
+  /// Compares the [current] entries with the [incoming] ones by [key];
+  /// [union] false for a part that is one value (the multi-view
+  /// arrangement), which both modes overwrite.
+  static RestorePart compare<T>(
+    RestorePartKind kind,
+    List<T> current,
+    List<T> incoming,
+    String? Function(T) key, {
+    bool union = true,
+  }) {
     final now = {for (final item in current) ?key(item)};
     final next = {for (final item in incoming) ?key(item)};
     return RestorePart(
@@ -296,6 +327,7 @@ final class RestorePart {
       incoming: incoming.length,
       added: next.difference(now).length,
       removed: now.difference(next).length,
+      union: union,
     );
   }
 
@@ -314,8 +346,21 @@ final class RestorePart {
   /// Entries the restore removes.
   final int removed;
 
+  /// Entries after a 合并 restore: the union, what is here plus what the
+  /// file adds (a 覆盖 restore ends at [incoming] instead).
+  int get merged => current + added;
+
+  /// Whether the part is a list (a 合并 restore unions it) rather than one
+  /// value (the multi-view arrangement, overwritten by both modes).
+  final bool union;
+
   /// Whether the restore leaves the part as it is.
   bool get unchanged => added == 0 && removed == 0 && current == incoming;
+
+  /// Whether a [mode] restore leaves the part as it is: 合并 only adds, so
+  /// a list with nothing new stays; a one-value part is compared like 覆盖.
+  bool unchangedIn(RestoreMode mode) =>
+      mode == RestoreMode.merge && union ? added == 0 : unchanged;
 }
 
 /// What a restore would change, shown before it runs (new in v4: 3.x only
@@ -366,8 +411,9 @@ final class RestorePreview {
   /// Entries that could not be read and are left out.
   final int skipped;
 
-  /// Whether anything would change.
-  bool get changesSomething => settingsChanged > 0 || accounts > 0 || parts.any((part) => !part.unchanged);
+  /// Whether anything would change under [mode].
+  bool changesIn(RestoreMode mode) =>
+      settingsChanged > 0 || accounts > 0 || parts.any((part) => !part.unchangedIn(mode));
 }
 
 /// Works out what restoring [json] for [scope] would change in [store]
@@ -448,7 +494,7 @@ Future<RestorePreview> previewRestore(
     kept.add(RestorePartKind.webdav);
   }
   if (searchWordsIn(json) case final words?) {
-    parts.add(RestorePart.compare(RestorePartKind.search, await _storedSearchWords(store), words, lower));
+    parts.add(RestorePart.compare(RestorePartKind.search, await storedSearchWords(store), words, lower));
   } else {
     kept.add(RestorePartKind.search);
   }
@@ -471,7 +517,9 @@ Future<RestorePreview> previewRestore(
   }
   if (multiviewSessionIn(json) case final session?) {
     final current = _multiviewRooms(await readMultiviewSession(store.meta));
-    parts.add(RestorePart.compare(RestorePartKind.multiview, current, _multiviewRooms(session), (room) => room));
+    parts.add(
+      RestorePart.compare(RestorePartKind.multiview, current, _multiviewRooms(session), (room) => room, union: false),
+    );
   } else {
     kept.add(RestorePartKind.multiview);
   }

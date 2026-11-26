@@ -20,6 +20,7 @@ import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/backup/backup_data.dart';
 import 'package:pure_live/shared/backup/backup_files.dart';
+import 'package:pure_live/shared/backup/backup_preview_dialog.dart';
 import 'package:pure_live/shared/backup/sync_parts.dart';
 import 'package:pure_live/tv/settings/tv_settings_section_page.dart';
 import 'package:pure_live/tv/tv_theme.dart';
@@ -74,7 +75,7 @@ void main() {
       expect(history.unchanged, isTrue);
       expect(preview.parts.map((part) => part.kind), contains(RestorePartKind.keywords));
       expect(preview.kept, containsAll([RestorePartKind.tags, RestorePartKind.webdav, RestorePartKind.search]));
-      expect(preview.changesSomething, isTrue);
+      expect(preview.changesIn(RestoreMode.merge), isTrue);
       expect(() => previewRestore(store, {'nothing': 1}, BackupScope.all), throwsFormatException);
     });
 
@@ -88,8 +89,9 @@ void main() {
       final preview = await previewRestore(store, file, BackupScope.all);
       expect(preview.scope, BackupScope.follows);
       expect(preview.followsOnlyFile, isTrue);
+      // 合并 unions the follows: the new device's own room stays.
       await restoreBackup(service, store, file, preview.scope);
-      expect(await _followIds(store), ['1']);
+      expect(await _followIds(store), ['5', '1']);
       expect((await store.history.all()).single.roomId, '9');
     });
 
@@ -109,11 +111,36 @@ void main() {
       final search = preview.parts.firstWhere((part) => part.kind == RestorePartKind.search);
       expect((search.added, search.removed), (2, 1));
       await restoreBackup(service, store, file, BackupScope.all);
+      expect(jsonDecode((await store.meta.get(SearchHistory.key))!), ['other', 'lol', 'music'], reason: '合并 unions');
+
+      // 覆盖 writes the file's words only.
+      await restoreBackup(service, store, file, BackupScope.all, mode: RestoreMode.replace);
       expect(jsonDecode((await store.meta.get(SearchHistory.key))!), ['lol', 'music']);
 
       // A 3.x backup has no search words: they stay.
       await restoreBackup(service, store, _legacyBackup([_room('1')]), BackupScope.all);
       expect(jsonDecode((await store.meta.get(SearchHistory.key))!), ['lol', 'music']);
+    });
+
+    test('合并 is a union: 72 follows and a 61-room file end at 73, with 新增 1', () async {
+      final store = services.store;
+      final service = BackupService(store);
+      // 72 here ('1'..'72': room id 0 is not storable), the file holds
+      // '1'..'60' plus one new room, so 12 of ours are not in it.
+      await store.follows.replaceAll([for (var i = 1; i <= 72; i++) _room('$i')]);
+      final file = _legacyBackup([for (var i = 1; i <= 60; i++) _room('$i'), _room('new')]);
+      final preview = await previewRestore(store, file, BackupScope.all);
+      final follows = preview.parts.firstWhere((part) => part.kind == RestorePartKind.follows);
+      expect((follows.current, follows.incoming, follows.added, follows.removed), (72, 61, 1, 12));
+      expect(follows.merged, 73);
+      // 合并 shows only the additions and the union; 覆盖 shows the removals.
+      expect(restorePartText(follows, RestoreMode.merge), '关注的直播间：72 → 73（新增 1）');
+      expect(restorePartText(follows, RestoreMode.replace), '关注的直播间：72 → 61（新增 1，移除 12）');
+
+      await restoreBackup(service, store, file, BackupScope.all);
+      expect((await store.follows.all()).length, 73);
+      expect(await _followIds(store), contains('new'));
+      expect(await _followIds(store), contains('72'), reason: 'a room the file lacks stays');
     });
 
     test('合并 keeps the parts the file lacks; 覆盖 clears them first', () async {
@@ -132,9 +159,9 @@ void main() {
         },
       };
 
-      // The default: the follows are replaced, everything else stays.
+      // The default: the follows join (a union), everything else stays.
       await restoreBackup(service, store, file, BackupScope.all);
-      expect(await _followIds(store), ['2']);
+      expect(await _followIds(store), ['1', '2']);
       expect((await store.history.all()).single.roomId, '9');
       expect(store.settings.get(Settings.danmakuSpeed), 90);
       expect(await store.blockLists.list(BlockKind.keyword), ['spoiler']);
@@ -149,7 +176,7 @@ void main() {
       expect(await store.blockLists.list(BlockKind.keyword), isEmpty);
     });
 
-    test('覆盖 restores every part, so an unticked one is cleared too', () async {
+    test('覆盖 leaves an unticked part alone', () async {
       final store = services.store;
       final service = BackupService(store);
       await store.follows.add(_room('1'));
@@ -162,8 +189,8 @@ void main() {
           'favoriteAreas': <Object?>[],
         },
       };
-      // Every part is cleared, then the file's are written: the history and
-      // the block lists stay empty, as the backup was.
+      // Only the ticked follows are cleared and rewritten; the unticked
+      // history and blocks are not touched.
       await restoreBackup(
         service,
         store,
@@ -173,8 +200,8 @@ void main() {
         mode: RestoreMode.replace,
       );
       expect(await _followIds(store), ['2']);
-      expect(await store.history.all(), isEmpty);
-      expect(await store.blockLists.list(BlockKind.keyword), isEmpty);
+      expect((await store.history.all()).single.roomId, '9');
+      expect(await store.blockLists.list(BlockKind.keyword), ['spoiler']);
     });
 
     test('file names, the TV document and TV addresses', () async {
@@ -430,7 +457,7 @@ void main() {
       await _settle(tester);
       expect(find.byKey(const ValueKey('backup-preview')), findsOneWidget);
       expect(find.text('3.x 备份（版本 3）'), findsOneWidget);
-      expect(find.text('关注的直播间：1 → 2（新增 2，移除 1）'), findsOneWidget);
+      expect(find.text('关注的直播间：1 → 3（新增 2）'), findsOneWidget, reason: '合并 is a union: no 移除');
       expect(find.textContaining('文件中没有、保持不变'), findsOneWidget);
       // One thing at a time: the other backup actions grey out, WebDAV and
       // device sync stay (c7).
@@ -450,7 +477,7 @@ void main() {
       await _settle(tester);
       await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
       await _settle(tester);
-      expect(await tester.runAsync(() => _followIds(services.store)), ['2', '3']);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['1', '2', '3'], reason: '合并 kept the local one');
       expect(_toasts, ['恢复备份成功']);
     });
 
@@ -516,16 +543,18 @@ void main() {
       expect(find.text('合并（默认）'), findsOneWidget);
       expect(find.text('覆盖'), findsOneWidget);
       expect(find.byKey(const ValueKey('backup-restore-mode-warning')), findsNothing);
-      expect(find.text('只替换文件里有的部分，其余保持现在的样子'), findsOneWidget);
+      expect(
+        find.text('列表取并集：本机的保留，文件里有而本机没有的新增；单值项直接覆盖'),
+        findsOneWidget,
+      );
 
       // 覆盖 says what it will do.
       await tester.tap(find.text('覆盖'));
       await _settle(tester);
       expect(find.byKey(const ValueKey('backup-restore-mode-warning')), findsOneWidget);
-      expect(find.text('先清空现有数据再写入文件，文件没有的部分保持清空，分区全选'), findsOneWidget);
-      // 覆盖 restores every part: the boxes are ticked and cannot be
-      // unticked, and 全选 goes.
-      expect(find.byKey(const ValueKey('backup-part-all')), findsNothing);
+      expect(find.text('先清空勾选的部分再写入文件，文件里没有的部分保持清空'), findsOneWidget);
+      // 覆盖 keeps its boxes: an unticked part is left alone, 全选 stays.
+      expect(find.byKey(const ValueKey('backup-part-all')), findsOneWidget);
 
       // 覆盖 asks once more, in red, before it clears anything.
       await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
@@ -546,8 +575,12 @@ void main() {
       await _settle(tester);
       await tester.tap(find.byKey(const ValueKey('backup-replace-confirm')));
       await _settle(tester);
-      expect(await tester.runAsync(() => _followIds(services.store)), ['2']);
-      expect(await tester.runAsync(services.store.history.all), isEmpty, reason: '覆盖 emptied it');
+      expect(await tester.runAsync(() => _followIds(services.store)), ['2'], reason: '覆盖 replaced the follows');
+      expect(
+        (await tester.runAsync(services.store.history.all))!.single.roomId,
+        '9',
+        reason: 'the file has no history, and it is unticked: it stays',
+      );
     });
 
     testWidgets("a file's ⋮, right click and long press open the same small menu; delete asks first", (tester) async {

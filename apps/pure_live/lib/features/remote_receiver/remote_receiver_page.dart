@@ -280,7 +280,9 @@ class _RemoteReceiverPageState extends ConsumerState<RemoteReceiverPage> {
           ),
         ),
       for (final part in preview.parts)
-        if (SyncPart.of(part.kind) case final sync? when held.contains(sync)) (part: sync, text: restorePartText(part)),
+        if (SyncPart.of(part.kind) case final sync? when held.contains(sync)) // Device sync still writes the file's lists as they are (覆盖).
+        if (SyncPart.of(part.kind) case final sync? when held.contains(sync))
+          (part: sync, text: restorePartText(part, RestoreMode.replace)),
       if (held.contains(SyncPart.accounts))
         (
           part: SyncPart.accounts,

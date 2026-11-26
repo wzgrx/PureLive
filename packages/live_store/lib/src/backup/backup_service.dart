@@ -179,11 +179,16 @@ final class BackupService {
     if (snapshot.followAreas case final areas?) await _store.followAreas.replaceAll(areas);
   });
 
-  Future<void> _exclusive(Future<void> Function() action) async {
+  /// Runs [action] as the one restore at a time ([StateError] when another
+  /// runs). The 4.x merged restore writes the store itself and keeps the
+  /// same lock as [restoreAll] this way.
+  Future<T> runExclusive<T>(Future<T> Function() action) => _exclusive(action);
+
+  Future<T> _exclusive<T>(Future<T> Function() action) async {
     if (_restoring) throw StateError('A settings restore is already running');
     _restoring = true;
     try {
-      await action();
+      return await action();
     } finally {
       _restoring = false;
     }

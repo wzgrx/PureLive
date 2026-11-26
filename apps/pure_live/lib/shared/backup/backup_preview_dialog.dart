@@ -18,12 +18,22 @@ String backupSourceText(RestorePreview preview) {
   };
 }
 
-/// One line of the preview: `关注的直播间：12 → 15（新增 4，移除 1）`.
-String restorePartText(RestorePart part) {
-  final counts = i18n('backup_preview_count', args: {'current': '${part.current}', 'incoming': '${part.incoming}'});
-  final detail = part.unchanged
+/// One line of the preview: `关注的直播间：12 → 15（新增 4，移除 1）` for 合并
+/// (a union: 12 → 13 with 新增 1), `12 → 15（新增 4，移除 1）` for 覆盖.
+String restorePartText(RestorePart part, RestoreMode mode) {
+  final effective = part.union ? mode : RestoreMode.replace;
+  final after = effective == RestoreMode.merge ? part.merged : part.incoming;
+  final counts = i18n('backup_preview_count', args: {'current': '${part.current}', 'incoming': '$after'});
+  final added = i18n('backup_preview_added', args: {'added': '${part.added}'});
+  final detail = part.unchangedIn(mode)
       ? i18n('backup_preview_same')
-      : i18n('backup_preview_diff', args: {'added': '${part.added}', 'removed': '${part.removed}'});
+      : switch (effective) {
+          RestoreMode.merge => added,
+          RestoreMode.replace => i18n(
+            'backup_preview_diff',
+            args: {'added': '${part.added}', 'removed': '${part.removed}'},
+          ),
+        };
   return i18n('backup_preview_part', args: {'part': i18n(part.kind.labelKey), 'counts': counts, 'detail': detail});
 }
 
@@ -79,7 +89,7 @@ Future<({Set<SyncPart> parts, RestoreMode mode})?> confirmRestore(
         SyncPart.settings => i18n('remote_sync_part_settings'),
         SyncPart.accounts => i18n('backup_preview_accounts', args: {'count': '${preview.accounts}'}),
         final part => switch (preview.parts.where((line) => line.kind == part.kind).firstOrNull) {
-          final line? => restorePartText(line),
+          final line? => restorePartText(line, mode),
           null => i18n(part.labelKey),
         },
       };
@@ -87,12 +97,11 @@ Future<({Set<SyncPart> parts, RestoreMode mode})?> confirmRestore(
         builder: (dialogContext, setState) {
           final none = ticked.isEmpty;
           final all = ticked.length == partsInFile.length;
-          final locked = mode == RestoreMode.replace;
           void toggle(SyncPart part) => setState(() => ticked.contains(part) ? ticked.remove(part) : ticked.add(part));
           Widget box(SyncPart part) => InkWell(
             key: ValueKey('backup-part-${part.name}'),
             borderRadius: BorderRadius.circular(8),
-            onTap: locked ? null : () => toggle(part),
+            onTap: () => toggle(part),
             child: ConstrainedBox(
               constraints: const BoxConstraints(minHeight: 32),
               child: Row(
@@ -106,7 +115,7 @@ Future<({Set<SyncPart> parts, RestoreMode mode})?> confirmRestore(
                         value: ticked.contains(part),
                         visualDensity: VisualDensity.compact,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        onChanged: locked ? null : (_) => toggle(part),
+                        onChanged: (_) => toggle(part),
                       ),
                     ),
                   ),
@@ -152,12 +161,7 @@ Future<({Set<SyncPart> parts, RestoreMode mode})?> confirmRestore(
                     ],
                     selected: {mode},
                     showSelectedIcon: false,
-                    onSelectionChanged: (selection) => setState(() {
-                      mode = selection.single;
-                      // 覆盖 writes the whole file and empties what it lacks:
-                      // every part is restored, so every box is ticked.
-                      if (mode == RestoreMode.replace) ticked.addAll(partsInFile);
-                    }),
+                    onSelectionChanged: (selection) => setState(() => mode = selection.single),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -192,7 +196,7 @@ Future<({Set<SyncPart> parts, RestoreMode mode})?> confirmRestore(
                     icon: AppIcons.selected,
                     iconSize: 14,
                   ),
-                if (partsInFile.length > 1 && !locked)
+                if (partsInFile.length > 1)
                   InkWell(
                     key: const ValueKey('backup-part-all'),
                     borderRadius: BorderRadius.circular(8),
@@ -239,7 +243,7 @@ Future<({Set<SyncPart> parts, RestoreMode mode})?> confirmRestore(
                   ),
                 for (final part in partsInFile) box(part),
                 for (final part in preview.parts)
-                  if (SyncPart.of(part.kind) == null) line(restorePartText(part)),
+                  if (SyncPart.of(part.kind) == null) line(restorePartText(part, mode)),
                 if (partsInFile.isNotEmpty && preview.accounts > 0 && !partsInFile.contains(SyncPart.accounts))
                   line(i18n('backup_preview_accounts', args: {'count': '${preview.accounts}'})),
                 if (preview.kept.isNotEmpty) ...[
@@ -270,7 +274,7 @@ Future<({Set<SyncPart> parts, RestoreMode mode})?> confirmRestore(
                     icon: AppIcons.warning,
                     iconSize: 14,
                   ),
-                if (!preview.changesSomething)
+                if (!preview.changesIn(mode))
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(i18n('backup_preview_nothing'), style: styles.t13Muted),

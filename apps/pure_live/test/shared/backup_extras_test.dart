@@ -119,7 +119,7 @@ void main() {
     expect(follows.keys, isNot(contains(multiviewSection)));
   });
 
-  test('c1, c2: restoring shows the change, replaces the playlists, adds the guide and the arrangement', () async {
+  test('c1, c2: 合并 joins the playlists, adds the guide and the arrangement too', () async {
     await fill(source.store);
     final file = _roundTrip(await exportBackup(BackupService(source.store), source.store, BackupScope.all));
 
@@ -136,10 +136,11 @@ void main() {
     final multiview = preview.parts.firstWhere((part) => part.kind == RestorePartKind.multiview);
     expect((multiview.current, multiview.incoming, multiview.added), (0, 2, 2));
 
+    // 合并 adds the file's playlist and keeps the device's own ('old').
     await restoreBackup(BackupService(store), store, file, BackupScope.all);
     expect([
       for (final playlist in await library.playlists()) playlist.id,
-    ], unorderedEquals([IptvPlaylist.hotId, 'p1']));
+    ], unorderedEquals([IptvPlaylist.hotId, 'p1', 'old']));
     expect((await library.playlist('p1'))!.lastRefresh, _at);
     final channels = await library.channels('p1');
     expect([for (final channel in channels) channel.id], ['c1', 'c2'], reason: 'ids kept: followed channels match');
@@ -153,6 +154,12 @@ void main() {
     final session = await readMultiviewSession(store.meta);
     expect(session!['layout'], 'quad');
     expect((session['rooms']! as List).whereType<Map<String, Object?>>(), hasLength(2));
+
+    // 覆盖 empties the playlists first, so the device's own 'old' goes.
+    await restoreBackup(BackupService(store), store, file, BackupScope.all, mode: RestoreMode.replace);
+    expect([
+      for (final playlist in await library.playlists()) playlist.id,
+    ], unorderedEquals([IptvPlaylist.hotId, 'p1']));
   });
 
   test('a 3.x backup has neither: the playlists and the arrangement stay', () async {

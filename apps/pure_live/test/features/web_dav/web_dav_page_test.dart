@@ -259,10 +259,10 @@ void main() {
     // A tap on a backup previews and restores it (c4, R2).
     await tester.tap(find.text('purelive_2026-09-01T10_00_00.json.gz'));
     await _settle(tester);
-    expect(find.text('关注的直播间：1 → 1（新增 1，移除 1）'), findsOneWidget);
+    expect(find.text('关注的直播间：1 → 2（新增 1）'), findsOneWidget, reason: '合并 is a union');
     await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
     await _settle(tester);
-    expect([for (final room in (await tester.runAsync(services.store.follows.all))!) room.roomId], ['7']);
+    expect([for (final room in (await tester.runAsync(services.store.follows.all))!) room.roomId], ['1', '7']);
     expect(_toasts.last, '恢复备份成功');
   });
 
