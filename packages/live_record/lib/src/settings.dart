@@ -1,3 +1,5 @@
+import 'package:live_core/live_core.dart';
+
 import 'package:meta/meta.dart';
 
 /// The five quality preferences of the recording settings, best first (3.x
@@ -32,7 +34,7 @@ final class RecordSettings {
     this.usePinyinForFolder = false,
     this.recordDanmaku = false,
     this.recordDanmakuGifts = false,
-    this.preferH264 = true,
+    this.codec = VideoCodecs.h264,
   }) : segmentTime = segmentTime.clamp(60, 3600),
        maxTaskCount = maxTaskCount.clamp(1, 10),
        maxCacheMB = maxCacheMB < 1 ? 1 : maxCacheMB,
@@ -115,8 +117,9 @@ final class RecordSettings {
   /// them.
   final bool recordDanmakuGifts;
 
-  /// The player's "优先 H.264" (live_store `Settings.preferH264`, on by
-  /// default): a task that does not name its quality is not started on an
-  /// HEVC quality while the room offers another (H01.7).
-  final bool preferH264;
+  /// The player's "优先视频编码" (live_store `Settings.preferredVideoCodec`,
+  /// `h264` by default): a task that does not name its quality is not
+  /// started on a quality of another codec while the room offers the chosen
+  /// one (H01.7).
+  final String codec;
 }

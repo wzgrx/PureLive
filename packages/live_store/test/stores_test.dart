@@ -157,7 +157,7 @@ void main() {
   group('settings', () {
     test('defaults from 3.x, clamping, choices, persistence', () async {
       expect(store.settings.get(Settings.danmakuSpeed), 120);
-      expect(store.settings.get(Settings.preferH264), isTrue);
+      expect(store.settings.get(Settings.preferredVideoCodec), 'h264');
       expect(store.settings.get(Settings.youtubeShowAllChat), isFalse);
       expect(store.settings.get(Settings.showUnplayableInDiscover), isFalse);
       expect(store.settings.get(Settings.detectClipboardRooms), isTrue);

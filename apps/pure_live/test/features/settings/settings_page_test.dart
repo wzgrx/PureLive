@@ -261,11 +261,13 @@ void main() {
       expect(settingsRow('video_danmaku_font'), findsOneWidget);
       expect(tester.widget<SettingsHighlight>(find.byType(SettingsHighlight)).words, ['字体']);
 
-      // A switch works in place.
+      // A choice works in place.
       await searchSettingsFor(tester, 'HEVC');
-      await tester.tap(settingsRow('prefer_h264'));
+      await tester.tap(settingsRow('preferred_codec'));
       await settleSettings(tester);
-      expect(h.settings.get(Settings.preferH264), isFalse);
+      await tester.tap(find.text('H.265（HEVC）').last);
+      await settleSettings(tester);
+      expect(h.settings.get(Settings.preferredVideoCodec), 'h265');
 
       // Every word must match.
       await searchSettingsFor(tester, '弹幕 速度');

@@ -89,10 +89,10 @@ List<String> recordQualityChoices(List<LivePlayQuality> roomQualities) {
 }
 
 /// The quality the recorder picks for [preference] among the room's
-/// [roomQualities] (its resolver's order, [preferH264] as the recorder's
+/// [roomQualities] (its resolver's order, [codec] as the recorder's
 /// setting); [preference] itself when the room has none.
-String recordDefaultQuality(List<LivePlayQuality> roomQualities, String preference, {bool preferH264 = false}) {
-  final ordered = RecordStreamResolver.orderQualities(roomQualities, preference, preferH264: preferH264);
+String recordDefaultQuality(List<LivePlayQuality> roomQualities, String preference, {String codec = VideoCodecs.auto}) {
+  final ordered = RecordStreamResolver.orderQualities(roomQualities, preference, codec: codec);
   return ordered.isEmpty ? preference : ordered.first.quality;
 }
 

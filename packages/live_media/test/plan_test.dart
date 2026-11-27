@@ -84,7 +84,7 @@ void main() {
         'https://x.test/a.m3u8',
         'https://x.test/h265.flv',
       ]);
-      expect(PlaybackPlan.of(resolution, preferH264: false).lines.first.codec, 'hevc');
+      expect(PlaybackPlan.of(resolution, codec: VideoCodecs.auto).lines.first.codec, 'hevc');
     });
 
     test('a recipe resolution plans one recipe source without a URL', () {

@@ -376,9 +376,17 @@ abstract final class Settings {
   /// Hardware decoding.
   static const enableCodec = BoolSetting('enableCodec', section: 'player', defaultValue: true);
 
-  /// New (UPGRADES unified rule, 22-3, 14-5, 33-2, 8-8): H.264 qualities
-  /// first so HEVC is only played when chosen by hand.
-  static const preferH264 = BoolSetting('preferH264', section: 'player', defaultValue: true);
+  /// The video codec to prefer (UPGRADES unified rule, 22-3, 14-5, 33-2,
+  /// 8-8 — 3.x only knew "H.264 or nothing"): 'h264' (the default, the
+  /// most compatible one, so HEVC is only played when chosen by hand),
+  /// 'h265', 'av1', 'vp9', 'vp8', or 'auto' for the platform's own order
+  /// ([VideoCodecs.preferences]).
+  static const preferredVideoCodec = StringSetting(
+    'preferredVideoCodec',
+    section: 'player',
+    defaultValue: 'h264',
+    allowed: {'auto', 'h264', 'h265', 'av1', 'vp9', 'vp8'},
+  );
 
   /// Opt-in Bilibili Raw candidates, followed by every official play line.
   static const bilibiliPreferRaw = BoolSetting('bilibiliPreferRaw', section: 'player', defaultValue: false);
@@ -2156,7 +2164,7 @@ abstract final class Settings {
     preferResolution,
     preferResolutionCellular,
     enableCodec,
-    preferH264,
+    preferredVideoCodec,
     bilibiliPreferRaw,
     playerCompatMode,
     customPlayerOutput,

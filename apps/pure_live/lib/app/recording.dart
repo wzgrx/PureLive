@@ -304,7 +304,7 @@ final class RecordSettingsStore {
     usePinyinForFolder: settings.get(Settings.recordPinyinFolders),
     recordDanmaku: settings.get(Settings.recordDanmaku),
     recordDanmakuGifts: settings.get(Settings.recordDanmakuGifts),
-    preferH264: settings.get(Settings.preferH264),
+    codec: settings.get(Settings.preferredVideoCodec),
   );
 
   /// Settings from values under 3.x's Hive keys (the pre-M8.1 meta object;

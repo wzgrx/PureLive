@@ -10,6 +10,7 @@ import 'package:live_core/src/live_site.dart';
 import 'package:live_core/src/play_line.dart';
 import 'package:live_core/src/quality_label.dart';
 import 'package:live_core/src/site_error.dart';
+import 'package:live_core/src/video_codecs.dart';
 import 'package:meta/meta.dart';
 
 const _site = 'twitch';
@@ -115,17 +116,38 @@ abstract final class TwitchApi {
   /// Broadcasting), as the web player asks.
   static const String enhancedCodecs = 'av1,h265,h264';
 
+  /// usher's names for the codecs "优先视频编码" can ask for (`h265` for
+  /// HEVC, unlike the model's `hevc`); null for `auto` and the ones usher
+  /// does not serve (VP8/VP9).
+  static String? _usherCodec(String? preference) => switch (preference) {
+    VideoCodecs.h264 => 'h264',
+    VideoCodecs.h265 => 'h265',
+    VideoCodecs.av1 => 'av1',
+    _ => null,
+  };
+
   /// usher's `supported_codecs` (8-8): [h264Codecs] when [preferH264];
   /// otherwise the web player's [enhancedCodecs] limited to the video
   /// codecs the engine decodes, named as lines name them (`av1`, `hevc`;
   /// [codecs] null when not known: all of them). H.264 is always asked
   /// for, last, as the web player does.
-  static String supportedCodecs({required bool preferH264, Set<String>? codecs}) {
+  /// The `supported_codecs` list: usher serves the first codec it can, so
+  /// the order is the preference. [preferredCodec] (4.x's "优先视频编码":
+  /// `h264`, `h265`, `av1`, or `auto`) names the first one; the rest follow
+  /// as before, and `h264` (the old [preferH264]) keeps H.264 alone.
+  static String supportedCodecs({required bool preferH264, Set<String>? codecs, String? preferredCodec}) {
+    bool decodes(String codec) => codecs == null || codecs.contains(codec);
     if (preferH264) return h264Codecs;
-    return [
-      if (codecs == null || codecs.contains('av1')) 'av1',
-      if (codecs == null || codecs.contains('hevc')) 'h265',
+    final wanted = _usherCodec(preferredCodec);
+    final wantedDecoded = wanted != null && decodes(VideoCodecs.of(wanted) ?? wanted);
+    final tail = [
+      for (final codec in const ['av1', 'h265'])
+        if (decodes(VideoCodecs.of(codec) ?? codec)) codec,
       'h264',
+    ];
+    return [
+      if (wantedDecoded && wanted != 'h264') wanted,
+      ...tail.where((codec) => codec != wanted),
     ].join(',');
   }
 
@@ -360,6 +382,7 @@ abstract final class TwitchApi {
     Random random, {
     bool preferH264 = true,
     Set<String>? codecs,
+    String? preferredCodec,
   }) {
     final session = playSessionIds[random.nextInt(playSessionIds.length)];
     return Uri.https('usher.ttvnw.net', '/api/channel/hls/$login.m3u8', {
@@ -375,7 +398,7 @@ abstract final class TwitchApi {
       'playlist_include_framerate': 'true',
       'reassignments_supported': 'true',
       'sig': token.signature,
-      'supported_codecs': supportedCodecs(preferH264: preferH264, codecs: codecs),
+      'supported_codecs': supportedCodecs(preferH264: preferH264, codecs: codecs, preferredCodec: preferredCodec),
       'token': token.value,
       'transcode_mode': 'cbr_v1',
     });

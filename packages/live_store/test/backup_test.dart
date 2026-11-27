@@ -115,7 +115,7 @@ void main() {
 
   test('v4 export round-trips and keeps 3.x layout; accounts only when asked', () async {
     await backup.restoreAll(v3Backup(sensitive: true));
-    await store.settings.set(Settings.preferH264, false);
+    await store.settings.set(Settings.preferredVideoCodec, 'auto');
     final plain = await backup.exportAll();
     expect(plain['backupVersion'], 4);
     expect(plain.containsKey('cookie'), isFalse);
@@ -127,7 +127,7 @@ void main() {
     final other = await memoryStore();
     final full = jsonDecode(jsonEncode(await backup.exportAll(includeSensitiveData: true))) as Map<String, Object?>;
     await BackupService(other).restoreAll(full);
-    expect(other.settings.get(Settings.preferH264), isFalse);
+    expect(other.settings.get(Settings.preferredVideoCodec), 'auto');
     expect(other.settings.get(Settings.themeMode), 'Dark');
     expect(other.secrets.cookieFor('douyu'), 'dy_auth=1');
     expect(await other.tags.tagsOf(LiveRoom(platform: 'douyu', roomId: '5526219')), ['t1']);

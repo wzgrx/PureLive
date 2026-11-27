@@ -915,13 +915,24 @@ List<SettingsEntry> _build() {
       desc: 'settings_cellular_warning_desc',
       keywords: ['流量', '蜂窝', 'mobile data', 'cellular'],
     )
-    ..toggle(
-      'prefer_h264',
-      'settings_prefer_h264',
-      Settings.preferH264,
+    ..choice(
+      'preferred_codec',
+      'settings_preferred_codec',
+      Settings.preferredVideoCodec,
       AppIcons.settingsH264,
-      desc: 'settings_prefer_h264_desc',
-      keywords: ['HEVC', 'H.265', 'H264', '编码'],
+      () => _keyed(
+        const {
+          'auto': 'codec_auto',
+          'h264': 'codec_h264',
+          'h265': 'codec_h265',
+          'av1': 'codec_av1',
+          'vp9': 'codec_vp9',
+          'vp8': 'codec_vp8',
+        },
+        const {'auto': 'codec_auto_desc'},
+      ),
+      desc: 'settings_preferred_codec_desc',
+      keywords: ['HEVC', 'H.265', 'H264', 'H.264', 'AV1', 'VP9', 'VP8', '编码', 'codec'],
     )
     ..toggle(
       'bilibili_raw',

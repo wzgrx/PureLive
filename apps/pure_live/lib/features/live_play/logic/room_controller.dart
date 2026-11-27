@@ -922,7 +922,7 @@ class LiveRoomController extends ChangeNotifier {
     _qualities = found;
     _qualityIndex = kept >= 0
         ? kept
-        : defaultQualityIndex(found, preferred!, preferH264: store.settings.get<bool>(Settings.preferH264));
+        : defaultQualityIndex(found, preferred!, codec: store.settings.get(Settings.preferredVideoCodec));
     _notify();
     final opened = await _openQuality(_qualityIndex, epoch, userChoice: false, preservePause: preservePause);
     if (!opened || !_current(epoch)) return;
@@ -1034,7 +1034,7 @@ class LiveRoomController extends ChangeNotifier {
   /// loop is (1-1: `play_time`), also after a recovery took the next one.
   PlaybackPlan _plan(LivePlayUrlResolution resolution) => PlaybackPlan.of(
     site.id == SiteIds.iptv ? _withIptvHeaders(resolution) : resolution,
-    preferH264: store.settings.get(Settings.preferH264),
+    codec: store.settings.get(Settings.preferredVideoCodec),
     onDemand: _room.isRecord,
     start: resolution.start,
   );

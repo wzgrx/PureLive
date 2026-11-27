@@ -102,7 +102,7 @@ void main() {
   test('E06.2 c4: Twitch asks usher for the codecs the player decodes (UPGRADES 8-8)', () async {
     final services = await testServices();
     addTearDown(services.close);
-    await services.store.settings.set(Settings.preferH264, false);
+    await services.store.settings.set(Settings.preferredVideoCodec, 'h265');
     const twitch = '../../fixtures/twitch';
     final recorded = ReplaySample.load('$twitch/S06-usher-live');
     final usher = ReplaySample(
@@ -136,7 +136,7 @@ void main() {
       await asked(
         (http) => PlatformDeps(http: http, proxy: services.proxy, cookies: services.cookies, store: services.store),
       ),
-      'av1,h265,h264',
+      'h265,av1,h264',
     );
     // The adapter gets the app's set: an engine without HEVC and AV1 asks for H.264 only.
     expect(

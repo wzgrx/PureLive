@@ -191,7 +191,7 @@ void main() {
     await controller.start();
     await controller.assign(0, pickRoom('1'));
     expect(controller.cells[0].qualityIndex, 0);
-    await store.settings.set(Settings.preferH264, false);
+    await store.settings.set(Settings.preferredVideoCodec, 'auto');
     await controller.assign(1, pickRoom('2'));
     expect(controller.cells[1].qualityIndex, 1);
     controller.dispose();

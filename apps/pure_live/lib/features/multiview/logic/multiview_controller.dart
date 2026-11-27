@@ -736,7 +736,7 @@ class MultiviewController extends ChangeNotifier {
   int _normalQuality(MultiviewCell cell) => defaultQualityIndex(
     cell.qualities,
     store.settings.get(Settings.preferResolution),
-    preferH264: store.settings.get(Settings.preferH264),
+    codec: store.settings.get(Settings.preferredVideoCodec),
   );
 
   void _fail(MultiviewCell cell, Object error) {
@@ -891,7 +891,7 @@ class MultiviewController extends ChangeNotifier {
   /// (1-1: `play_time`), also after a recovery took the next one.
   PlaybackPlan _plan(LiveRoom room, LivePlayUrlResolution resolution) => PlaybackPlan.of(
     resolution,
-    preferH264: store.settings.get(Settings.preferH264),
+    codec: store.settings.get(Settings.preferredVideoCodec),
     onDemand: room.isRecord,
     start: resolution.start,
   );

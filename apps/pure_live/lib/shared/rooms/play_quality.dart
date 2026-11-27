@@ -5,22 +5,31 @@ import 'package:live_core/live_core.dart';
 /// same relative position in the list (3.x's five names from best to
 /// worst). 3.x's multi-view always took the best one.
 ///
-/// With [preferH264] (the "优先 H.264" setting) a name match whose codec
-/// hint is HEVC is passed over while the room offers anything else: the
-/// relative position decides, and should it land on HEVC too the nearest
-/// other quality is taken (the better one on a tie). HEVC is then played
-/// only when picked by hand or when nothing else is on offer (G01.3).
-int defaultQualityIndex(List<LivePlayQuality> qualities, String preferred, {bool preferH264 = false}) {
+/// With [codec] (the "优先视频编码" setting, `h264` by default) a name
+/// match whose codec hint is another codec is passed over while the room
+/// offers the chosen one: the relative position decides, and should it land
+/// on another codec too the nearest chosen one is taken (the better one on
+/// a tie). A codec other than `auto` is then played only when picked by
+/// hand or when nothing else is on offer (G01.3).
+int defaultQualityIndex(
+  List<LivePlayQuality> qualities,
+  String preferred, {
+  String codec = VideoCodecs.auto,
+}) {
   if (qualities.isEmpty) return 0;
-  bool hevc(int index) => qualities[index].codec == 'hevc';
+  // A quality is passed over only when its codec is known to be another
+  // one than the preference asks for; one with no hint may be the wanted
+  // codec, so it is kept (as "优先 H.264" did with HLS-only qualities).
+  bool acceptable(int index) => !VideoCodecs.knownOther(qualities[index].codec, codec);
+  bool anyAcceptable() => qualities.any((quality) => !VideoCodecs.knownOther(quality.codec, codec));
   final exact = qualities.indexWhere((q) => q.quality == preferred);
-  final skip = exact >= 0 && preferH264 && hevc(exact) && qualities.any((q) => q.codec != 'hevc');
+  final skip = exact >= 0 && !acceptable(exact) && anyAcceptable();
   if (exact >= 0 && !skip) return exact;
   final position = _relativePosition(qualities.length, preferred);
-  if (!skip || !hevc(position)) return position;
+  if (!anyAcceptable() || acceptable(position)) return position;
   for (var distance = 1; distance < qualities.length; distance++) {
     for (final index in [position - distance, position + distance]) {
-      if (index >= 0 && index < qualities.length && !hevc(index)) return index;
+      if (index >= 0 && index < qualities.length && acceptable(index)) return index;
     }
   }
   return position;
