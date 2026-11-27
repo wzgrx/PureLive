@@ -128,12 +128,12 @@ Future<void> _enable(
 void main() {
   test('automatic names keep the purelive prefix and are told apart from manual files', () {
     final now = DateTime(2026, 10, 24, 12, 34, 56);
-    expect(autoBackupFileName(BackupScope.all, now), 'purelive_auto_2026-10-24T12_34_56.txt');
-    expect(autoBackupFileName(BackupScope.follows, now), 'purelive_favorites_auto_2026-10-24T12_34_56.txt');
-    expect(isAutoBackupFile('purelive_auto_2026-10-24T12_34_56.txt'), isTrue);
-    expect(isAutoBackupFile('purelive_favorites_auto_2026-10-24T12_34_56.txt'), isTrue);
-    expect(isAutoBackupFile('purelive_2026-10-24T12_34_56.txt'), isFalse);
-    expect(isAutoBackupFile('purelive_favorites_2026-10-24T12_34_56.txt'), isFalse);
+    expect(autoBackupFileName(BackupScope.all, now), 'purelive_auto_2026-10-24T12_34_56.json.gz');
+    expect(autoBackupFileName(BackupScope.follows, now), 'purelive_favorites_auto_2026-10-24T12_34_56.json.gz');
+    expect(isAutoBackupFile('purelive_auto_2026-10-24T12_34_56.json.gz'), isTrue);
+    expect(isAutoBackupFile('purelive_favorites_auto_2026-10-24T12_34_56.json.gz'), isTrue);
+    expect(isAutoBackupFile('purelive_2026-10-24T12_34_56.json.gz'), isFalse);
+    expect(isAutoBackupFile('purelive_favorites_2026-10-24T12_34_56.json.gz'), isFalse);
     expect(isAutoBackupFile('notes.txt'), isFalse);
   });
 
@@ -188,11 +188,11 @@ void main() {
       now: () => DateTime.utc(2026, 10, 24, 12),
     );
     final result = await service.runIfDue();
-    expect(result.fileName, 'purelive_auto_2026-10-24T12_00_00.txt');
+    expect(result.fileName, 'purelive_auto_2026-10-24T12_00_00.json.gz');
     expect(dav.dirs, containsAll(['backup', 'backup/purelive']));
-    final file = dav.files['backup/purelive/purelive_auto_2026-10-24T12_00_00.txt'];
+    final file = dav.files['backup/purelive/purelive_auto_2026-10-24T12_00_00.json.gz'];
     expect(file, isNotNull);
-    final json = jsonDecode(utf8.decode(file!)) as Map<String, Object?>;
+    final json = BackupService.decode(file!);
     expect(json['backupVersion'], 4);
     expect(json['sensitiveDataIncluded'], isFalse);
     expect(json['cookie'], isNull);
@@ -247,9 +247,9 @@ void main() {
     final dav = _AutoDav();
     dav.dirs.add('purelive');
     for (final day in [1, 2, 3]) {
-      dav.files['purelive/purelive_auto_2026-10-0${day}T10_00_00.txt'] = utf8.encode('{}');
+      dav.files['purelive/purelive_auto_2026-10-0${day}T10_00_00.json.gz'] = utf8.encode('{}');
     }
-    dav.files['purelive/purelive_2026-10-04T10_00_00.txt'] = utf8.encode('{}');
+    dav.files['purelive/purelive_2026-10-04T10_00_00.json.gz'] = utf8.encode('{}');
     final store = await _store();
     addTearDown(store.close);
     await _enable(store, keep: 3);
@@ -261,18 +261,18 @@ void main() {
     );
     await service.runIfDue();
     final names = dav.files.keys.map((path) => path.substring('purelive/'.length)).toSet();
-    expect(names, contains('purelive_auto_2026-10-24T12_00_00.txt'));
-    expect(names, isNot(contains('purelive_auto_2026-10-01T10_00_00.txt')));
-    expect(names, contains('purelive_auto_2026-10-02T10_00_00.txt'));
-    expect(names, contains('purelive_auto_2026-10-03T10_00_00.txt'));
-    expect(names, contains('purelive_2026-10-04T10_00_00.txt'));
+    expect(names, contains('purelive_auto_2026-10-24T12_00_00.json.gz'));
+    expect(names, isNot(contains('purelive_auto_2026-10-01T10_00_00.json.gz')));
+    expect(names, contains('purelive_auto_2026-10-02T10_00_00.json.gz'));
+    expect(names, contains('purelive_auto_2026-10-03T10_00_00.json.gz'));
+    expect(names, contains('purelive_2026-10-04T10_00_00.json.gz'));
   });
 
   test('mixed scopes retain by timestamp, including the new full backup', () async {
     final dav = _AutoDav();
     dav.dirs.add('purelive');
-    dav.files['purelive/purelive_favorites_auto_2026-10-01T10_00_00.txt'] = utf8.encode('{}');
-    dav.files['purelive/purelive_auto_2026-10-23T10_00_00.txt'] = utf8.encode('{}');
+    dav.files['purelive/purelive_favorites_auto_2026-10-01T10_00_00.json.gz'] = utf8.encode('{}');
+    dav.files['purelive/purelive_auto_2026-10-23T10_00_00.json.gz'] = utf8.encode('{}');
     final store = await _store();
     addTearDown(store.close);
     await _enable(store, keep: 2);
@@ -283,12 +283,12 @@ void main() {
       now: () => DateTime.utc(2026, 10, 24, 12),
     );
     final result = await service.runIfDue();
-    expect(result.fileName, 'purelive_auto_2026-10-24T12_00_00.txt');
+    expect(result.fileName, 'purelive_auto_2026-10-24T12_00_00.json.gz');
     expect(
       dav.files.keys,
       unorderedEquals([
-        'purelive/purelive_auto_2026-10-23T10_00_00.txt',
-        'purelive/purelive_auto_2026-10-24T12_00_00.txt',
+        'purelive/purelive_auto_2026-10-23T10_00_00.json.gz',
+        'purelive/purelive_auto_2026-10-24T12_00_00.json.gz',
       ]),
     );
   });
@@ -297,14 +297,14 @@ void main() {
     final dav = _AutoDav()..includeOtherDepths = true;
     dav.dirs.add('purelive');
     final protected = [
-      'sibling/purelive_auto_2026-10-01T10_00_00.txt',
-      'purelive/nested/purelive_auto_2026-10-02T10_00_00.txt',
-      'purelive/purelive_2026-10-03T10_00_00.txt',
+      'sibling/purelive_auto_2026-10-01T10_00_00.json.gz',
+      'purelive/nested/purelive_auto_2026-10-02T10_00_00.json.gz',
+      'purelive/purelive_2026-10-03T10_00_00.json.gz',
     ];
     for (final path in protected) {
       dav.files[path] = utf8.encode('{}');
     }
-    dav.files['purelive/purelive_auto_2026-10-04T10_00_00.txt'] = utf8.encode('{}');
+    dav.files['purelive/purelive_auto_2026-10-04T10_00_00.json.gz'] = utf8.encode('{}');
     final store = await _store();
     addTearDown(store.close);
     await _enable(store, keep: 1);
@@ -317,7 +317,7 @@ void main() {
     await service.runIfDue();
     expect(dav.files.keys, containsAll(protected));
     expect(dav.requests.where((request) => request.startsWith('DELETE ')), [
-      'DELETE purelive/purelive_auto_2026-10-04T10_00_00.txt',
+      'DELETE purelive/purelive_auto_2026-10-04T10_00_00.json.gz',
     ]);
   });
 
@@ -333,17 +333,15 @@ void main() {
       now: () => DateTime.utc(2026, 10, 24, 12),
     );
     await service.runIfDue();
-    var json = jsonDecode(
-      utf8.decode(dav.files['purelive/purelive_favorites_auto_2026-10-24T12_00_00.txt']!),
-    ) as Map<String, Object?>;
+    var json = BackupService.decode(dav.files['purelive/purelive_favorites_auto_2026-10-24T12_00_00.json.gz']!);
     expect(json['backupScope'], 'favorites');
     expect(json['cookie'], isNull);
 
     await _enable(store, accounts: true);
     await store.meta.set('webdav.auto.lastSuccess', null);
     await service.runIfDue();
-    final allFile = dav.files['purelive/purelive_auto_2026-10-24T12_00_00.txt']!;
-    json = jsonDecode(utf8.decode(allFile)) as Map<String, Object?>;
+    final allFile = dav.files['purelive/purelive_auto_2026-10-24T12_00_00.json.gz']!;
+    json = BackupService.decode(allFile);
     expect(json['sensitiveDataIncluded'], isTrue);
     expect(json['cookie'], isNotNull);
     expect(json['webdav'], isNotNull);

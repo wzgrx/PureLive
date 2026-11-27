@@ -125,7 +125,7 @@ void main() {
     expect(setup.scheduler.timerActive, isTrue);
     expect(setup.dav.putCount, 1);
     expect(setup.toasts.single, contains('已自动备份到 WebDAV'));
-    expect(setup.toasts.single, contains('purelive_auto_2026-10-24T12_00_00.txt'));
+    expect(setup.toasts.single, contains('purelive_auto_2026-10-24T12_00_00.json.gz'));
     setup.scheduler.dispose();
     expect(setup.scheduler.timerActive, isFalse);
   });

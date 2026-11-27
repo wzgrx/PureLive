@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:live_store/src/block_lists.dart';
 import 'package:live_store/src/legacy/legacy_snapshot.dart';
@@ -33,15 +35,19 @@ final class BackupService {
   static const int version = 4;
 
   /// Everything as 3.x's full backup; [includeSensitiveData] adds cookies
-  /// and WebDAV passwords (3.x `exportAllSettings`).
-  Future<Map<String, Object?>> exportAll({bool includeSensitiveData = false}) async {
+  /// and WebDAV passwords (3.x `exportAllSettings`). [includeSettings] false
+  /// writes the app's data only, without any preference: the file's
+  /// `settingsIncluded` says which one it is.
+  Future<Map<String, Object?>> exportAll({bool includeSensitiveData = false, bool includeSettings = true}) async {
     final sections = <String, Map<String, Object?>>{};
-    for (final setting in Settings.all) {
-      if (setting.scope == SettingScope.internal) continue;
-      final value = _store.settings.get(setting);
-      sections.putIfAbsent(setting.section, () => {})[setting.backupKey] = setting == Settings.pageSizeOptions
-          ? [for (final part in (value as String).split(',')) ?int.tryParse(part.trim())]
-          : setting.encode(value);
+    if (includeSettings) {
+      for (final setting in Settings.all) {
+        if (setting.scope == SettingScope.internal) continue;
+        final value = _store.settings.get(setting);
+        sections.putIfAbsent(setting.section, () => {})[setting.backupKey] = setting == Settings.pageSizeOptions
+            ? [for (final part in (value as String).split(',')) ?int.tryParse(part.trim())]
+            : setting.encode(value);
+      }
     }
     sections.putIfAbsent('favorite', () => {}).addAll({
       'shieldList': await _store.blockLists.list(BlockKind.keyword),
@@ -84,7 +90,14 @@ final class BackupService {
           '$site${LegacySnapshot.accountsSuffix}': [for (final account in _store.accounts.of(site)) account.toJson()],
       };
     }
-    return {'backupVersion': version, 'sensitiveDataIncluded': includeSensitiveData, ...sections};
+    return {
+      'backupVersion': version,
+      'sensitiveDataIncluded': includeSensitiveData,
+      // 3.x ignores the key; a file without the `settings` sections is read
+      // as "settings unchanged" by the restore.
+      'settingsIncluded': includeSettings,
+      ...sections,
+    };
   }
 
   /// The follows-only file: followed rooms and areas, nothing else (3.x
@@ -98,12 +111,22 @@ final class BackupService {
     },
   };
 
+  /// Throws [FormatException] for a file written by a newer app
+  /// (`backupVersion` above [version]): Obtainium refuses a newer
+  /// schemaVersion the same way instead of reading it half-way.
+  static void checkVersion(Map<String, Object?> json) {
+    if (json['backupVersion'] case final int fileVersion when fileVersion > version) {
+      throw const FormatException('Backup written by a newer version');
+    }
+  }
+
   /// Restores a full backup. The whole file is read and checked first
   /// ([FormatException] before anything is written); then each part the
   /// file has replaces the stored one. Parts the file does not have stay as
   /// they are (3.x reset them to defaults). A follows-only file is refused
   /// here, as in 3.x. One restore at a time ([StateError]).
   Future<void> restoreAll(Map<String, Object?> json) => _exclusive(() async {
+    checkVersion(json);
     if (json['backupScope'] == 'favorites') {
       throw const FormatException('Favorites-only backup requires favorites restore');
     }
@@ -137,6 +160,7 @@ final class BackupService {
   /// else stays (3.x `restoreFavoriteSettings`). Accepts full and
   /// follows-only files.
   Future<void> restoreFollows(Map<String, Object?> json) => _exclusive(() async {
+    checkVersion(json);
     final version = json['backupVersion'];
     if (version != null && (version is! int || version < 1)) throw const FormatException('Invalid backup version');
     final favorite = version == null ? json : json['favorite'];
@@ -155,11 +179,16 @@ final class BackupService {
     if (snapshot.followAreas case final areas?) await _store.followAreas.replaceAll(areas);
   });
 
-  Future<void> _exclusive(Future<void> Function() action) async {
+  /// Runs [action] as the one restore at a time ([StateError] when another
+  /// runs). The 4.x merged restore writes the store itself and keeps the
+  /// same lock as [restoreAll] this way.
+  Future<T> runExclusive<T>(Future<T> Function() action) => _exclusive(action);
+
+  Future<T> _exclusive<T>(Future<T> Function() action) async {
     if (_restoring) throw StateError('A settings restore is already running');
     _restoring = true;
     try {
-      await action();
+      return await action();
     } finally {
       _restoring = false;
     }
@@ -181,7 +210,10 @@ final class BackupService {
     }
     if (staged.existsSync()) await staged.delete();
     try {
-      await staged.writeAsString(const JsonEncoder.withIndent('  ').convert(data), flush: true);
+      // Encoded and gzipped off the UI isolate, as Obtainium's
+      // encodeJsonBytesOffIsolate: a long history is megabytes of JSON and
+      // the page would drop frames; gzip takes it down to a tenth or less.
+      await staged.writeAsBytes(await encode(data), flush: true);
       final hadPrevious = file.existsSync();
       if (hadPrevious) await file.rename(previous.path);
       try {
@@ -204,8 +236,24 @@ final class BackupService {
   }
 
   /// Reads a backup file; [FormatException] when it is not a JSON object.
-  static Future<Map<String, Object?>> readFile(File file) async {
-    final data = jsonDecode(await file.readAsString());
+  static Future<Map<String, Object?>> readFile(File file) async => decode(await file.readAsBytes());
+
+  /// The bytes of a backup file: the indented JSON, gzipped (J03.1).
+  /// Encoded off the UI isolate: a long history is megabytes of JSON and
+  /// the restore page would drop frames.
+  static Future<Uint8List> encode(Map<String, Object?> data) => Isolate.run(
+    () => Uint8List.fromList(gzip.encode(JsonUtf8Encoder('  ').convert(data))),
+    debugName: 'backup-encode',
+  );
+
+  /// A backup file's bytes as its JSON object. Gzip when the bytes carry
+  /// the gzip header (every v4 file); plain UTF-8 JSON otherwise, which is
+  /// what 3.x wrote. [FormatException] when it is not a JSON object.
+  static Map<String, Object?> decode(List<int> bytes) {
+    final text = bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b
+        ? utf8.decode(gzip.decode(bytes), allowMalformed: true)
+        : utf8.decode(bytes, allowMalformed: true);
+    final data = jsonDecode(text);
     if (data is! Map<String, Object?>) throw const FormatException('Not a backup file');
     return data;
   }

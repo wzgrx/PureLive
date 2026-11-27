@@ -207,7 +207,7 @@ void main() {
   testWidgets('adds a server after testing it, uploads a backup and restores a file after the preview', (tester) async {
     final dav = FakeDav()
       ..dirs.add('old')
-      ..files['purelive_2026-09-01T10_00_00.txt'] = utf8.encode(
+      ..files['purelive_2026-09-01T10_00_00.json.gz'] = utf8.encode(
         jsonEncode({
           'backupVersion': 3,
           'favorite': {
@@ -241,35 +241,38 @@ void main() {
     expect((current.name, current.password), ('home', 'p'));
     expect(find.text('home'), findsOneWidget, reason: 'the server under the title (c2)');
     expect(find.text('old'), findsOneWidget);
-    expect(find.text('purelive_2026-09-01T10_00_00.txt'), findsOneWidget);
+    expect(find.text('purelive_2026-09-01T10_00_00.json.gz'), findsOneWidget);
 
     // Upload the current data to the open folder.
     await tester.runAsync(() => services.store.follows.add(_room('1')));
     expect(find.text('备份到当前目录'), findsOneWidget, reason: 'the button says what it does (c3)');
     await tester.tap(find.byKey(const ValueKey('webdav-upload')));
     await _settle(tester);
-    final uploaded = jsonDecode(utf8.decode(dav.files['purelive_2026-10-01T20_00_00.txt']!)) as Map<String, Object?>;
+    // The three kinds of file come first (J03.1), as on the backup page.
+    await tester.tap(find.byKey(const ValueKey('backup-contents-settings')));
+    await _settle(tester);
+    final uploaded = BackupService.decode(dav.files['purelive_2026-10-01T20_00_00.json.gz']!);
     expect(((uploaded['favorite']! as Map)['favoriteRooms']! as List).single, containsPair('roomId', '1'));
     expect(_toasts, ['文件上传成功']);
-    expect(find.text('purelive_2026-10-01T20_00_00.txt'), findsOneWidget);
+    expect(find.text('purelive_2026-10-01T20_00_00.json.gz'), findsOneWidget);
 
     // A tap on a backup previews and restores it (c4, R2).
-    await tester.tap(find.text('purelive_2026-09-01T10_00_00.txt'));
+    await tester.tap(find.text('purelive_2026-09-01T10_00_00.json.gz'));
     await _settle(tester);
-    expect(find.text('关注的直播间：1 → 1（新增 1，移除 1）'), findsOneWidget);
+    expect(find.text('关注的直播间：1 → 2（新增 1）'), findsOneWidget, reason: '合并 is a union');
     await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
     await _settle(tester);
-    expect([for (final room in (await tester.runAsync(services.store.follows.all))!) room.roomId], ['7']);
+    expect([for (final room in (await tester.runAsync(services.store.follows.all))!) room.roomId], ['1', '7']);
     expect(_toasts.last, '恢复备份成功');
   });
 
   testWidgets('P02: a pull lists the folder again under the classic header, the rows staying', (tester) async {
-    final dav = FakeDav()..files['purelive_2026-09-01T10_00_00.txt'] = utf8.encode('{}');
+    final dav = FakeDav()..files['purelive_2026-09-01T10_00_00.json.gz'] = utf8.encode('{}');
     await _pump(tester, dav, server: _server);
     expect(find.byType(RefreshIndicator), findsNothing);
     final list = find.byKey(const ValueKey('webdav-list'));
     expect(find.ancestor(of: list, matching: find.byType(AppRefreshView)), findsOneWidget);
-    dav.files['purelive_2026-09-02T10_00_00.txt'] = utf8.encode('{}');
+    dav.files['purelive_2026-09-02T10_00_00.json.gz'] = utf8.encode('{}');
     final gesture = await tester.startGesture(tester.getCenter(list));
     for (var i = 0; i < 40; i++) {
       await gesture.moveBy(const Offset(0, 5));
@@ -283,7 +286,7 @@ void main() {
       expect(list, findsOneWidget);
     }
     await _settle(tester);
-    expect(find.text('purelive_2026-09-02T10_00_00.txt'), findsOneWidget);
+    expect(find.text('purelive_2026-09-02T10_00_00.json.gz'), findsOneWidget);
     await tester.pump(AppRefreshView.resultDuration);
     await tester.pumpAndSettle();
   });
@@ -291,7 +294,7 @@ void main() {
   testWidgets('the bar: server, refresh, ⋮ (follows upload, help); rows: icon, time · size, ⋮', (tester) async {
     final dav = FakeDav()
       ..dirs.add('old')
-      ..files['purelive_2026-09-01T10_00_00.txt'] = utf8.encode('{}')
+      ..files['purelive_2026-09-01T10_00_00.json.gz'] = utf8.encode('{}')
       ..files['notes.txt'] = utf8.encode('hello');
     await _pump(tester, dav, server: _server);
     final servers = tester.getCenter(find.byKey(const ValueKey('webdav-servers'))).dx;
@@ -318,7 +321,7 @@ void main() {
     // Folder first, then files; each row: its icon, time · size, ⋮.
     expect(find.descendant(of: _entry('old'), matching: find.byIcon(AppIcons.webDavFolder)), findsOneWidget);
     expect(
-      find.descendant(of: _entry('purelive_2026-09-01T10_00_00.txt'), matching: find.byIcon(AppIcons.webDavBackupFile)),
+      find.descendant(of: _entry('purelive_2026-09-01T10_00_00.json.gz'), matching: find.byIcon(AppIcons.webDavBackupFile)),
       findsOneWidget,
     );
     expect(find.descendant(of: _entry('notes.txt'), matching: find.byIcon(AppIcons.webDavOtherFile)), findsOneWidget);
@@ -475,6 +478,8 @@ void main() {
     final dav = _FailingPut();
     await _pump(tester, dav, server: _server);
     await tester.tap(find.byKey(const ValueKey('webdav-upload')));
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('backup-contents-settings')));
     await _settle(tester);
     expect(find.byType(SnackBar), findsOneWidget);
     expect(find.textContaining('文件上传失败'), findsOneWidget);

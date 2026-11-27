@@ -1881,6 +1881,17 @@ abstract final class Settings {
     scope: SettingScope.internal,
   );
 
+  /// The kind of file "创建备份" wrote last (J03.1), the way Obtainium's
+  /// "包含在备份中" remembers its choice: `data`, `settings` or
+  /// `sensitive`. A choice of this device, so backups do not carry it.
+  static const backupContents = StringSetting(
+    'backupContents',
+    section: 'backup',
+    defaultValue: 'settings',
+    allowed: {'data', 'settings', 'sensitive'},
+    scope: SettingScope.internal,
+  );
+
   /// Uploads a backup to the current WebDAV server while the app runs
   /// (J04.2, V01.9).
   static const webdavAutoBackupEnabled = BoolSetting('webdavAutoBackupEnabled', section: 'backup', defaultValue: false);
@@ -2319,6 +2330,7 @@ abstract final class Settings {
     localInteractionGrowthDay,
     localInteractionGiftEffectLevel,
     backupDirectory,
+    backupContents,
     webdavAutoBackupEnabled,
     webdavAutoBackupHours,
     webdavAutoBackupScope,

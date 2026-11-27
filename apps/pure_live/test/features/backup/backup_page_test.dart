@@ -20,6 +20,8 @@ import 'package:pure_live/routes/route_args.dart';
 import 'package:pure_live/routes/route_path.dart';
 import 'package:pure_live/shared/backup/backup_data.dart';
 import 'package:pure_live/shared/backup/backup_files.dart';
+import 'package:pure_live/shared/backup/backup_preview_dialog.dart';
+import 'package:pure_live/shared/backup/sync_parts.dart';
 import 'package:pure_live/tv/settings/tv_settings_section_page.dart';
 import 'package:pure_live/tv/tv_theme.dart';
 import 'package:pure_live/tv/widgets/tv_focusable.dart';
@@ -73,7 +75,7 @@ void main() {
       expect(history.unchanged, isTrue);
       expect(preview.parts.map((part) => part.kind), contains(RestorePartKind.keywords));
       expect(preview.kept, containsAll([RestorePartKind.tags, RestorePartKind.webdav, RestorePartKind.search]));
-      expect(preview.changesSomething, isTrue);
+      expect(preview.changesIn(RestoreMode.merge), isTrue);
       expect(() => previewRestore(store, {'nothing': 1}, BackupScope.all), throwsFormatException);
     });
 
@@ -87,8 +89,9 @@ void main() {
       final preview = await previewRestore(store, file, BackupScope.all);
       expect(preview.scope, BackupScope.follows);
       expect(preview.followsOnlyFile, isTrue);
+      // 合并 unions the follows: the new device's own room stays.
       await restoreBackup(service, store, file, preview.scope);
-      expect(await _followIds(store), ['1']);
+      expect(await _followIds(store), ['5', '1']);
       expect((await store.history.all()).single.roomId, '9');
     });
 
@@ -108,6 +111,10 @@ void main() {
       final search = preview.parts.firstWhere((part) => part.kind == RestorePartKind.search);
       expect((search.added, search.removed), (2, 1));
       await restoreBackup(service, store, file, BackupScope.all);
+      expect(jsonDecode((await store.meta.get(SearchHistory.key))!), ['other', 'lol', 'music'], reason: '合并 unions');
+
+      // 覆盖 writes the file's words only.
+      await restoreBackup(service, store, file, BackupScope.all, mode: RestoreMode.replace);
       expect(jsonDecode((await store.meta.get(SearchHistory.key))!), ['lol', 'music']);
 
       // A 3.x backup has no search words: they stay.
@@ -115,13 +122,100 @@ void main() {
       expect(jsonDecode((await store.meta.get(SearchHistory.key))!), ['lol', 'music']);
     });
 
+    test('合并 is a union: 72 follows and a 61-room file end at 73, with 新增 1', () async {
+      final store = services.store;
+      final service = BackupService(store);
+      // 72 here ('1'..'72': room id 0 is not storable), the file holds
+      // '1'..'60' plus one new room, so 12 of ours are not in it.
+      await store.follows.replaceAll([for (var i = 1; i <= 72; i++) _room('$i')]);
+      final file = _legacyBackup([for (var i = 1; i <= 60; i++) _room('$i'), _room('new')]);
+      final preview = await previewRestore(store, file, BackupScope.all);
+      final follows = preview.parts.firstWhere((part) => part.kind == RestorePartKind.follows);
+      expect((follows.current, follows.incoming, follows.added, follows.removed), (72, 61, 1, 12));
+      expect(follows.merged, 73);
+      // 合并 shows only the additions and the union; 覆盖 shows the removals.
+      expect(restorePartText(follows, RestoreMode.merge), '关注的直播间：72 → 73（新增 1）');
+      expect(restorePartText(follows, RestoreMode.replace), '关注的直播间：72 → 61（新增 1，移除 12）');
+
+      await restoreBackup(service, store, file, BackupScope.all);
+      expect((await store.follows.all()).length, 73);
+      expect(await _followIds(store), contains('new'));
+      expect(await _followIds(store), contains('72'), reason: 'a room the file lacks stays');
+    });
+
+    test('合并 keeps the parts the file lacks; 覆盖 clears them first', () async {
+      final store = services.store;
+      final service = BackupService(store);
+      await store.follows.add(_room('1'));
+      await store.history.record(_room('9'));
+      await store.settings.set(Settings.danmakuSpeed, 90);
+      await store.blockLists.replaceAll(BlockKind.keyword, ['spoiler']);
+      // A v4 file with the follows only: no history, no settings, no blocks.
+      final file = {
+        'backupVersion': 4,
+        'favorite': {
+          'favoriteRooms': [_room('2').toJson()],
+          'favoriteAreas': <Object?>[],
+        },
+      };
+
+      // The default: the follows join (a union), everything else stays.
+      await restoreBackup(service, store, file, BackupScope.all);
+      expect(await _followIds(store), ['1', '2']);
+      expect((await store.history.all()).single.roomId, '9');
+      expect(store.settings.get(Settings.danmakuSpeed), 90);
+      expect(await store.blockLists.list(BlockKind.keyword), ['spoiler']);
+
+      // 覆盖: the parts being restored are emptied first, so what the file
+      // lacks stays empty.
+      await store.follows.add(_room('1'));
+      await restoreBackup(service, store, file, BackupScope.all, mode: RestoreMode.replace);
+      expect(await _followIds(store), ['2']);
+      expect(await store.history.all(), isEmpty);
+      expect(store.settings.get(Settings.danmakuSpeed), isNot(90));
+      expect(await store.blockLists.list(BlockKind.keyword), isEmpty);
+    });
+
+    test('覆盖 leaves an unticked part alone', () async {
+      final store = services.store;
+      final service = BackupService(store);
+      await store.follows.add(_room('1'));
+      await store.history.record(_room('9'));
+      await store.blockLists.replaceAll(BlockKind.keyword, ['spoiler']);
+      final file = {
+        'backupVersion': 4,
+        'favorite': {
+          'favoriteRooms': [_room('2').toJson()],
+          'favoriteAreas': <Object?>[],
+        },
+      };
+      // Only the ticked follows are cleared and rewritten; the unticked
+      // history and blocks are not touched.
+      await restoreBackup(
+        service,
+        store,
+        file,
+        BackupScope.all,
+        parts: {SyncPart.follows},
+        mode: RestoreMode.replace,
+      );
+      expect(await _followIds(store), ['2']);
+      expect((await store.history.all()).single.roomId, '9');
+      expect(await store.blockLists.list(BlockKind.keyword), ['spoiler']);
+    });
+
     test('file names, the TV document and TV addresses', () async {
-      expect(backupFileName(BackupScope.all, _now), 'purelive_2026-10-01T20_00_00.txt');
-      expect(backupFileName(BackupScope.follows, _now), 'purelive_favorites_2026-10-01T20_00_00.txt');
+      expect(backupFileName(BackupScope.all, _now), 'purelive_2026-10-01T20_00_00.json.gz');
+      expect(backupFileName(BackupScope.follows, _now), 'purelive_favorites_2026-10-01T20_00_00.json.gz');
       final dir = await Directory.systemTemp.createTemp('backup_names');
       addTearDown(() => dir.delete(recursive: true));
       File(p(dir, 'purelive_a.txt')).writeAsStringSync('{}');
       expect(freeBackupFile(dir, 'purelive_a.txt').path, p(dir, 'purelive_a_2.txt'));
+      expect(
+        freeBackupFile(dir, 'purelive_b.json.gz').path,
+        p(dir, 'purelive_b.json.gz'),
+        reason: 'a name that is free keeps it',
+      );
 
       final full = await BackupService(services.store).exportAll();
       final document = tvSyncDocument(full);
@@ -237,7 +331,7 @@ void main() {
         if (i > 0) expect(_top(tester, title), greaterThan(_top(tester, rows[i - 1].$1)), reason: title);
       }
       expect(find.text(withoutOrphan('备份到 WebDAV 服务器')), findsOneWidget);
-      expect(find.text(withoutOrphan('保存设置、关注、历史、分组、屏蔽词和搜索记录（不含账号 Cookie 和 WebDAV 密码）')), findsOneWidget);
+      expect(find.text(withoutOrphan('选择导出应用数据、设置，或连同账号与密码一起导出')), findsOneWidget);
       expect(find.text(withoutOrphan('改用 WebDAV 或设备同步；点这里看怎么迁移旧的云端配置')), findsOneWidget);
       // 3.x's Firebase row and log group are gone (c2, c9).
       expect(find.textContaining('Firebase'), findsNothing);
@@ -257,14 +351,92 @@ void main() {
 
       await tester.tap(find.text('创建备份'));
       await _settle(tester);
-      final file = File(p(folder, 'purelive_2026-10-01T20_00_00.txt'));
+      // J03.1: the three kinds of file first (Obtainium's "apps" and
+      // "apps and settings").
+      expect(find.text('新建备份'), findsOneWidget);
+      await tester.tap(find.text('应用与设置（不含敏感数据）'));
+      await _settle(tester);
+      final file = File(p(folder, 'purelive_2026-10-01T20_00_00.json.gz'));
       expect(file.existsSync(), isTrue);
-      final saved = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+      expect(file.readAsBytesSync().take(2), [0x1f, 0x8b], reason: 'gzipped (J03.1)');
+      final saved = BackupService.decode(file.readAsBytesSync());
       expect((saved['favorite']! as Map)['favoriteRooms'], hasLength(1));
-      expect(_toasts, ['已备份到 purelive_2026-10-01T20_00_00.txt']);
-      expect(find.text('purelive_2026-10-01T20_00_00.txt'), findsOneWidget);
+      expect(_toasts, ['已备份到 purelive_2026-10-01T20_00_00.json.gz']);
+      expect(find.text('purelive_2026-10-01T20_00_00.json.gz'), findsOneWidget);
       expect(findWords('完整备份'), findsOneWidget);
       expect(find.text('目录中的备份 · 1'), findsOneWidget);
+    });
+
+    testWidgets('the three choices: app only, settings, settings with the accounts', (tester) async {
+      final services = await pump(tester);
+      await tester.runAsync(() => services.store.follows.add(_room('1')));
+      await tester.tap(find.text('创建备份'));
+      await _settle(tester);
+      for (final label in ['仅应用', '应用与设置（不含敏感数据）', '应用与设置（含敏感数据）']) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      expect(
+        find.text('只导出关注、历史、分组、屏蔽词、搜索记录和网络电视列表，不含任何设置'),
+        findsOneWidget,
+      );
+
+      // App only: no settings section, the name says so, the row shows it.
+      await tester.tap(find.text('仅应用'));
+      await _settle(tester);
+      final data = File(p(folder, 'purelive_data_2026-10-01T20_00_00.json.gz'));
+      expect(data.existsSync(), isTrue);
+      final appOnly = BackupService.decode(data.readAsBytesSync());
+      expect(appOnly['settingsIncluded'], isFalse);
+      expect(appOnly.containsKey('app'), isFalse, reason: 'no preference travels');
+      expect(appOnly.containsKey('theme'), isFalse);
+      expect((appOnly['favorite']! as Map)['favoriteRooms'], hasLength(1));
+      expect(find.text('purelive_data_2026-10-01T20_00_00.json.gz'), findsOneWidget);
+      expect(findWords('仅应用数据'), findsOneWidget);
+      // The choice is remembered (Obtainium's dropdown keeps its value) and
+      // preselected next time.
+      expect(services.store.settings.get(Settings.backupContents), 'data');
+      await tester.tap(find.text('创建备份'));
+      await _settle(tester);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('backup-contents-data')),
+          matching: find.byIcon(AppIcons.selected),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('取消'));
+      await _settle(tester);
+      expect(find.text('新建备份'), findsNothing);
+
+      // Settings with the accounts: the sensitive flag and the cookies.
+      await tester.runAsync(() async {
+        await services.store.secrets.write(SecretRefs.cookie('douyu'), 'dy_auth=1');
+      });
+      await tester.tap(find.text('创建备份'));
+      await _settle(tester);
+      await tester.tap(find.text('应用与设置（含敏感数据）'));
+      await _settle(tester);
+      final full = File(p(folder, 'purelive_2026-10-01T20_00_00.json.gz'));
+      final withAccounts = BackupService.decode(full.readAsBytesSync());
+      expect(withAccounts['settingsIncluded'], isTrue);
+      expect(withAccounts['sensitiveDataIncluded'], isTrue);
+      expect((withAccounts['cookie']! as Map)['douyuCookie'], 'dy_auth=1');
+      expect(find.text('目录中的备份 · 2'), findsOneWidget);
+      expect(services.store.settings.get(Settings.backupContents), 'sensitive');
+    });
+
+    testWidgets('a file from a newer app is refused with its version', (tester) async {
+      final services = await pump(tester);
+      await tester.runAsync(
+        () => File(p(folder, 'purelive_2027-01-01T00_00_00.txt'))
+            .writeAsString(jsonEncode({..._legacyBackup([_room('1')]), 'backupVersion': 9})),
+      );
+      await refresh(tester);
+      await tester.tap(find.text('purelive_2027-01-01T00_00_00.txt'));
+      await _settle(tester);
+      expect(find.byKey(const ValueKey('backup-preview')), findsNothing);
+      expect(_toasts, ['这个备份来自更新的纯粹直播（版本 9），请先升级应用再恢复']);
+      expect(await tester.runAsync(() => _followIds(services.store)), isEmpty);
     });
 
     testWidgets('restores a 3.x file from the folder after showing what changes; the others grey out meanwhile', (
@@ -285,7 +457,7 @@ void main() {
       await _settle(tester);
       expect(find.byKey(const ValueKey('backup-preview')), findsOneWidget);
       expect(find.text('3.x 备份（版本 3）'), findsOneWidget);
-      expect(find.text('关注的直播间：1 → 2（新增 2，移除 1）'), findsOneWidget);
+      expect(find.text('关注的直播间：1 → 3（新增 2）'), findsOneWidget, reason: '合并 is a union: no 移除');
       expect(find.textContaining('文件中没有、保持不变'), findsOneWidget);
       // One thing at a time: the other backup actions grey out, WebDAV and
       // device sync stay (c7).
@@ -305,8 +477,110 @@ void main() {
       await _settle(tester);
       await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
       await _settle(tester);
-      expect(await tester.runAsync(() => _followIds(services.store)), ['2', '3']);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['1', '2', '3'], reason: '合并 kept the local one');
       expect(_toasts, ['恢复备份成功']);
+    });
+
+    testWidgets('each part of a v4 file has a box: unticking one leaves that part as it is', (tester) async {
+      final services = await pump(tester);
+      await tester.runAsync(() async {
+        await services.store.follows.add(_room('1'));
+        await File(p(folder, 'purelive_2026-09-01T10_00_00.txt')).writeAsString(
+          jsonEncode({
+            ..._legacyBackup([_room('2')], history: [_room('9')]),
+            'backupVersion': 4,
+          }),
+        );
+      });
+      await refresh(tester);
+      await tester.tap(find.text('purelive_2026-09-01T10_00_00.txt'));
+      await _settle(tester);
+      // One ticked box per part (as Obtainium's import sheet), and 全选
+      // that empties them.
+      expect(find.byKey(const ValueKey('backup-part-follows')), findsOneWidget);
+      expect(find.byKey(const ValueKey('backup-part-history')), findsOneWidget);
+      expect(find.byKey(const ValueKey('backup-part-all')), findsOneWidget);
+
+      // Unticking the follows leaves them as they are, the history comes.
+      await tester.tap(find.byKey(const ValueKey('backup-part-follows')));
+      await _settle(tester);
+      await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
+      await _settle(tester);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['1']);
+      expect([for (final room in (await tester.runAsync(services.store.history.all))!) room.roomId], ['9']);
+
+      // Nothing ticked: nothing to restore, "恢复" does nothing.
+      await tester.tap(find.text('purelive_2026-09-01T10_00_00.txt'));
+      await _settle(tester);
+      await tester.tap(find.byKey(const ValueKey('backup-part-all')));
+      await _settle(tester);
+      expect(tester.widget<DialogActionButton>(find.byKey(const ValueKey('backup-restore-confirm'))).onPressed, isNull);
+      await tester.tap(find.text('取消'));
+      await _settle(tester);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['1']);
+    });
+
+    testWidgets('恢复方式: 合并 by default; 覆盖 clears what the file lacks', (tester) async {
+      final services = await pump(tester);
+      await tester.runAsync(() async {
+        await services.store.follows.add(_room('1'));
+        await services.store.history.record(_room('9'));
+        await File(p(folder, 'purelive_2026-09-01T10_00_00.txt')).writeAsString(
+          jsonEncode({
+            'backupVersion': 4,
+            'favorite': {
+              'favoriteRooms': [_room('2').toJson()],
+              'favoriteAreas': <Object?>[],
+            },
+          }),
+        );
+      });
+      await refresh(tester);
+      await tester.tap(find.text('purelive_2026-09-01T10_00_00.txt'));
+      await _settle(tester);
+      // Default 合并: nothing is cleared, no warning.
+      expect(find.byKey(const ValueKey('backup-restore-mode')), findsOneWidget);
+      expect(find.text('合并（默认）'), findsOneWidget);
+      expect(find.text('覆盖'), findsOneWidget);
+      expect(find.byKey(const ValueKey('backup-restore-mode-warning')), findsNothing);
+      expect(
+        find.text('列表取并集：本机的保留，文件里有而本机没有的新增；单值项直接覆盖'),
+        findsOneWidget,
+      );
+
+      // 覆盖 says what it will do.
+      await tester.tap(find.text('覆盖'));
+      await _settle(tester);
+      expect(find.byKey(const ValueKey('backup-restore-mode-warning')), findsOneWidget);
+      expect(find.text('先清空勾选的部分再写入文件，文件里没有的部分保持清空'), findsOneWidget);
+      // 覆盖 keeps its boxes: an unticked part is left alone, 全选 stays.
+      expect(find.byKey(const ValueKey('backup-part-all')), findsOneWidget);
+
+      // 覆盖 asks once more, in red, before it clears anything.
+      await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
+      await _settle(tester);
+      expect(find.text('覆盖恢复？'), findsOneWidget);
+      expect(find.textContaining('现有数据和设置会被清空后重写成这份备份的样子'), findsOneWidget);
+      // Cancelling the second question changes nothing.
+      await tester.tap(find.text('取消'));
+      await _settle(tester);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['1']);
+      expect((await tester.runAsync(services.store.history.all))!.single.roomId, '9');
+
+      await tester.tap(find.text('purelive_2026-09-01T10_00_00.txt'));
+      await _settle(tester);
+      await tester.tap(find.text('覆盖'));
+      await _settle(tester);
+      await tester.tap(find.byKey(const ValueKey('backup-restore-confirm')));
+      await _settle(tester);
+      await tester.tap(find.byKey(const ValueKey('backup-replace-confirm')));
+      await _settle(tester);
+      expect(await tester.runAsync(() => _followIds(services.store)), ['2'], reason: '覆盖 replaced the follows');
+      expect(
+        (await tester.runAsync(services.store.history.all))!.single.roomId,
+        '9',
+        reason: 'the file has no history, and it is unticked: it stays',
+      );
     });
 
     testWidgets("a file's ⋮, right click and long press open the same small menu; delete asks first", (tester) async {
