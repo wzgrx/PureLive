@@ -182,7 +182,7 @@ SiteRegistry buildSiteRegistry(PlatformDeps deps) {
       additionalCodecs: () => !preferH264(),
     ),
     SiteIds.huya: () => HuyaSite(http, cookies: cookies, preferH264: preferH264),
-    SiteIds.douyin: () => DouyinSite(http, cookies: cookies),
+    SiteIds.douyin: () => DouyinSite(http, cookies: cookies, preferH264: preferH264),
     SiteIds.kuaishou: () => KuaishouSite(http, cookies: cookies, preferH264: preferH264),
     SiteIds.cc: () => CcSite(http),
     SiteIds.twitch: () => TwitchSite(

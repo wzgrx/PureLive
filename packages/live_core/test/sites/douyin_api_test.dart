@@ -1202,4 +1202,190 @@ void main() {
     expect(DouyinApi.isRoomId('7687741736843512602'), isTrue);
     expect(DouyinApi.isRoomId('547977714661'), isFalse);
   });
+  group("douyin HEVC (the room page's web_stream_url)", () {
+    Map<String, Object?> mkMain(String codec, String url, {String size = '1280x720', int bitrate = 6000000}) => {
+      'flv': url,
+      'sdk_params': {'VCodec': codec, 'vbitrate': bitrate, 'resolution': size},
+    };
+
+    Map<String, Object?> mkStream({String stream = '696967974775161662'}) => {
+      'common': {'stream': stream},
+      'data': {
+        'hd': {'main': mkMain('h264', 'https://pull-q3.douyincdn.com/thirdgame/stream-1_hd.flv?auth_key=1')},
+        'md': {
+          'main': mkMain(
+            'h264',
+            'https://pull-q3.douyincdn.com/thirdgame/stream-1_md.flv?auth_key=1',
+            size: '640x360',
+            bitrate: 800000,
+          ),
+        },
+      },
+    };
+
+    Map<String, Object?> avcStream({String stream = '696967974775161662'}) => {
+      'live_core_sdk_data': {
+        'pull_data': {
+          'stream_data': mkStream(stream: stream),
+          'options': {
+            'qualities': [
+              {'sdk_key': 'hd', 'name': '超清', 'v_bit_rate': 6000000, 'resolution': '1280x720'},
+              {'sdk_key': 'md', 'name': '流畅', 'v_bit_rate': 800000, 'resolution': '640x360'},
+            ],
+            'default_quality': {'sdk_key': 'hd'},
+          },
+        },
+      },
+      'flv_pull_url': {'HD': 'https://pull-q3.douyincdn.com/thirdgame/stream-1_hd.flv?auth_key=1'},
+      'default_resolution': 'HD',
+    };
+
+    Map<String, Object?> hevcStream({String stream = '696967974775161662', String suffix = '_hiq'}) => {
+      'live_core_sdk_data': {
+        'pull_data': {
+          'stream_data': {
+            'common': {'stream': stream},
+            'data': {
+              'hd': {
+                'main': mkMain(
+                  'h265',
+                  'https://pull-flv-q1.douyincdn.com/thirdgame/stream-1${suffix}hd5.flv?keeptime=00093a80&wsSecret=ab&wsTime=6b085e4e',
+                ),
+              },
+              // `md` repeats the H.264 rendition: same host and path, another lease.
+              'md': {
+                'main': mkMain(
+                  'h265',
+                  'https://pull-q3.douyincdn.com/thirdgame/stream-1_md.flv?wsSecret=cd',
+                  size: '640x360',
+                  bitrate: 800000,
+                ),
+              },
+            },
+          },
+          'options': <String, Object?>{}, // the HEVC set carries no options of its own
+        },
+      },
+    };
+
+    /// A page whose `__pace_f` flight has [rooms] as JSON rows.
+    String pageFor(List<Map<String, Object?>> rooms) {
+      final buffer = StringBuffer();
+      for (final (index, room) in rooms.indexed) {
+        buffer.writeln(
+          '$index:${jsonEncode({
+            'roomStore': {
+              'roomInfo': {'room': room},
+            },
+          })}',
+        );
+      }
+      return '<html><script>self.__pace_f.push([1,${jsonEncode(buffer.toString())}])</script></html>';
+    }
+
+    test("the page's stream set is picked by stream name; a room without it yields nothing", () {
+      final page = pageFor([
+        {'web_stream_url': hevcStream(stream: 'other')},
+        {'web_stream_url': hevcStream()},
+        {'stream_url': avcStream(), 'web_stream_url': hevcStream(stream: 'other')},
+      ]);
+      final data = DouyinApi.roomPageHevcData(page, streamUrl: avcStream());
+      expect(data.keys, ['hd', 'md']);
+      expect(
+        DouyinApi.roomPageHevcData(
+          pageFor([
+            {'stream_url': avcStream()},
+          ]),
+        ),
+        isEmpty,
+      );
+    });
+
+    test('mergeHevc folds H.265 into the same quality: one id, one label, both codecs', () {
+      final h264 = avcStream();
+      final merged = DouyinApi.mergeHevc(
+        h264,
+        DouyinApi.roomPageHevcData(
+          pageFor([
+            {'web_stream_url': hevcStream()},
+          ]),
+          streamUrl: h264,
+        ),
+      );
+      expect(DouyinApi.hasHevc(h264), isFalse);
+      expect(DouyinApi.hasHevc(merged), isTrue);
+      final qualities = DouyinApi.qualities(merged);
+      expect(qualities.map((quality) => quality.id), ['hd', 'md'], reason: 'one entry per quality, no +h265 twins');
+      expect(qualities.map((quality) => quality.quality), ['超清', '流畅'], reason: 'no 「（H.265）」 suffixes');
+      expect(qualities.first.codec, 'avc', reason: '超清 is playable as H.264 too');
+      expect(DouyinApi.qualities(h264).map((quality) => quality.id), ['hd', 'md'], reason: 'h264 is untouched');
+
+      final lines = DouyinApi.resolution(
+        merged,
+        quality: qualities.first,
+        webRid: '531854687617',
+        issuedAt: DateTime.now(),
+      );
+      expect(lines.lines.map((line) => line.codec), [
+        'hevc',
+        'avc',
+      ], reason: 'HEVC first; the codec preference reorders');
+      expect(lines.lines.first.url, contains('_hiqhd5.flv'));
+      expect((lines.lines.first.width, lines.lines.first.height), (1280, 720));
+      expect(lines.lines.first.lease, isNotNull, reason: 'wsSecret + keeptime is a lease');
+      expect(lines.lines.last.url, contains('_hd.flv?auth_key=1'));
+    });
+
+    test('a repeat of the H.264 rendition in the HEVC set is not a second yethevc line', () {
+      final merged = DouyinApi.mergeHevc(
+        avcStream(),
+        DouyinApi.roomPageHevcData(
+          pageFor([
+            {'web_stream_url': hevcStream()},
+          ]),
+          streamUrl: avcStream(),
+        ),
+      );
+      final qualities = DouyinApi.qualities(merged);
+      expect(qualities.map((quality) => quality.id), ['hd', 'md']);
+      expect(qualities.last.codec, 'avc', reason: 'md is `_md.flv` in both sets');
+      final md = DouyinApi.resolution(
+        merged,
+        quality: qualities.last,
+        webRid: '531757997661',
+        issuedAt: DateTime.now(),
+      );
+      expect(md.lines.map((line) => line.codec), ['avc'], reason: 'one line: the H.264 original');
+    });
+
+    test('sdk_params as a string with unescaped quotes still gives its codec, bitrate and size', () {
+      final streamUrl = {
+        'live_core_sdk_data': {
+          'pull_data': {
+            'options': {
+              'qualities': [
+                {'sdk_key': 'uhd', 'name': '蓝光'},
+              ],
+            },
+            'stream_data': {
+              'data': {
+                'uhd': {
+                  'main': {
+                    'flv': 'https://pull-q3.douyincdn.com/thirdgame/stream-1_uhd.flv?auth_key=1',
+                    'sdk_params': '{"VCodec":"h264","vbitrate":8000000,"resolution":"1920x1080"}',
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+      final quality = DouyinApi.qualities(streamUrl).single;
+      expect(quality.codec, 'avc');
+      final picture = DouyinApi.pictureSize(
+        main: {'sdk_params': '{"VCodec":"h264","vbitrate":8000000,"resolution":"1920x1080"}'},
+      );
+      expect((picture!.width, picture.height), (1920, 1080));
+    });
+  });
 }
