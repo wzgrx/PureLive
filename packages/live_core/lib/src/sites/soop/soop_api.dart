@@ -21,11 +21,17 @@ const _kst = Duration(hours: 9);
 /// What the danmaku connection needs to join one room (3.x's
 /// `SoopDanmakuArgs`: the endpoint and the chat room number), with the
 /// WebSocket headers 3.x built for it (its API headers, `Origin` the player
-/// page).
+/// page) and the room's signature emoticons ([emotes]).
 @immutable
 final class SoopDanmakuArgs {
   /// Creates the arguments.
-  const new({required this.url, required this.plainUrl, required this.chatNo, required this.headers});
+  const new({
+    required this.url,
+    required this.plainUrl,
+    required this.chatNo,
+    required this.headers,
+    this.emotes = const {},
+  });
 
   /// `wss://<chat host>:<CHPT + 1>/Websocket/<room id>`: the TLS port next
   /// to the plain one, as the official HTTPS player connects (3.x's URL).
@@ -43,6 +49,13 @@ final class SoopDanmakuArgs {
   /// Handshake headers: 3.x's API headers ([SoopApi.apiHeaders]) with
   /// `Origin: https://play.sooplive.co.kr`, the user's cookie included.
   final Map<String, String> headers;
+
+  /// The room's signature emoticons: the keyword a chat line writes
+  /// (`선글라스`) → its picture (`img_path + mobile_img`, e.g.
+  /// `https://static.file.sooplive.com/signature_emoticon/<id>/….webp`),
+  /// from `signature_emoticon_api.php` ([SoopApi.signatureEmoticons]);
+  /// empty when the room was not read from its signature list.
+  final Map<String, String> emotes;
 
   @override
   String toString() => 'SoopDanmakuArgs($url, $chatNo)';
@@ -381,6 +394,7 @@ abstract final class SoopApi {
     String cookie = '',
     bool withDanmaku = false,
     int status = 200,
+    Map<String, String> emotes = const {},
   }) {
     final answer = channel(body, status: status);
     final fields = answer.channel;
@@ -442,7 +456,7 @@ abstract final class SoopApi {
               password: _truthy(fields['BPWD']),
             )
           : null,
-      danmakuData: withDanmaku ? danmakuArgs(fields, roomId: id, cookie: cookie) : null,
+       danmakuData: withDanmaku ? danmakuArgs(fields, roomId: id, cookie: cookie, emotes: emotes) : null,
     );
   }
 
@@ -609,8 +623,14 @@ abstract final class SoopApi {
   /// (3.x's `buildDanmakuWebSocketUrl`): the chat host is `CHDOMAIN`, else
   /// `chat-<CHIP as hex>.sooplive.com` (7-6), and the TLS port is
   /// `CHPT + 1`. Null without `CHATNO`, a host or a plain port below 65535
-  /// (3.x connected nothing then).
-  static SoopDanmakuArgs? danmakuArgs(Map<String, dynamic> channel, {required String roomId, String cookie = ''}) {
+  /// (3.x connected nothing then). [emotes] carries the room's signature
+  /// emoticons ([signatureEmoticons]).
+  static SoopDanmakuArgs? danmakuArgs(
+    Map<String, dynamic> channel, {
+    required String roomId,
+    String cookie = '',
+    Map<String, String> emotes = const {},
+  }) {
     final id = roomId.trim();
     final chatNo = _text(channel['CHATNO']).trim();
     final host = jsonString(channel['CHDOMAIN']) ?? _chatHost(_text(channel['CHIP']).trim());
@@ -624,7 +644,57 @@ abstract final class SoopApi {
         ...apiHeaders(cookie: cookie),
         'origin': _play,
       },
+      emotes: emotes,
     );
+  }
+
+  /// `signature_emoticon_api.php` (`work=list`, the streamer's id as
+  /// `szBjId`): the room's signature emoticons, as a table of keyword →
+  /// picture.
+  ///
+  /// The answer's `data` is a flat list of items (`work=list`), each an
+  /// object naming its keyword (`title`, e.g. `선글라스`) and the picture's
+  /// file name (`mobile_img`, e.g. `16016a16ca9fe1ddf.webp`). The picture's
+  /// base `img_path` (e.g.
+  /// `https://static.file.sooplive.com/signature_emoticon/<roomId>/`) is a
+  /// top-level field of the answer, and the address is `img_path +
+  /// mobile_img`. A `v=tier` answer instead gives `data` as an object of
+  /// tiers, each a list of the same items. Items without a keyword or a file
+  /// name (the global tier set, which the app's bundled list already covers)
+  /// are left out, and so is the whole table without a base. A keyword's
+  /// first picture wins. A `result` other than 1 or a non-object answer is
+  /// `ApiChanged`; 401/403/429/5xx as every other SOOP answer. Empty for an
+  /// unknown streamer (`data` missing or empty).
+  static Map<String, String> signatureEmoticons(String body, {int status = 200}) {
+    final root = _root(body, status: status, what: 'signature_emoticon');
+    if (jsonInt(root['result']) != 1) throw ApiChanged(_site, 'signature_emoticon: result ${root['result']}');
+    final base = _text(jsonString(root['img_path']) ?? '').trim();
+    if (base.isEmpty) return const {};
+    final table = <String, String>{};
+    for (final raw in _signatureItems(root['data'])) {
+      if (raw case final Map<String, dynamic> item) {
+        final title = _text(item['title']).trim();
+        final file = _text(item['mobile_img']).trim();
+        if (title.isEmpty || file.isEmpty) continue;
+        table.putIfAbsent(title, () => '$base$file');
+      }
+    }
+    return table;
+  }
+
+  /// The signature-emoticon items of [data]: a flat list (`work=list`) as
+  /// its own elements, or an object of tiers (`v=tier`, each a list) with
+  /// every element in tier order. Anything else is nothing.
+  static List<Object?> _signatureItems(Object? data) {
+    final tiers = <List<Object?>>[];
+    if (data case final Map<String, dynamic> tiersObject) {
+      for (final entries in tiersObject.entries) {
+        if (entries.value case final List<Object?> items) tiers.add(items);
+      }
+    } else if (data case final List<Object?> items) {
+      tiers.add(items);
+    }
+    return [for (final items in tiers) ...items];
   }
 
   /// `chat-<IPv4 as eight hex digits>.sooplive.com`, or null: the domain of

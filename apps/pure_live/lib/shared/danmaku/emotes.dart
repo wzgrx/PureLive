@@ -69,6 +69,7 @@ final class EmoteLibrary {
     SiteIds.douyu,
     SiteIds.huya,
     SiteIds.kuaishou,
+    SiteIds.soop,
   };
 
   /// [platform]'s table once loaded, else empty.

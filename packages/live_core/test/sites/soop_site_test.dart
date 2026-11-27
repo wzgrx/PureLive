@@ -17,6 +17,7 @@ final DateTime _now = DateTime.utc(2026, 9, 27, 17, 30, 45);
 
 const _player = '/afreeca/player_live_api.php';
 const _assign = '/broad_stream_assign.html';
+const _signature = '/api/signature_emoticon_api.php';
 
 /// The station path of streamer [id] (7-5).
 String _station(String id) => '/api/$id/station';
@@ -68,7 +69,14 @@ _Setup _setup(
   CookieVault? cookies,
   Map<String, List<Object>> script = const {},
 }) {
-  final http = ReplayHttp([...extra, for (final name in samples) ReplaySample.load('$_root/$name')]);
+  final http = ReplayHttp([
+    // Room entry asks for the signature emoticons (best effort); a setup that
+    // does not record one answers it empty so the room keeps its chat.
+    if (!extra.any((sample) => sample.url.path == _signature))
+      _synthetic('https://live.sooplive.co.kr$_signature', <String, Object?>{'result': 1, 'data': []}, method: 'POST'),
+    ...extra,
+    for (final name in samples) ReplaySample.load('$_root/$name'),
+  ]);
   final site = SoopSite(
     script.isEmpty
         ? http
@@ -85,7 +93,7 @@ _Setup _setup(
 /// `METHOD path type` of every request (`type` of a player API form).
 List<String> _trace(ReplayHttp http) => [
   for (final request in http.requests)
-    [request.method, request.url.path, if (request.body != null) _form(request)['type']].join(' '),
+    [request.method, request.url.path, if (request.url.path == _player && request.body != null) _form(request)['type']].join(' '),
 ];
 
 Map<String, String> _form(LiveRequest request) => Uri.splitQueryString(utf8.decode(request.body!));
@@ -207,8 +215,9 @@ void main() {
     test("room entry: 3.x's form and headers, the requested id, the broadcast and danmaku arguments", () async {
       final setup = _setup(['S05-live-live', 'S05-station-live']);
       final room = await setup.site.getRoomDetail(roomId: ' khm11903 ');
-      expect(_trace(setup.http), ['POST $_player live', 'GET ${_station('khm11903')}']);
-      final request = setup.http.requests.first;
+      expect(_trace(setup.http), ['GET ${_station('khm11903')}', 'POST $_signature', 'POST $_player live']);
+      // The player API is the third request (after the station and the signature list).
+      final request = setup.http.requests.last;
       final legacy = _legacyRequest('S05-live-live');
       expect(request.method, 'POST');
       expect(request.url, Uri.parse(legacy['url'] as String));
@@ -225,7 +234,8 @@ void main() {
     test("room entry also reads the station (7-5): 3.x's API headers, the profile and viewers", () async {
       final setup = _setup(['S05-live-live', 'S05-station-live']);
       final room = await setup.site.getRoomDetail(roomId: 'khm11903');
-      final station = setup.http.requests.last;
+      // The station read is the first request (signature and player follow).
+      final station = setup.http.requests.first;
       expect(station.method, 'GET');
       expect(station.url, Uri.parse('https://chapi.sooplive.co.kr/api/khm11903/station'));
       expect(station.headers, SoopApi.apiHeaders());
@@ -253,7 +263,7 @@ void main() {
         expect(room.restriction, LiveRestriction.password, reason: '7-8');
         expect(room.avatar, 'https://stimg.sooplive.co.kr/LOGO/ns/nsh100427/nsh100427.jpg', reason: 'the built one');
         expect(room.introduction, '');
-        expect(setup.http.requests, hasLength(2));
+        expect(setup.http.requests, hasLength(3), reason: 'the signature list is asked too (best effort)');
       }
     });
 
@@ -265,7 +275,10 @@ void main() {
       // E05.4: the same answer's chat arguments, for multi-view.
       expect(recording.danmakuData, isA<SoopDanmakuArgs>());
       expect(recording.data, isA<SoopRoomData>(), reason: "the recorder's streams need the broadcast");
-      expect(_trace(setup.http), ['POST $_player live', 'POST $_player live']);
+      // Recording also asks the signature list (best effort, before the player
+      // API); refresh stays the player API alone.
+      expect(_trace(setup.http), ['POST $_player live', 'POST $_signature', 'POST $_player live']);
+      expect((recording.danmakuData! as SoopDanmakuArgs).emotes, isEmpty, reason: 'no signature recorded here');
       expect(refresh.startedAt, DateTime.utc(2026, 9, 22, 10, 59, 31));
       expect(refresh.restriction, LiveRestriction.none);
       expect(await setup.site.getLiveStatus(roomId: 'khm11903'), isTrue);
@@ -275,12 +288,17 @@ void main() {
       final setup = _setup(['S05-live-offline', 'S05-station-offline']);
       expect((await setup.site.getRoomDetailForRefresh(roomId: 'phonics1')).effectiveLiveStatus, LiveStatus.offline);
       expect((await setup.site.getRoomDetailForRecording(roomId: 'phonics1')).effectiveLiveStatus, LiveStatus.offline);
-      expect(setup.http.requests, hasLength(2), reason: 'one request each, as in 3.x');
+      expect(setup.http.requests, hasLength(3), reason: 'the recording asks the signature list too (best effort)');
       final room = await setup.site.getRoomDetail(roomId: 'phonics1');
       expect(room.effectiveLiveStatus, LiveStatus.offline);
       expect(room.nick, '김민교.');
       expect(room.introduction, '실력과 재미와 감동을 겸비한 방송');
-      expect(_trace(setup.http).sublist(2), ['POST $_player live', 'GET ${_station('phonics1')}']);
+      expect(_trace(setup.http).sublist(2), [
+        'POST $_player live',
+        'GET ${_station('phonics1')}',
+        'POST $_signature',
+        'POST $_player live',
+      ]);
       expect(await setup.site.getLiveStatus(roomId: 'phonics1'), isFalse);
     });
 
@@ -288,11 +306,11 @@ void main() {
       final setup = _setup(['S05-live-missing', 'S05-station-missing']);
       const id = 'zzzqqqxxxnotexist1';
       await expectLater(setup.site.getRoomDetail(roomId: id), throwsA(isA<NotFound>()));
-      expect(setup.http.requests, hasLength(2));
+      expect(setup.http.requests, hasLength(3), reason: 'the signature list is asked too (best effort)');
       // The refresh reads the player API only, which answers an unknown
       // streamer like an offline one (as 3.x did).
       expect((await setup.site.getRoomDetailForRefresh(roomId: id)).effectiveLiveStatus, LiveStatus.offline);
-      expect(setup.http.requests, hasLength(3));
+      expect(setup.http.requests, hasLength(4));
       // Without the station's word it stays offline.
       final failing = _setup(
         ['S05-live-missing'],
@@ -385,7 +403,7 @@ void main() {
       ]);
       final room = await setup.site.getRoomDetail(roomId: 'khm11903');
       final qualities = await setup.site.getPlayQualities(detail: room);
-      expect(setup.http.requests, hasLength(2), reason: 'the qualities need no request');
+      expect(setup.http.requests, hasLength(3), reason: 'room entry (station, signature, player); the qualities need no request');
       // 7-1: 720p (hd4k) is “超清” after the source; ids unchanged.
       expect(qualities.map((quality) => quality.id), ['original', 'hd4k', 'hd', 'sd']);
       expect(qualities.map((quality) => quality.quality), ['原画', '超清', '高清', '标清']);
@@ -501,7 +519,7 @@ void main() {
           isA<StreamUnavailable>().having((error) => error.detail, 'detail', 'aid: RESULT 0, password-protected'),
         ),
       );
-      expect(_trace(setup.http).sublist(2), ['GET $_assign', 'POST $_player aid']);
+      expect(_trace(setup.http).sublist(3), ['GET $_assign', 'POST $_player aid']);
     });
   });
 

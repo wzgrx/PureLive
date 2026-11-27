@@ -124,6 +124,33 @@ final class SoopSite extends LiveSite
     ),
   );
 
+  /// `signature_emoticon_api.php` (`work=list`, `v=tier`) for streamer
+  /// [roomId] as `szBjId`: the room's signature emoticons, keyword → picture
+  /// ([SoopApi.signatureEmoticons]). Best effort: a failing or refused
+  /// answer (5xx, 429, 401/403, a shape change, or no transport) is
+  /// swallowed: the room then shows no signature pictures, its chat lines
+  /// stay text, as when the list is empty. A cancelled transport failure
+  /// is rethrown, so the room entry the user pulled the refresh still
+  /// reports it.
+  Future<Map<String, String>> _signatureEmoticons(String roomId) async {
+    try {
+      final response = await _send(
+        LiveRequest.form(
+          site: _site,
+          url: Uri.https(_live, '/api/signature_emoticon_api.php', const {}),
+          headers: SoopApi.apiHeaders(cookie: _cookie()),
+          fields: {'work': 'list', 'v': 'tier', 'szBjId': roomId},
+        ),
+      );
+      return SoopApi.signatureEmoticons(response.text, status: response.status);
+    } on TransportFailure catch (failure) {
+      if (failure.reason == TransportReason.cancelled) rethrow;
+      return const {};
+    } on SiteError {
+      return const {};
+    }
+  }
+
   // Catalog and search --------------------------------------------------------
 
   /// One category (3.x's "热门", id 1) with every area: pages of 120 while
@@ -235,7 +262,7 @@ final class SoopSite extends LiveSite
     return id;
   }
 
-  Future<LiveRoom> _detail(String roomId, {bool withDanmaku = false}) async {
+  Future<LiveRoom> _detail(String roomId, {bool withDanmaku = false, Map<String, String> emotes = const {}}) async {
     final id = _checked(roomId);
     final response = await _player(id, type: 'live');
     return SoopApi.roomDetail(
@@ -244,6 +271,7 @@ final class SoopSite extends LiveSite
       now: _now(),
       cookie: _cookie(),
       withDanmaku: withDanmaku,
+      emotes: withDanmaku ? emotes : const {},
       status: response.status,
     );
   }
@@ -278,8 +306,9 @@ final class SoopSite extends LiveSite
   @override
   Future<LiveRoom> getRoomDetail({required String roomId}) async {
     final id = _checked(roomId);
-    final detail = _detail(id, withDanmaku: true);
     final station = _stationOf(id);
+    final signature = _signatureEmoticons(id);
+    final detail = _detail(id, withDanmaku: true, emotes: await signature);
     final room = await detail;
     final found = await station;
     if (found.missing && room.effectiveLiveStatus == LiveStatus.offline) {
@@ -299,7 +328,11 @@ final class SoopSite extends LiveSite
   /// streams need, and the danmaku arguments it carries (multi-view
   /// connects them; E05.4).
   @override
-  Future<LiveRoom> getRoomDetailForRecording({required String roomId}) => _detail(roomId, withDanmaku: true);
+  Future<LiveRoom> getRoomDetailForRecording({required String roomId}) async {
+    final id = _checked(roomId);
+    final signature = _signatureEmoticons(id);
+    return await _detail(id, withDanmaku: true, emotes: await signature);
+  }
 
   @override
   Future<bool> getLiveStatus({required String roomId}) async =>
