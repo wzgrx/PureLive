@@ -117,6 +117,7 @@ final class TwitchSite extends LiveSite
     with LiveSiteLinks
     implements
         LiveSiteRoomRefresher,
+        LiveSiteFollowBatchRefresher,
         LiveSiteRecordRoomResolver,
         LivePlayUrlResolver,
         LivePlayRecoveryResolver,
@@ -475,6 +476,34 @@ final class TwitchSite extends LiveSite
   /// "offline".
   @override
   Future<bool> getLiveStatus({required String roomId}) async => (await _detail(roomId)).isLiveNow;
+
+  // Follow batch ---------------------------------------------------------------
+
+  /// Follow-card batch refresh: [TwitchApi.usersBatchQuery] (up to
+  /// [TwitchApi.batchLimit] logins per request), the batch version of the
+  /// single-user query used at room entry. No login cookie is required.
+  @override
+  Future<Map<String, LiveRoom>> refreshFollowBatch(List<LiveRoom> rooms) async {
+    final eligible = rooms.where((room) => TwitchApi.loginPattern.hasMatch(room.roomId.trim().toLowerCase())).toList();
+    if (eligible.length < 2) return const {};
+
+    final updates = <String, LiveRoom>{};
+    for (var start = 0; start < eligible.length; start += TwitchApi.batchLimit) {
+      final chunk = eligible.sublist(start, min(start + TwitchApi.batchLimit, eligible.length));
+      final logins = [for (final room in chunk) room.roomId.trim().toLowerCase()];
+      try {
+        final answer = await _gql(TwitchApi.usersBatchOperation(logins), what: 'users batch');
+        updates.addAll(TwitchApi.usersBatchDetail(answer, requestedLogins: logins, now: _now(), chat: _chat()));
+      } on RiskControl {
+        // An integrity challenge ends the batch quietly; the caller
+        // refreshes the unconfirmed rooms individually.
+      } on SiteError {
+        // A failed batch drops its rooms; the caller refreshes them
+        // individually.
+      }
+    }
+    return updates;
+  }
 
   // Streams -------------------------------------------------------------------
 
