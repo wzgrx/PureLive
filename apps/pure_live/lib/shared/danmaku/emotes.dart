@@ -168,7 +168,8 @@ final Expando<(EmoteTable, List<ChatSegment>)> _parsed = Expando('chat segments'
 
 /// The pieces of [message] for `EmoteText` (M13.16, UPGRADES B-12, B-13):
 /// the codes the message names ([LiveMessage.emotes]: CHZZK, YouTube,
-/// Bilibili, Kuaishou) and the codes of the platform's bundled list [table]
+/// Bilibili, Kuaishou, Twitch) and the codes of the platform's bundled list
+/// [table]
 /// become pictures, the bundled picture first and the address as its
 /// fallback; anything else stays text.
 ///

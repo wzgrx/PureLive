@@ -1099,6 +1099,40 @@ void main() {
       expect(TwitchIrcLine.unescape('plain'), 'plain');
     });
 
+    test('emotes: the emotes tag gives each picture once, its code read out of the words', () {
+      final line =
+          '@display-name=V;id=n-6;emotes=25:0-4,6-10/1902:12-16 '
+          ':v!v@v.tmi.twitch.tv PRIVMSG #$_channel :Kappa Kappa Keepo';
+      final message = TwitchDanmakuProtocol.chat(line)!;
+      expect(message.message, 'Kappa Kappa Keepo');
+      expect(message.emotes, [
+        const LiveEmote(code: 'Kappa', url: 'https://static-cdn.jtvnw.net/emoticons/v2/25/default/dark/1.0'),
+        const LiveEmote(code: 'Keepo', url: 'https://static-cdn.jtvnw.net/emoticons/v2/1902/default/dark/1.0'),
+      ], reason: 'Kappa twice is one picture; both are in the order of the tag');
+
+      // No tag, no id, no range, and a range that runs past the words.
+      expect(TwitchDanmakuProtocol.chat(_command('PRIVMSG', const {}, words: 'Kappa'))!.emotes, isEmpty);
+      expect(TwitchDanmakuProtocol.emotesOf('Kappa', null), isEmpty);
+      expect(TwitchDanmakuProtocol.emotesOf('Kappa', ''), isEmpty);
+      expect(TwitchDanmakuProtocol.emotesOf('Kappa', ':0-4'), isEmpty);
+      expect(TwitchDanmakuProtocol.emotesOf('Kappa', '25:0-9'), isEmpty);
+      expect(TwitchDanmakuProtocol.emotesOf('Kappa', '25:'), isEmpty);
+      expect(TwitchDanmakuProtocol.emotesOf('Kappa', '25:0-4'), [
+        LiveEmote(code: 'Kappa', url: TwitchDanmakuProtocol.emoteUrl('25')),
+      ]);
+    });
+
+    test("emotes: a /me line's ranges count over the words as received, wrapper included", () {
+      // `\x01ACTION Kappa\x01`: Kappa starts at 8 in what the server sent,
+      // while the message shown is `Kappa`.
+      final line =
+          '@display-name=V;id=n-7;emotes=25:8-12 '
+          ':v!v@v.tmi.twitch.tv PRIVMSG #$_channel :\u0001ACTION Kappa\u0001';
+      final message = TwitchDanmakuProtocol.chat(line)!;
+      expect(message.message, 'Kappa');
+      expect(message.emotes.single.code, 'Kappa');
+    });
+
     test('RECONNECT asks for a new socket; the word in chat or a notice does not', () {
       expect(TwitchDanmakuProtocol.decode(_reconnect).reconnect, isTrue);
       expect(TwitchDanmakuProtocol.decode('RECONNECT').reconnect, isTrue);
