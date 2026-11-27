@@ -469,8 +469,46 @@ abstract final class TwitchDanmakuProtocol {
       messageId: tags['id'] ?? '',
       sentAt: timestamp == null ? null : DateTime.fromMillisecondsSinceEpoch(timestamp),
       color: LiveMessageColor.numberToColor(colorValue),
+      emotes: emotesOf(content, tags['emotes']),
     );
   }
+
+  /// The pictures [content] holds by its `emotes` tag
+  /// (`25:0-4,12-16/1902:6-10`: emote id, then the ranges of its text, both
+  /// inclusive, entries and ranges separated by `/` and `,`): the code is
+  /// read out of [content] itself, the picture is [emoteUrl] of the id.
+  /// A code written more than once is one picture; a range that falls
+  /// outside [content] is dropped.
+  ///
+  /// Offsets count over [content] as received, CTCP wrapper included, so a
+  /// `/me` line's ranges stay right while its text loses the wrapper.
+  static List<LiveEmote> emotesOf(String content, String? tag) {
+    if (tag == null || tag.isEmpty) return const [];
+    final emotes = <LiveEmote>[];
+    final seen = <String>{};
+    for (final entry in tag.split('/')) {
+      final colon = entry.indexOf(':');
+      if (colon <= 0) continue;
+      final id = entry.substring(0, colon).trim();
+      if (id.isEmpty) continue;
+      for (final range in entry.substring(colon + 1).split(',')) {
+        final dash = range.indexOf('-');
+        if (dash < 0) continue;
+        final start = int.tryParse(range.substring(0, dash));
+        final end = int.tryParse(range.substring(dash + 1));
+        if (start == null || end == null || start < 0 || end < start || end >= content.length) continue;
+        final code = content.substring(start, end + 1);
+        if (code.isEmpty || !seen.add(code)) continue;
+        emotes.add(LiveEmote(code: code, url: emoteUrl(id)));
+      }
+    }
+    return emotes;
+  }
+
+  /// The picture of the emote [id]: Twitch serves the static `default`
+  /// variant on the `dark` theme at 1.0 scale, the smallest one that stays
+  /// sharp in the chat list.
+  static String emoteUrl(String id) => 'https://static-cdn.jtvnw.net/emoticons/v2/$id/default/dark/1.0';
 
   /// A tag value with 3.x's unescaping: `\s`, `\:`, `\r`, `\n`, then `\\`,
   /// each replaced everywhere in that order. (Values holding an escaped
